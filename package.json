@@ -15,6 +15,7 @@
     "start": "npm run build && electron .",
     "typecheck": "tsc --noEmit",
     "review": "tsx scripts/development/review.ts",
+    "screenshots:readme": "npm run build && tsx scripts/development/capture-readme.ts",
     "test:rules": "node --import tsx --test tests/rules/*.test.ts tests/rules/*.test.mjs",
     "docs:check": "node scripts/checks/docs.mjs",
     "check": "npm run typecheck && npm run docs:check && npm run test:rules",

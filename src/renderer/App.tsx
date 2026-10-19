@@ -510,7 +510,7 @@ export function App() {
                               )
                             }
                           />
-                          {p.name}
+                          {t(p.name)}
                         </label>
                       ))}
                     </fieldset>
@@ -644,8 +644,8 @@ export function App() {
                       {t(report.origin === "follow" ? "关注运行" : "手动搜索")}{" "}
                       ·{" "}
                       {report.platforms
-                        .map((p) => platforms.find((x) => x.id === p)?.name)
-                        .join("、")}{" "}
+                        .map((p) => t(platforms.find((x) => x.id === p)?.name ?? p))
+                        .join(language === "en" ? ", " : "、")}{" "}
                       · {status(report.status ?? "completed")}
                     </p>
                     {["queued", "running"].includes(report.status ?? "") && (
@@ -664,10 +664,10 @@ export function App() {
                       >
                         <header>
                           <h3>
-                            {
+                            {t(
                               platforms.find((p) => p.id === section.platform)
-                                ?.name
-                            }
+                                ?.name ?? section.platform,
+                            )}
                           </h3>
                           <span className="muted">{status(section.state)}</span>
                         </header>
@@ -824,7 +824,7 @@ export function App() {
                     >
                       <strong>{r.title || r.sourceIdentity}</strong>
                       <small>
-                        {r.platform} · {r.stageLabel || t("完成")} ·{" "}
+                        {r.platform} · {t(r.stageLabel || "完成")} ·{" "}
                         {dateTime(r.fetchedAt)}
                       </small>
                     </button>
@@ -894,11 +894,11 @@ export function App() {
                   {f.name && f.name !== f.question && <p>{f.question}</p>}
                   <p className="muted">
                     {f.platforms
-                      .map((p) => platforms.find((x) => x.id === p)?.name)
-                      .join("、")}{" "}
+                      .map((p) => t(platforms.find((x) => x.id === p)?.name ?? p))
+                      .join(language === "en" ? ", " : "、")}{" "}
                     ·{" "}
                     {t(periods.find((p) => p.id === f.period)?.name ?? "不限")}{" "}
-                    · {t(f.schedule.cadence === "daily" ? "每天" : "每周")}
+                    · {t(f.schedule.cadence === "daily" ? "每天" : "每周")}{" "}
                     {f.schedule.cadence === "weekly"
                       ? t(
                           [
@@ -1089,7 +1089,7 @@ function FollowEditor({
                   })
                 }
               />
-              {p.name}
+              {t(p.name)}
             </label>
           ))}
         </fieldset>

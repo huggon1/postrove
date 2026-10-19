@@ -2,9 +2,13 @@
 
 # Postrove
 
-[简体中文](README.zh-CN.md)
+[Simplified Chinese](README.zh-CN.md)
 
 Postrove is a desktop app that helps you find posts with each platform's own AI and collect interesting content to read later.
+
+![Search results with platform AI answers and source posts](assets/screenshots/search-en.png)
+
+*Demo data: questions, platform replies, source links, and reading materials in these screenshots are fictional.*
 
 ## Features
 
@@ -14,16 +18,20 @@ Choose your information sources and a time range, then ask a question. View rele
 
 Save search conditions as a follow to run daily or weekly while Postrove is open.
 
+![Saved follows with weekly schedules and their next run](assets/screenshots/follows-en.png)
+
 | AI search entry | Information source |
 | --- | --- |
 | Grok within X | X |
-| 点点 AI | Xiaohongshu |
+| Diandian AI | Xiaohongshu |
 
 ### Collect content to read later
 
 Collect posts and articles from different platforms in one place. Read their text, images, and summaries in your chosen language.
 
 For example, when you find a long technical article you want to read later, forward its link to your configured Telegram or Feishu app bot. Postrove retrieves the content and prepares a summary, so you can skim the summary first and read the article later in the app. You can also add links directly.
+
+![Reading an article with its summary, illustration, and referenced material](assets/screenshots/reading-en.png)
 
 | Source | Parsing target | Capability details |
 | --- | --- | --- |

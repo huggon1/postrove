@@ -68,6 +68,16 @@ Copy preparation requires an inactive source and preserves current-generation re
 
 Use a review profile with the intended model and platform sessions. Submit a question, read both platform sections and source links, save a follow, add a candidate to parsing, stop active work, and export its Pi logs. Check partial-platform results and English output. Record inputs, screenshots, saved state, and observed failures in a local acceptance directory. [Product behavior](product-spec.md) defines expected outcomes.
 
+## Capture README screenshots
+
+```sh
+npm run screenshots:readme
+```
+
+The [capture script](../scripts/development/capture-readme.ts) opens the real Electron application with fresh temporary profiles and schema-validated fictional records. It captures Search results, Parsed content, and Focus in English and Simplified Chinese, then removes the profiles. The article illustration is drawn locally. Authored platform replies and source addresses serve as display examples; live platform retrieval has its own acceptance above.
+
+The six PNG files enter `assets/screenshots/`. The local `tmp/readme-capture/evidence.json` records build identity, screenshot hashes, language checks, image loading, layout bounds, and profile isolation. The root README captions identify the demonstration data. Regenerate these files after changes to the featured pages or sample content.
+
 ## Verify reading with live sources
 
 Submit a public source link in Parsed content. Inspect source coverage, translated body, introduction, and direct references. The [reading helper](../scripts/development/verify-reading.ts) submits through Electron IPC and exports saved material:
