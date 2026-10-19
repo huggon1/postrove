@@ -1,3 +1,4 @@
+import type { ContentRequest } from "../../shared/content-contracts";
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { utilityProcess } from "electron";
@@ -29,9 +30,11 @@ export interface BrowserCapture {
   documentGeneration?: number;
   sourceKind?: "reply_inline" | "source_panel";
 }
-export type SearchProgress = Pick<
-  SearchSection,
-  "rawReply" | "platformPrompt" | "citationExtraction"
+export type SearchProgress = Partial<
+  Pick<
+    SearchSection,
+    "rawReply" | "platformPrompt" | "citationExtraction" | "checkpoint"
+  >
 >;
 export class BrowserAgent {
   constructor(
@@ -43,6 +46,12 @@ export class BrowserAgent {
       signal: AbortSignal,
     ) => Promise<unknown>,
     private enhancementAvailable: () => boolean = () => !!this.enhancedRead,
+    private processContent?: (
+      input: ContentRequest,
+      signal: AbortSignal,
+      config: ModelExecutionConfig,
+      taskId: string,
+    ) => Promise<string>,
   ) {}
   async run(
     platform: Platform,
@@ -53,6 +62,7 @@ export class BrowserAgent {
     purpose: "search" | "collect" = "search",
     refreshCredential?: () => Promise<string>,
     onSearchProgress?: (progress: SearchProgress) => Promise<void>,
+    recovery?: { prompt: string; conversationUrl?: string },
   ) {
     await mkdir(this.traceRoot, { recursive: true, mode: 0o700 });
     return this.browser.exclusive(platform, signal, async (page) => {
@@ -315,7 +325,9 @@ export class BrowserAgent {
             .catch(() => false)
         );
       };
-      const fills: string[] = [];
+      const fills: string[] = recovery ? [recovery.prompt] : [];
+      let submitted = !!recovery;
+      let savedConversationUrl = recovery?.conversationUrl;
       const capturedImages = new Map<string, { url: string; alt: string }[]>();
       const popups = new Set<Page>();
       const trackPopup = (popup: Page) => popups.add(popup);
@@ -432,6 +444,10 @@ export class BrowserAgent {
               submittedPlatformPrompt = data.output.platformPrompt;
               await onSearchProgress?.({
                 rawReply: capture.text,
+                checkpoint: {
+                  state: "answered",
+                  conversationUrl: capture.pageUrl,
+                },
                 platformPrompt: data.output.platformPrompt,
                 citationExtraction: { state: "running" },
               });
@@ -475,6 +491,24 @@ export class BrowserAgent {
                 )
               )
                 return { accessState: "action_required" };
+              if (data.operation.action === "structure_content") {
+                const capture = captureData.get(data.operation.captureId);
+                if (!capture || !this.processContent)
+                  throw new Error(
+                    "Structure requires a capture from this task",
+                  );
+                return JSON.parse(
+                  await this.processContent(
+                    {
+                      operation: "structure_content",
+                      text: capture.markdown || capture.text,
+                    },
+                    signal,
+                    config,
+                    taskId,
+                  ),
+                );
+              }
               if (data.operation.action === "load_skill")
                 return {
                   skill: data.operation.value,
@@ -695,12 +729,64 @@ export class BrowserAgent {
                 data.operation.action === "navigate" &&
                 data.operation.value === page.url() &&
                 page.url() === captureData.get(replyCaptureId)?.pageUrl;
+              if (
+                purpose === "search" &&
+                recovery &&
+                data.operation.action === "fill"
+              )
+                throw new Error(
+                  "Recovery observes the submitted conversation; return browser_interaction_failed if it is unavailable",
+                );
+              if (
+                purpose === "search" &&
+                !submitted &&
+                fills.length &&
+                ["press", "click"].includes(data.operation.action)
+              ) {
+                submitted = true;
+                await onSearchProgress?.({
+                  platformPrompt: fills[fills.length - 1],
+                  checkpoint: {
+                    state: "submitted",
+                    conversationUrl: page.url(),
+                    submittedAt: new Date().toISOString(),
+                  },
+                });
+              }
+              const sourcePopup =
+                pendingSourceClick && data.operation.action === "click"
+                  ? page
+                      .waitForEvent("popup", { timeout: 1500 })
+                      .catch(() => undefined)
+                  : undefined;
               const value = await this.browser.operation(
                 platform,
                 page,
                 sameAnswerPage ? { action: "snapshot" } : data.operation,
                 purpose,
               );
+              if (
+                sourcePopup &&
+                pendingSourceClick?.pageUrl === page.url() &&
+                !popups.size
+              )
+                await sourcePopup;
+              if (
+                purpose === "search" &&
+                submitted &&
+                !replyCaptureId &&
+                page.url().startsWith("https://") &&
+                page.url() !== savedConversationUrl
+              ) {
+                savedConversationUrl = page.url();
+                await onSearchProgress?.({
+                  checkpoint: {
+                    state: "submitted",
+                    conversationUrl: page.url(),
+                    submittedAt: new Date().toISOString(),
+                  },
+                });
+              }
               if (purpose === "search" && data.operation.action === "capture") {
                 const match = String(data.operation.ref).match(
                   /^f(\d+):(b\d+)$/,

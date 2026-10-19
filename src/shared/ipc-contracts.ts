@@ -15,6 +15,7 @@ import type {
   SearchAddition,
 } from "./focus-search-contracts";
 import type { Language } from "./language";
+import type { AdvisorSettings } from "./advisor-contracts";
 import type { ApplicationPreferences } from "./preferences-contracts";
 import type { TaskActivity, TaskSnapshot } from "./task-contracts";
 import type {
@@ -40,6 +41,7 @@ export const searchChannels = {
   start: "search:start",
   retry: "search:retry",
   cancel: "search:cancel",
+  cancelSection: "search:cancel-section",
   add: "search:add",
   open: "search:open",
 } as const;
@@ -99,6 +101,21 @@ export const channels = {
 } as const;
 
 export interface DesktopBridge {
+  advisorSettings(): Promise<ModelReply<AdvisorSettings>>;
+  saveAdvisorSettings(
+    input: Pick<AdvisorSettings, "enabled">,
+  ): Promise<ModelReply<AdvisorSettings>>;
+  cancelAdvisorRun(
+    taskId: string,
+    sectionId: string,
+  ): Promise<ModelReply<void>>;
+  revealResult(
+    kind: "search" | "reading",
+    taskId: string,
+  ): Promise<ModelReply<string>>;
+  saveReadingLanguage(
+    language: ApplicationPreferences["readingLanguage"],
+  ): Promise<ApplicationPreferences>;
   botStatus(channel: BotChannel): Promise<ModelReply<BotStatus>>;
   saveBotCredentials<C extends keyof BotCredentialsByChannel>(
     channel: C,

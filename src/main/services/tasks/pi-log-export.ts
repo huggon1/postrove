@@ -7,45 +7,52 @@ import { z } from "zod";
 export async function exportTaskPiLogs(
   traceRoots: string[],
   taskId: string,
+  runIds: string[] = [],
 ): Promise<string | undefined> {
   const id = z.string().uuid().parse(taskId);
   const pages: { source: string; name: string; executionId: string }[] = [];
-  for (const [rootIndex, root] of traceRoots.entries()) {
-    const taskRoot = join(root, id);
-    const readDirectory = async (directory: string) => {
-      try {
-        return await readdir(directory, { withFileTypes: true });
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
-        throw error;
-      }
-    };
-    const collect = async (directory: string, executionId: string) => {
-      for (const entry of await readDirectory(directory)) {
+  for (const [rootIndex, root] of traceRoots.entries())
+    for (const runId of new Set([
+      id,
+      ...runIds.map((value) => z.string().uuid().parse(value)),
+    ])) {
+      const taskRoot = join(root, runId);
+      const readDirectory = async (directory: string) => {
+        try {
+          return await readdir(directory, { withFileTypes: true });
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+          throw error;
+        }
+      };
+      const collect = async (directory: string, executionId: string) => {
+        for (const entry of await readDirectory(directory)) {
+          if (
+            !entry.isFile() ||
+            !/^(?:session|attempt-\d+)\.html$/.test(entry.name)
+          )
+            continue;
+          pages.push({
+            source: join(directory, entry.name),
+            name: `${rootIndex}-${runId.slice(0, 8)}-${executionId}-${entry.name}`,
+            executionId,
+          });
+        }
+      };
+      await collect(join(taskRoot, "html"), "legacy");
+      for (const execution of await readDirectory(
+        join(taskRoot, "executions"),
+      )) {
         if (
-          !entry.isFile() ||
-          !/^(?:session|attempt-\d+)\.html$/.test(entry.name)
+          execution.isDirectory() &&
+          z.string().uuid().safeParse(execution.name).success
         )
-          continue;
-        pages.push({
-          source: join(directory, entry.name),
-          name: `${rootIndex}-${executionId}-${entry.name}`,
-          executionId,
-        });
+          await collect(
+            join(taskRoot, "executions", execution.name, "html"),
+            execution.name,
+          );
       }
-    };
-    await collect(join(taskRoot, "html"), "legacy");
-    for (const execution of await readDirectory(join(taskRoot, "executions"))) {
-      if (
-        execution.isDirectory() &&
-        z.string().uuid().safeParse(execution.name).success
-      )
-        await collect(
-          join(taskRoot, "executions", execution.name, "html"),
-          execution.name,
-        );
     }
-  }
   if (!pages.length) throw new Error("该任务尚无可导出的 Pi 会话记录");
   const selected = await dialog.showOpenDialog({
     title: "导出 Pi 会话记录",

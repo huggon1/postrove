@@ -11,7 +11,6 @@ import {
   recordRefSchema,
 } from "../shared/deletion-contracts";
 import { ExecutionGate } from "./services/execution-gate";
-import { resetLegacyBusinessData } from "./runtime/business-reset";
 import { exportTaskPiLogs } from "./services/tasks/pi-log-export";
 import { registerMaterialImages } from "./services/material-images";
 import { createXhsAdapter } from "../platforms/adapters/xhs";
@@ -67,6 +66,17 @@ import { checkModel, readPiCatalog } from "./services/model-worker-client";
 import { XhsAuth } from "./services/xhs-auth";
 import { resolveRuntimeLayout } from "./services/runtime-layout";
 
+import { AdvisorStore } from "./storage/advisor-store";
+import { ContentService } from "./services/content-service";
+import { ResultPublisher } from "./services/result-publisher";
+import { legacyAdvisor } from "../shared/advisor-contracts";
+import { createHash } from "node:crypto";
+import { loadPlatformSkill } from "../platforms/browser/skills";
+import {
+  browserSystem,
+  searchCaptureInstruction,
+  searchCitationInstruction,
+} from "../platforms/browser/prompts";
 import { Preferences } from "./runtime/preferences";
 export async function initializeServices(
   changed: () => void,
@@ -74,7 +84,6 @@ export async function initializeServices(
   profileMode: string,
   onLanguage: (language: Language) => void,
 ) {
-  await resetLegacyBusinessData(app.getPath("userData"));
   const executionGate = new ExecutionGate();
   let models: ModelService | undefined;
   let forwarding: ForwardingPipelineService | undefined;
@@ -172,6 +181,14 @@ export async function initializeServices(
   );
   const imageRoot = join(app.getPath("userData"), "material-images");
   registerMaterialImages(imageRoot);
+  const contentService = new ContentService(
+    () => models!.acquire(),
+    join(app.getPath("userData"), "browser-traces"),
+  );
+  const results = new ResultPublisher(
+    join(app.getPath("userData"), "results"),
+    imageRoot,
+  );
   const browserAgent = new BrowserAgent(
     browser,
     join(__dirname, "../worker/jobs/browser/worker-entry.mjs"),
@@ -204,6 +221,13 @@ export async function initializeServices(
       };
     },
     () => xhsAuth!.installed(),
+    (input, signal, config, taskId) =>
+      contentService.execute(
+        input,
+        signal,
+        { config, release: async () => {} },
+        taskId,
+      ),
   );
 
   const platformAccess = new PlatformAccess(browserAgent, browser, imageRoot);
@@ -227,7 +251,8 @@ export async function initializeServices(
   forwarding = new ForwardingPipelineService({
     executionGate,
     traceRoot: join(app.getPath("userData"), "browser-traces"),
-    language: () => preferences.language,
+    language: () => preferences.resolvedReadingLanguage,
+    publish: (detail) => results.publishReading(detail),
     store: forwardingStore,
     acquire: () => models!.acquire(),
     spawn: (config) => {
@@ -289,6 +314,28 @@ export async function initializeServices(
     join(app.getPath("userData"), "focus-search.json"),
   );
   await searchStore.open();
+  const advisorStore = new AdvisorStore(
+    join(app.getPath("userData"), "advisors.json"),
+  );
+  const usedAdvisors = new Set(
+    searchStore
+      .snapshot()
+      .reports.flatMap((report) =>
+        report.sections.map(
+          (section) =>
+            section.advisorId ??
+            legacyAdvisor(section.platform, section.promptLanguage),
+        ),
+      ),
+  );
+  if ((await browser.status("x").catch(() => ({ signedIn: false }))).signedIn)
+    usedAdvisors.add("x-grok-en");
+  if (
+    (await browser.status("xiaohongshu").catch(() => ({ signedIn: false })))
+      .signedIn
+  )
+    usedAdvisors.add("xiaohongshu-diandian-zh");
+  await advisorStore.open([...usedAdvisors]);
   let deletions: RecordDeletions;
   const search = new FocusSearchService(
     searchStore,
@@ -340,6 +387,11 @@ export async function initializeServices(
         };
       const lease = await models!.acquire();
       return {
+        content: (
+          input: import("../shared/content-contracts").ContentRequest,
+          signal: AbortSignal,
+          runId: string,
+        ) => contentService.execute(input, signal, lease, runId),
         execute: (
           section: SearchSection,
           signal: AbortSignal,
@@ -359,7 +411,27 @@ export async function initializeServices(
     },
     changed,
     {
-      language: () => preferences.language,
+      language: () => preferences.resolvedReadingLanguage,
+      advisorIds: () => advisorStore.view().enabled,
+      revisions: async (platform) => ({
+        skillRevision:
+          "sha256:" +
+          createHash("sha256")
+            .update(
+              await loadPlatformSkill(`${platform}-search`, "search", platform),
+            )
+            .digest("hex"),
+        promptRevision:
+          "sha256:" +
+          createHash("sha256")
+            .update(
+              browserSystem +
+                searchCaptureInstruction("") +
+                searchCitationInstruction(platform, "", ""),
+            )
+            .digest("hex"),
+      }),
+      publish: (report) => results.publishSearch(report),
       executionGate,
       isParsedDeleted: (taskId) => {
         const item = forwarding!.list().find((t) => t.taskId === taskId);
@@ -591,6 +663,59 @@ export async function initializeServices(
     changed();
     return preferences.view();
   });
+  for (const channel of ["advisors:view", "advisors:save", "results:reveal"])
+    handle(channel, async (event, ...args: unknown[]) => {
+      if (
+        event.senderFrame !== event.sender.mainFrame ||
+        event.senderFrame?.url !== expected ||
+        args.length !== (channel === "advisors:view" ? 0 : 1)
+      )
+        return { ok: false, message: "Invalid workspace request" };
+      try {
+        if (channel === "advisors:view")
+          return { ok: true, value: advisorStore.view() };
+        if (channel === "advisors:save") {
+          const value = await advisorStore.save(args[0]);
+          await search.reconcileAdvisors();
+          changed();
+          return { ok: true, value };
+        }
+        const input = z
+          .object({
+            kind: z.enum(["search", "reading"]),
+            taskId: z.string().uuid(),
+          })
+          .strict()
+          .parse(args[0]);
+        let value: string | undefined;
+        if (input.kind === "search") {
+          const report = search.readTask(input.taskId);
+          if (deletions.hidden("search", report.reportId))
+            throw new Error("Result deleted");
+          value = await results.publishSearch(report);
+        } else {
+          const detail = forwarding!.read(input.taskId);
+          if (deletions.hidden("parsed", detail.task.materialId))
+            throw new Error("Result deleted");
+          value = await results.publishReading(detail);
+        }
+        if (!value) throw new Error("Result is still running");
+        shell.showItemInFolder(value);
+        return { ok: true, value };
+      } catch {
+        return { ok: false, message: "结果文件暂不可用" };
+      }
+    });
+  handle("preferences:save-reading-language", async (event, value: unknown) => {
+    if (
+      event.senderFrame?.url !== expected ||
+      event.senderFrame !== event.sender.mainFrame
+    )
+      throw new Error("Invalid preferences request");
+    await preferences.saveReadingLanguage(value);
+    changed();
+    return preferences.view();
+  });
   handle("preferences:save-task-browser", async (event, visible: unknown) => {
     if (
       event.senderFrame?.url !== expected ||
@@ -612,6 +737,12 @@ export async function initializeServices(
       const value = await exportTaskPiLogs(
         [join(app.getPath("userData"), "browser-traces")],
         id,
+        search
+          .reports()
+          .find((report) => report.taskId === id)
+          ?.sections.flatMap((section) =>
+            section.runId ? [section.runId] : [],
+          ) ?? [],
       );
       return { ok: true, value };
     } catch {
@@ -665,7 +796,13 @@ export async function initializeServices(
           value = await search.start(args[0]);
         else if (channel === searchChannels.retry)
           value = await search.retry(z.string().uuid().parse(args[0]));
-        else if (channel === searchChannels.cancel)
+        else if (channel === searchChannels.cancelSection) {
+          const input = z
+            .object({ taskId: z.string().uuid(), sectionId: z.string().uuid() })
+            .strict()
+            .parse(args[0]);
+          await search.cancelSection(input.taskId, input.sectionId);
+        } else if (channel === searchChannels.cancel)
           await search.cancel(z.string().uuid().parse(args[0]));
         else {
           const selection = searchSelectionSchema.parse(args[0]);

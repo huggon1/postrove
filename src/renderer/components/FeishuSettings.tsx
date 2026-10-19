@@ -109,9 +109,7 @@ export function FeishuSettings({
           </div>
         ))}
       <p className="muted-copy">
-        {t(
-          "向机器人发送一条消息后，在这里授权本人单聊。授权后发送的新链接会加入解析。",
-        )}
+        {t("向机器人发送一条消息，再授权这里出现的聊天。")}
       </p>
     </div>
   );
@@ -124,7 +122,6 @@ export function FeishuSettings({
       >
         <span>
           <strong>{name}</strong>
-          <small>{t("链接转发到应用内阅读")}</small>
         </span>
         <span>
           <span
@@ -357,11 +354,7 @@ export function FeishuSettings({
           {step === 2 && (
             <>
               <h3>{t("接入已配置")}</h3>
-              <p>
-                {t(
-                  "现在可以向已授权聊天发送一条 HTTPS 链接。Bot 确认收取后，在内容中查看解析结果，在顶部任务面板查看进度。",
-                )}
-              </p>
+
               <div className="settings-actions">
                 <button
                   className="button button-quiet"
@@ -370,7 +363,7 @@ export function FeishuSettings({
                     onOpenContent();
                   }}
                 >
-                  {t("打开解析结果")}
+                  {t("查看阅读内容")}
                 </button>
                 <button className="button button-primary" onClick={finish}>
                   {t("完成")}
@@ -385,11 +378,6 @@ export function FeishuSettings({
           title={t("确认修改机器人配置")}
           onClose={() => setConfirm(undefined)}
         >
-          <p>
-            {t(
-              "后续链接按更新后的配置接收。已保存的内容、任务和收取记录保留。",
-            )}
-          </p>
           <div className="settings-actions">
             <button
               className="button button-quiet"

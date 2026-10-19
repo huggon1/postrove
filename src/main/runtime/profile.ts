@@ -1,10 +1,10 @@
 import { deletionStateSchema } from "../../shared/deletion-contracts";
 import { searchStateSchema } from "../../shared/focus-search-contracts";
 import { claimProfile } from "./profile-lock";
-import { businessGenerationSchema } from "./business-reset";
 import { z } from "zod";
 import { taskStateSchema } from "../../shared/task-contracts";
-import { languageSchema } from "../../shared/language";
+import { preferencesSchema } from "../../shared/preferences-contracts";
+import { advisorSettingsSchema } from "../../shared/advisor-contracts";
 import {
   cp,
   lstat,
@@ -26,6 +26,7 @@ const businessFiles = [
   "tasks.json",
   "forwarding.json",
   "preferences.json",
+  "advisors.json",
 ];
 async function regularTree(path: string): Promise<void> {
   const info = await lstat(path);
@@ -115,19 +116,25 @@ export async function prepareProfile(
           if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
         }
       }
+      for (const folder of ["results", "material-images"]) {
+        try {
+          await regularTree(join(source, folder));
+          await cp(join(source, folder), join(stage, folder), {
+            recursive: true,
+            dereference: false,
+            errorOnExist: true,
+          });
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+        }
+      }
       for (const file of businessFiles) {
         try {
           const path = join(stage, file);
           let data = JSON.parse(await readFile(path, "utf8"));
-          if (file === "business-generation.json") {
-            const marker = businessGenerationSchema.parse(data);
-            if (marker.state === "resetting")
-              throw new Error(
-                "Complete the source profile business reset before copying it",
-              );
-          }
-          if (file === "preferences.json")
-            z.object({ language: languageSchema }).strict().parse(data);
+          if (file === "preferences.json") data = preferencesSchema.parse(data);
+          if (file === "advisors.json")
+            data = advisorSettingsSchema.parse(data);
           if (file === "record-deletions.json")
             data = deletionStateSchema.parse(data);
           if (file === "tasks.json") {

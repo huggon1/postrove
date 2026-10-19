@@ -94,5 +94,19 @@ export function createBrowserTools(
           }),
         ),
     });
+  tools.push({
+    name: "structure_content",
+    label: "Structure captured content",
+    description:
+      "Extract a title, full Markdown and citations from a successful capture in this task. The application resolves the capture and runs an isolated text agent. Returns structured content with original destinations preserved.",
+    parameters: Type.Object({ captureId: Type.String() }),
+    execute: async (_id, params) =>
+      result(
+        await operate({
+          action: "structure_content",
+          captureId: (params as { captureId: string }).captureId,
+        }),
+      ),
+  });
   return tools;
 }

@@ -39,6 +39,8 @@ export interface ForwardingTaskSummary {
 }
 export interface ForwardingTaskDetail {
   task: {
+    attemptId?: string;
+    attemptStartedAt?: string;
     outputLanguage?: Language;
     taskId: string;
     materialId: string;

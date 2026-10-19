@@ -8,16 +8,13 @@ Postrove is a desktop app that helps you find posts with each platform's own AI 
 
 ## Features
 
-### Search with platform AI
+### Ask your AI members
 
-Choose your information sources and a time range, then ask a question. View relevant posts and source links found by each platform's AI, alongside its original answer. Interesting sources can go directly into parsing.
+Start a topic and choose its members. Each member answers independently with its platform's posts and sources. Open the topic to read its replies, inspect member receipts, and collect individual, selected, or all sources into Reading.
 
-Save search conditions as a follow to run daily or weekly while Postrove is open.
+One platform sign-in can enable several language experts. Grok in Chinese and English share the same X connection; 点点 uses Chinese on Xiaohongshu. Postrove translates each question into the expert language and prepares replies in your reading language while retaining the originals.
 
-| AI search entry | Information source |
-| --- | --- |
-| Grok within X | X |
-| 点点 AI | Xiaohongshu |
+Scheduled messages send a saved question daily or weekly while Postrove is open. Each occurrence creates its own topic.
 
 ### Collect content to read later
 
@@ -34,16 +31,24 @@ For example, when you find a long technical article you want to read later, forw
 
 Platform access and login state determine retrieval coverage. Partial retrieval keeps the available content and shows its coverage.
 
+## Architecture
+
+![Postrove architecture](docs/architecture/overview.svg)
+
+[Interactive architecture](docs/architecture/index.html) · [Agent prompts and tools](docs/agent-prompt-flow.md) · [Saved Markdown results](docs/data-contracts.md#result-packages)
+
+This source revision contains the topic workspace refactor. Published packages have their own release notes.
+
 ## Installation and use
 
 Installation packages are available for macOS Apple silicon.
 
 1. Install Google Chrome.
 2. Download the DMG from [GitHub Releases](https://github.com/huggon1/postrove/releases), move Postrove into Applications, and open it. Packages use a project signature; macOS may require System Settings → Privacy & Security → Open Anyway on first launch.
-3. In Settings, select a Pi provider, complete its authentication, and save a model connection. Then sign in to your selected platforms. Existing Codex connections offer a one-time migration to native Pi login.
-4. Enter a question in Search or add a link in Content → Parsed content. For bot forwarding, configure Telegram or Feishu and authorize your chat in Settings. Feishu supports official scan-to-create registration or an existing app with direct-message, sending, and history permissions.
+3. In Settings → Background models, create a connection, complete authentication, and select a model. Open Members to sign in to a platform and enable its language experts. Existing Codex connections offer a one-time migration to native Pi login.
+4. Start a topic or add a link in Reading. For bot forwarding, configure Telegram or Feishu and authorize your chat in Settings. Feishu supports official scan-to-create registration or an existing app with direct-message, sending, and history permissions.
 
-Reports and website sessions are stored locally. Tasks send related questions and materials to your configured model. Later versions can be downloaded and installed through Settings → Application updates.
+Reports and website sessions are stored locally. Tasks send related questions and materials to your configured model. Later versions can be downloaded and installed through Settings → About.
 
 ## Account risk
 

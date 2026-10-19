@@ -266,11 +266,21 @@ export class PlatformAccess {
       section.platform,
       taskId,
       config,
-      platformSearchInstruction(section.platform, section.prompt),
+      platformSearchInstruction(
+        section.platform,
+        section.prompt,
+        section.checkpoint,
+      ),
       signal,
       "search",
       refreshCredential,
       onProgress,
+      section.checkpoint && section.checkpoint.state !== "prepared"
+        ? {
+            prompt: section.platformPrompt || section.prompt,
+            conversationUrl: section.checkpoint.conversationUrl,
+          }
+        : undefined,
     );
     if (
       typeof result.output.rawReply !== "string" ||

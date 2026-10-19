@@ -238,10 +238,7 @@ test("Feishu setup, durable receipts, history recovery and account isolation", a
   let app = await launch();
   try {
     let page = await app.firstWindow();
-    await page
-      .getByRole("navigation")
-      .getByRole("button", { name: "设置", exact: true })
-      .click();
+    await page.getByRole("button", { name: "设置", exact: true }).click();
     let section = page.getByRole("region", { name: "飞书", exact: true });
     await section.locator(".telegram-summary").click();
     await section
@@ -423,10 +420,7 @@ test("Feishu setup, durable receipts, history recovery and account isolation", a
     const beforeReview = connections;
     app = await launch("review");
     page = await app.firstWindow();
-    await page
-      .getByRole("navigation")
-      .getByRole("button", { name: "设置", exact: true })
-      .click();
+    await page.getByRole("button", { name: "设置", exact: true }).click();
     section = page.getByRole("region", { name: "飞书", exact: true });
     await section.locator(".telegram-summary").click();
     await section
@@ -444,7 +438,15 @@ test("Feishu setup, durable receipts, history recovery and account isolation", a
       animations: "disabled",
     });
     await guide.getByRole("button", { name: "关闭", exact: true }).click();
-    await page.getByLabel("Language", { exact: true }).selectOption("en");
+    await page.getByRole("button", { name: "偏好设置", exact: true }).click();
+    await page.getByLabel("界面语言", { exact: true }).selectOption("en");
+    await page
+      .getByRole("button", { name: "Inbox connections", exact: true })
+      .click();
+    await page
+      .getByRole("region", { name: "Feishu", exact: true })
+      .locator(".telegram-summary")
+      .click();
     section = page.getByRole("region", { name: "Feishu", exact: true });
     await section
       .getByRole("button", { name: "View setup steps", exact: true })

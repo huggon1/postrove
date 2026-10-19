@@ -85,10 +85,7 @@ test("collapsed Telegram settings guide connection and authorization", async ({}
   let app = await launch();
   try {
     let page = await app.firstWindow();
-    await page
-      .getByRole("navigation")
-      .getByRole("button", { name: "设置", exact: true })
-      .click();
+    await page.getByRole("button", { name: "设置", exact: true }).click();
     const summary = page.locator(".telegram-settings .telegram-summary");
     await expect(summary).toHaveAttribute("aria-expanded", "false");
     await expect(page.getByLabel("Bot Token", { exact: true })).toHaveCount(0);
@@ -170,10 +167,7 @@ test("collapsed Telegram settings guide connection and authorization", async ({}
     await app.close();
     app = await launch();
     page = await app.firstWindow();
-    await page
-      .getByRole("navigation")
-      .getByRole("button", { name: "设置", exact: true })
-      .click();
+    await page.getByRole("button", { name: "设置", exact: true }).click();
     await expect(
       page.locator(".telegram-settings .telegram-summary"),
     ).toContainText("@review_setup_bot");

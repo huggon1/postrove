@@ -1,81 +1,57 @@
 # Postrove product specification
 
-Postrove searches social-media content through platform AI and parses submitted links into readable material. This document owns behavior and page flows. The root [README](../README.md) describes current source capabilities; live acceptance records describe observed platform results.
+Postrove presents questions as topics. Selected AI members reply independently through their own platform. People collect useful sources into a separate reading library. This document owns product behavior; [architecture](architecture-overview.md) owns execution.
 
-## Product scope
+## Workspace
 
-The application opens on Search. Content has fixed Parsed content and Search results destinations. Focus manages recurring conditions. The global header task panel shows execution status and exports native Pi logs. Settings manages model connections, platform sessions, bot connections, task browser visibility, application language, and application updates.
+The top navigation contains Topics, Reading, and Scheduled messages. Settings and Members open from the top bar. A topic contains the original question, selected members, their replies, source links, and member receipts. Opening a card shows its conversation. The topic list supports all, unread, and scheduled views.
 
-## Single-question search
+The composer sends the question to its selected enabled members. An HTTPS link opens Add link. Source collection offers individual, selected, and all-source actions. Selecting a collected source opens its reading record. AI members produce independent replies to the original question.
 
-Search accepts a question, selected platforms, and a content time range. Search executes these conditions and confirms task addition while retaining the form. Save as Follow opens a schedule editor and saves the conditions after schedule selection.
+## Members and language
 
-X uses Grok with an English question; Xiaohongshu uses 点点 AI with a Chinese question. Each platform starts a fresh conversation. Adaptation preserves the question's meaning and requests original social-media links. The content time range is sent to the platform AI; reported dates reflect available evidence.
+One platform connection owns a shared browser session. Its language switches enable individual members. X offers Grok in Chinese and English; Xiaohongshu offers 点点 in Chinese. Members opens platform connection cards, a focused sign-in step, login verification, language selection, and sign-out confirmation.
 
-Each run produces one independent report containing the original question, conditions, exact platform questions, original replies, and titled candidate links. The application confirms a stable platform answer and saves it before a second step extracts its citations. Source extraction uses that answer's inline links and source panel. A later extraction failure retains the answer and verified links and marks the report partial. A completed source inspection can record an empty source result. Successful sections remain readable when another platform fails.
+Interface language controls application labels. Expert language controls the exact question sent to the platform AI. Reading language controls prepared replies and collected material; its default follows the interface language. Main freezes the resolved reading language when accepting a run. Saved content keeps its original language after preference changes.
 
-Search results mixes manual and follow runs, newest first, with origin filters. Each platform section displays its original answer, source links, and retrieval state. Open Source opens a link. Add to Parsing submits the source and confirms task addition. Repeating the same canonical source within one report reuses its parsing task.
+Main translates the question into the expert language and appends one sentence requesting platform posts and original links. Each expert opens a fresh conversation. The application saves the exact submitted question and captured answer. Formatting and translation create a separate reading version. The reader can switch between reading and original versions and inspect the actual question.
 
-## Follows and scheduling
+## Replies, receipts, and recovery
 
-A follow stores a name, question, platforms, content time range, and daily or weekly schedule. Daily schedules select a time; weekly schedules select a weekday and time. The application displays the next execution in local time. The first automatic run occurs then.
+Main saves the platform answer before asking the same browser session to extract its citations. Receipt details show each member's answer, source state, and observed failure stage: question preparation, bridge, platform, sources, or reading processing. Partial success keeps useful replies and verified links readable. Empty sources produce a partial topic.
 
-The running application admits due occurrences. Occurrences missed while closed expire. Returning from sleep resumes future occurrences. A queued or running task for the same follow skips that occurrence. Different follows and manual searches enter one serial search queue.
+Topic receipts expose Stop for active members, Stop all, result-file access, and native Pi log export. Stopping one member lets the other selected members continue. A captured answer survives cancellation and later citation or translation failure. A submitted checkpoint records the existing conversation; crash recovery observes that conversation before continuing. An unavailable conversation produces a bridge failure. A fresh send creates a new topic.
 
-Each admitted run freezes its conditions. Editing affects later admissions and recalculates the next execution. Pause stops future admissions; resume computes the next future time. Delete removes the follow and future plan. Existing reports retain their saved identity and conditions; admitted runs continue until completion or Stop.
+Browser access uses a shared serial lock. Search and reading enter independent queues. The application retries transient browser/model failures within fixed budgets. Login, verification, and account agreements return an actionable platform state. A reading failure retains saved source content and completed translation chunks.
 
-## Link parsing and connections
+## Scheduled messages
 
-Parsed content accepts an HTTPS link manually or from an authorized Telegram or Feishu chat. The Agent collects the main text and images plus explicit direct materials, including quoted posts and author-supplied links, one level deep. GitHub repository scope is its default README. Accessible frames contribute ordinary page text and images.
+A scheduled message stores a name, question, selected members, and a daily or weekly local send time. Each due occurrence creates a new topic with frozen conditions. The running application admits occurrences; occurrences missed while closed expire. An outstanding run for the same schedule skips that occurrence. Edits affect later admissions; pause and delete affect future occurrences.
 
-Each material saves its source snapshot, translated Markdown, short introduction, retrieval coverage, and processing state. Reading preserves source order, headings, lists, tables, code, commands, identifiers, links, and image positions. Long text is translated in chunks. A failed or stopped task retains its saved sources and translated portions.
+Member changes update future recipient sets. A schedule with zero enabled recipients becomes paused. The editor requires an enabled recipient before save or resume. Already admitted topics retain their member snapshot. Historical time-range fields remain readable; new sends use the exact question and the post-enhancement sentence.
 
-The reader lists the main material and direct references with their states. Selecting a material displays its source, introduction, coverage, and body in the run's saved language. Partial material shows its issue and available text. The reader preserves per-material reading position. Active Content records expose Stop.
+## Reading and link intake
 
-Telegram acknowledges accepted links after local persistence and queue submission. Chat and message identities deduplicate receipt. Startup retrieves messages available after the saved Telegram cursor. [Data contracts](data-contracts.md#telegram-queue-and-business-reset) owns receipt and upgrade behavior.
+Reading contains saved and partial materials. Add link accepts HTTPS addresses. Telegram and Feishu authorized messages enter the same collection pipeline. Main saves the accepted message identity before acknowledging intake. Repeated message identities reuse their queue entry.
 
-## Telegram setup and management
+Collection captures the main text, images, and one level of direct references. GitHub collection targets the default README. Materials keep their individual sources, coverage, translated chunks, introductions, and issues. The reader offers a material selector, original/reading versions, source navigation, progress, Stop, retry, result files, and native logs. Markdown preserves links, code, images, and diagrams.
 
-Telegram settings starts collapsed. Its summary shows the connection state and verified Bot username. Expanding it reveals chat authorization and maintenance. Start Setup opens a focused side drawer with BotFather instructions, Token save and verification, discovered-chat authorization, and a completion step that directs the user to Parsed content. Setup advances after successful verification and authorization. Reopening the drawer derives progress from saved configuration.
+Telegram settings has a collapsed connection card and a focused setup drawer: verified Token, discovered-chat authorization, then reading access. Feishu uses scan-to-create or existing App ID/Secret, application permissions, discovered direct-chat authorization, and account management. Credential replacement verifies the new account before commit. Revocation affects later intake while preserving accepted records. Review profiles start bot receiving paused. [Bot contracts](data-contracts.md#shared-bot-receipts-and-feishu-accounts) own deduplication and history recovery.
 
-A new chat appears after sending a message such as `/start` to the Bot. Authorization applies to later messages. The completion step asks the user to send a fresh HTTPS link and check the actual acknowledgment and saved result. Content and the global task panel present processing progress. Verification errors remain visible in the drawer so users can retry. Token save verifies the submitted Bot before changing credentials or interrupting the current receiver. Successful replacement saves the new verified identity; clearing removes it. Revocation and Token clearing use consequence confirmation and retain existing content, tasks, and receipt history.
+## Settings
 
-## Feishu setup and management
+Settings contains Inbox connections, AI members, Background models, Preferences, and About. Model setup separates provider selection, native Pi authentication, and model/options. Saved connections expose edit and removal. Authentication controls follow the native provider's text, secret, selection, browser, or device-code prompts. Connection checks report their actual state.
 
-Feishu settings uses a collapsed connection summary and a three-step setup drawer. Scan-to-create opens the official application registration page. Existing applications use App ID and App Secret verification. The setup explains bot capability, direct-message reception, sending, history permission, the Receive message event, persistent connections, and application publication. Tenant policy controls application approval.
+Main freezes model metadata and options for active execution through a lease. Existing API connections migrate to Pi; existing Codex connections use staged native authorization. Cancellation retains the active connection. Browser visibility applies at the next browser operation. Platform sign-in always opens a visible window.
 
-The user sends a message to their application bot, then authorizes the discovered direct chat in Postrove. Authorization records the sender and effective time. Later messages containing one HTTPS link enter parsing. Text and rich-text hyperlinks share the existing single-link policy. Other message content receives a resend instruction. Group and bot events complete transport receipt with their content outside the parsing queue.
+## Saved results and deletion
 
-Startup, reconnection, and periodic reconciliation retrieve authorized direct-chat history from saved checkpoints. Complete pagination advances each chat checkpoint. Repeated pages or failed requests preserve the prior checkpoint. Live events and history share durable message deduplication. Successful parsing submission precedes the user-facing receipt. Pending receipts retry independently of parsing.
+Terminal runs publish immutable Markdown packages. Result file opens the current run's location. [Result contracts](data-contracts.md#result-packages) define stable paths and latest results for further Agent work.
 
-Replacing credentials verifies the candidate before changing the receiver. Each application retains its own authorization, receipt history, and checkpoints. Clearing configuration stops receiving and retains saved content and account history. Review profiles keep automatic bot receiving paused; explicit configuration or verification starts the selected connection.
-
-## Recovery and task status
-
-Browser execution retries transient model failures and repairs recoverable page actions within time and action budgets. Recovery observes the current page before repeating actions. Login, verification, and account agreements requiring human action end the affected platform section while other sections continue. Translation and introduction also retry transient connection failures. Exhausted recovery marks the parsing task failed and retains its sources and translated portions; translation fidelity validation permits one correction.
-
-The global header task entry remains available while searching, reading, or configuring the app. Its panel groups active, failed, and ended work. Rows show state and stage; expanding a row shows update time, failure reason, activity, saved-result navigation, and native Pi export. The panel initially opens failures when present, otherwise active work or ended history. Individual clearing and Clear Ended hide terminal task history and preserve saved results and logs. Clear Ended includes completed, failed, and stopped records present at the time of the action. Each clear uses the eight-second recovery window. Escape or an outside click closes the panel and returns focus to the task entry. Application-update task links open this same panel. Content owns reading and Stop. A new search starts from Search; a new parsing request starts from Parsed content.
-
-## Record deletion and recovery
-
-Each task, parsed result, and search result exposes Delete through its More menu. Active records first offer Stop and Delete. Main completes Stop before saving deletion; a Stop failure leaves the record visible. Deleting a task entry preserves its saved content. Deleting a parsed result hides its main material and direct references together and retains task history. Deleting a search result retains its follow and independently submitted parsing records.
-
-Deletion feedback offers Undo for eight seconds. Each operation has its own recovery action. Undo restores original identities and saved data; stopped execution stays stopped. Startup restores feedback for the remaining recovery window. Deleting the selected item selects its next neighbour, or its preceding neighbour at the list end. The last deletion shows the destination's empty state. Repeating Add to Parsing after result deletion creates a fresh parsing identity.
-
-## Languages and runtime boundaries
-
-Settings supports Simplified Chinese and English. Interface messages use the selected language. Generated reading material and saved execution messages use the language frozen for that run. Questions, platform replies, quotations, URLs, and identifiers keep their source wording.
-
-Settings lists providers, chat models, and authentication methods from the installed Pi runtime. Each connection saves a provider, model, and task options. Browser and reading tasks each offer Pi-supported reasoning levels plus a displayed task default. Common controls expose temperature, maximum output, transport, and cache preference. Advanced JSON uses the selected Pi API's native options and gives its native thinking fields control of reasoning. Custom catalogs use Pi models.json. A model request establishes actual account access and quota.
-
-Saving makes the selected connection available to later tasks. Active execution retains its model and option snapshot. Existing API connections migrate automatically with their endpoint, key, and model. Existing Codex connections retain the legacy bridge until a fresh Pi authorization succeeds and the user saves the native connection. Cancelled or failed authorization retains the active connection. Shared Chrome preserves platform sessions. Task browsing defaults to headless; Settings can show task windows, with changes applied at the next browser operation. Platform login always opens a window. Credentials remain in controlled local storage. Source pages and replies are evidence data; application instructions control task actions.
-
-The [data contracts](data-contracts.md#telegram-queue-and-business-reset) define the test-business reset and retained connections.
+Deleting a topic or reading record changes visibility and offers Undo for eight seconds. Main stops active execution before deleting it. Source associations, material evidence, logs, and receipt identities remain saved. Undo restores the same record identity. Recollecting a hidden reading result creates a fresh reading identity.
 
 ## Application updates
 
-Installed macOS builds check the public GitHub Releases source five seconds after startup and every six hours. A new version produces a dismissible notice and a persistent sidebar entry. Settings shows the current version, last check, release notes, download progress, and retry actions. Source builds show the installed-build availability message.
+Installed macOS builds check GitHub Releases after startup and every six hours. About shows version, check state, release notes, download, cancellation, and installation. Source builds show the installed-build requirement. Download requires a user action.
 
-Download starts when the user selects Download Update. Cancel returns to the available version. A downloaded update offers Install and Restart. Selecting this action during active search or parsing opens confirmation to install when current tasks finish. Confirmation pauses admission in both queues; new submissions remain queued. Cancel Waiting resumes admission. Once admitted work finishes and its worker cleanup completes, Main validates the native update, saves the receipt, shuts down services, and installs. A validation failure shows the installation error and resumes admission. Closing the application follows ordinary shutdown; installation starts through the update action.
-
-The new version opens the same profile and shows a one-time completion notice. Queued searches and parsing resume on launch. Running searches that were interrupted retain the saved result and interruption state. [Release preparation](development.md#release-preparation) owns package and signing requirements.
+Install and Restart waits for active work after confirmation, holds admission in both queues, validates the package, and shuts down services. A failure resumes admission. Cancelling the wait resumes queued work. Restart opens the same profile, preserves accepted records, and resumes queued work. [Release preparation](development.md#release-preparation) owns signing and package acceptance.

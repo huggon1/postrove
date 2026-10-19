@@ -65,6 +65,7 @@ export interface ForwardingServiceDependencies {
     accessToken?: string,
   ) => Promise<ReadingMaterial[]>;
   language?: () => Language;
+  publish?: (detail: ForwardingTaskDetail) => Promise<unknown>;
   store: ForwardingStore;
   acquire(): Promise<Lease>;
   spawn(config?: ModelExecutionConfig): ForwardingWorkerHandle;
@@ -158,6 +159,9 @@ export class ForwardingPipelineService {
           });
         }
     });
+    for (const task of this.dependencies.store.snapshot().tasks)
+      if (task.finishedAt)
+        await this.dependencies.publish?.(this.read(task.taskId));
     this.dependencies.changed();
     this.schedulePump();
   }
@@ -343,6 +347,8 @@ export class ForwardingPipelineService {
         )
       )
         throw new Error("当前任务已完成");
+      task.attemptId = randomUUID();
+      task.attemptStartedAt = now();
       task.report = undefined;
       task.state = "queued";
       task.phase = "等待处理";
@@ -392,7 +398,10 @@ export class ForwardingPipelineService {
     }
     await entry?.preparing.catch(() => {});
     entry?.releaseExecution?.();
-    if (changed) this.dependencies.changed();
+    if (changed) {
+      await this.dependencies.publish?.(this.read(taskId));
+      this.dependencies.changed();
+    }
     this.schedulePump();
   }
 
@@ -886,6 +895,7 @@ export class ForwardingPipelineService {
           occurredAt: task.finishedAt,
         });
       });
+      await this.dependencies.publish?.(this.read(taskId));
       this.dependencies.changed();
       await this.finish(taskId, entry, false);
       return;
@@ -915,7 +925,10 @@ export class ForwardingPipelineService {
     });
     const entry = this.active.get(taskId);
     if (entry) await this.finish(taskId, entry, true);
-    if (changed) this.dependencies.changed();
+    if (changed) {
+      await this.dependencies.publish?.(this.read(taskId));
+      this.dependencies.changed();
+    }
   }
 
   private async stopWorker(worker?: ForwardingWorkerHandle) {

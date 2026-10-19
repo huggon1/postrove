@@ -447,8 +447,11 @@ app.whenReady().then(async () => {
               async (value) => {
                 progress.push(structuredClone(value));
                 await onProgress?.(value);
+                if (!value.rawReply) return;
                 if (input.mode === "cancel")
-                  await searchService!.cancel(taskId);
+                  await searchService!.cancel(
+                    searchService!.reports()[0].taskId,
+                  );
                 else worker!.kill();
               },
             ),

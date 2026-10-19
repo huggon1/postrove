@@ -15,6 +15,14 @@ import {
 } from "../shared/ipc-contracts";
 
 const bridge: DesktopBridge = {
+  advisorSettings: () => ipcRenderer.invoke("advisors:view"),
+  saveAdvisorSettings: (input) => ipcRenderer.invoke("advisors:save", input),
+  cancelAdvisorRun: (taskId, sectionId) =>
+    ipcRenderer.invoke(searchChannels.cancelSection, { taskId, sectionId }),
+  revealResult: (kind, taskId) =>
+    ipcRenderer.invoke("results:reveal", { kind, taskId }),
+  saveReadingLanguage: (language) =>
+    ipcRenderer.invoke("preferences:save-reading-language", language),
   botStatus: (channel) => ipcRenderer.invoke(botChannels.status, channel),
   saveBotCredentials: (channel, credentials) =>
     ipcRenderer.invoke(botChannels.save, channel, credentials),

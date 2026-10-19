@@ -17,6 +17,7 @@ test("development shows the version and packaged-update boundary", async ({}, in
   try {
     const page = await application.firstWindow();
     await page.getByRole("button", { name: "设置", exact: true }).click();
+    await page.getByRole("button", { name: "关于", exact: true }).click();
     const updates = page.getByRole("region", { name: "应用更新", exact: true });
     await expect(updates).toBeVisible({ timeout: 5000 });
     const { version } = JSON.parse(await readFile("package.json", "utf8"));
@@ -62,13 +63,14 @@ test("update shutdown resumes queued searches on the next launch", async ({}, in
     await application.evaluate(() =>
       (globalThis as any).fixtureServices.executionGate.pause(),
     );
-    await page.evaluate(() =>
-      window.postrove.startFocusSearch({
+    await page.evaluate(async () => {
+      await window.postrove.saveAdvisorSettings({ enabled: ["x-grok-en"] });
+      return window.postrove.startFocusSearch({
         question: "Resume saved search",
         platforms: ["x"],
         period: "all",
-      }),
-    );
+      });
+    });
     await application.evaluate(async () => {
       (globalThis as any).fixtureUpdates.close();
       await (globalThis as any).fixtureServices.shutdown();
@@ -86,7 +88,7 @@ test("update shutdown resumes queued searches on the next launch", async ({}, in
           JSON.parse(await readFile(join(profile, "focus-search.json"), "utf8"))
             .reports[0].status,
       )
-      .toBe("completed");
+      .toBe("partial");
     const tasks = JSON.parse(
       await readFile(join(profile, "tasks.json"), "utf8"),
     );
@@ -183,6 +185,7 @@ test("updates preserve work through cancellation, signature failure, and install
     const page = await application.firstWindow();
     await page.setViewportSize({ width: 1024, height: 760 });
     await page.getByRole("button", { name: "设置", exact: true }).click();
+    await page.getByRole("button", { name: "关于", exact: true }).click();
     const updates = page.getByRole("region", { name: "应用更新", exact: true });
     await updates
       .getByRole("button", { name: "检查更新", exact: true })
@@ -197,10 +200,11 @@ test("updates preserve work through cancellation, signature failure, and install
       page.getByText("Postrove 0.1.1 已发布", { exact: true }),
     ).toHaveCount(0);
     await page
-      .getByRole("button", { name: "搜索", exact: true })
+      .getByRole("button", { name: "话题", exact: true })
       .first()
       .click();
-    await page.getByRole("button", { name: "应用更新", exact: true }).click();
+    await page.getByRole("button", { name: "设置", exact: true }).click();
+    await page.getByRole("button", { name: "关于", exact: true }).click();
     await expect(updates).toBeVisible();
     await updates
       .getByRole("button", { name: "更新说明", exact: true })
@@ -239,13 +243,14 @@ test("updates preserve work through cancellation, signature failure, and install
     ).toBe(false);
     stageFails = false;
     const startSearch = () =>
-      page.evaluate(() =>
-        window.postrove.startFocusSearch({
+      page.evaluate(async () => {
+        await window.postrove.saveAdvisorSettings({ enabled: ["x-grok-en"] });
+        return window.postrove.startFocusSearch({
           question: "Hold running search",
           platforms: ["x"],
           period: "week",
-        }),
-      );
+        });
+      });
     const first = await startSearch();
     expect(first.ok).toBe(true);
     await expect
@@ -338,7 +343,9 @@ test("updates preserve work through cancellation, signature failure, and install
     await page.screenshot({
       path: info.outputPath("installation-requested.png"),
     });
-    await page.getByLabel("Language", { exact: true }).selectOption("en");
+    await page.getByRole("button", { name: "偏好设置", exact: true }).click();
+    await page.getByLabel("界面语言", { exact: true }).selectOption("en");
+    await page.getByRole("button", { name: "About", exact: true }).click();
     await expect(
       page.getByRole("region", { name: "Application updates", exact: true }),
     ).toBeVisible();

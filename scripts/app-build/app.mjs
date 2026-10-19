@@ -49,6 +49,7 @@ await build({
   define,
   entryPoints: [
     "src/worker/model-worker.ts",
+    "src/worker/content-worker.ts",
     "src/worker/jobs/browser/worker-entry.ts",
     "src/worker/jobs/forwarding/worker-entry.ts",
   ],

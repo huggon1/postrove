@@ -1,29 +1,40 @@
 # Agent prompt flow
 
-## Loading paths
+## Startup packets
 
-| Stage | System | User | Tools and additional instructions |
-| --- | --- | --- | --- |
-| Search answer | Generic `browserSystem` plus capture/access rules, assembled in browser worker | `platformSearchInstruction`: adapted question and reply capture | Browser plus the selected search skill catalog; `load_platform_skill` returns its full file |
-| Search sources | Same persisted browser session | `searchCitationInstruction`: extract citations after saving the answer | Browser and `capture_search_sources`, with the loaded platform skill |
-| Main/reference collection | Same browser system | `materialCollectionInstruction`: address, capture requirements, reference scope, and schema | Browser plus reading skill catalog; optional `read_xiaohongshu` tool |
-| Translation | `translationSystem` in a new lightweight Agent | One original Markdown chunk | Empty tool list |
-| Fidelity correction | Translation system plus correction instructions | Original, returned translation, and preservation issues | One new lightweight Agent with empty tools |
-| Introduction | `summarySystem` in a new lightweight Agent | Material title, coverage, and available translation | Empty tools; long inputs use successive reduction calls |
-| Connection check | Fixed connection-check system | Fixed OK request | Empty tool list, bounded output |
+| Agent | Task/input | Tools | Skill visibility | Output |
+| --- | --- | --- | --- | --- |
+| Platform bridge | Prepared question, platform identity, capture rules; submitted checkpoint on recovery | `browser`, `load_platform_skill`, `capture_search_sources`, `structure_content` | Selected platform search Skill name and description; full body after load | Captured answer, exact question, verified citations and source state |
+| Material capture | HTTPS address, main/reference scope, capture schema | `browser`, `load_platform_skill`, `structure_content`; optional `read_xiaohongshu` | Reading Skill names and descriptions; selected full bodies after load | Capture-backed material, source identity, ordered Markdown/images, coverage |
+| Translation | Current text chunk, target language, preservation rules | Empty | Empty | Translated Markdown |
+| Formatting | Captured text, paragraph/list/heading rules, preservation rules | Empty | Empty | Markdown reading version |
+| Structure | Current-task capture text and fixed JSON schema | Empty | Empty | Title, full Markdown, observed citation links |
+| Introduction | One material's title, coverage, readable text, target language | Empty | Empty | Short material introduction |
+| Connection check | Fixed connection-check system and OK request | Empty | Empty | Bounded check response |
 
-[Browser prompts](../src/platforms/browser/prompts.ts) owns common task templates. [Reading prompts](../src/worker/jobs/forwarding/reading-prompts.ts) owns translation and introduction systems. [Browser worker](../src/worker/jobs/browser/worker-entry.ts) assembles persisted sessions; [Pi runtime](../src/worker/pi-runtime.ts) creates lightweight Agents.
+[Browser prompts](../src/platforms/browser/prompts.ts) owns the generic system, reply/source tasks, and material scope. [Content capabilities](../src/worker/content/capabilities.ts) owns formatting and structure prompts and shares [reading prompts](../src/worker/jobs/forwarding/reading-prompts.ts) for translation and introduction.
 
-## Platform skills and tools
+## Question and answer flow
 
-[Bundled skills](../src/platforms/browser/skills.ts) derive names and descriptions from separate `SKILL.md` files. Search exposes only its selected platform's search skill. Collection exposes reading skill summaries so redirected or referenced pages can select the relevant instructions. `load_platform_skill` loads one file into a tool response; other bodies stay outside model context.
+Main prepares the question outside the bridge. It translates into the expert language, then appends exactly one sentence:
 
-[Tool definitions](../src/platforms/browser/tools.ts) owns browser operations and optional enhancement descriptions. Adding a tool changes its definition and registration. Platform instructions change in their own skill file. The generic system stays platform-independent.
+- Chinese: `请基于本平台的相关帖子回答，并附原帖链接。`
+- English: `Answer using relevant posts on this platform and include links to the original posts.`
 
-Persisted sessions use the application system and Pi's working-directory section. The factory fixes append-system input to an empty list and disables automatic context, skill, extension, and template discovery. Application skills use the explicit tool catalog. Lightweight Agents receive their explicit system directly. Both paths use the shared [Pi bridge](../src/pi/README.md) for native credentials, reasoning, and request options. New native sessions append provider, Pi version, and requested/effective reasoning as `postrove:model-settings` metadata.
+The bridge task contains that exact text and the output schema. The platform Skill supplies its fixed AI entry address and interaction guide. Main saves a captured stable answer before acknowledging the same session's citation phase. Browser captures provide the original answer bytes. Formatting and translation produce a separately saved reading version.
 
-## Recovery and logs
+## Explicit Skill and tool loading
 
-Browser recovery keeps the same session and task budget, with up to three transient-failure attempts and bounded result corrections. Tool-free translation and introduction calls also permit three transient-failure attempts, with short waits and cancellation checks. Authentication, quota, and invalid configuration failures end the call. Fidelity correction uses its own preservation check and correction prompt.
+[Bundled Skills](../src/platforms/browser/skills.ts) derive their names and descriptions from their own `SKILL.md` frontmatter. Search sees the selected platform's search catalog. Collection sees reading catalogs for redirects and references. `load_platform_skill` validates the requested name against the current catalog and returns its body as a tool result.
 
-Persistent sessions write native Pi JSONL and HTML. Lightweight export copies the actual system, user, assistant, and tool-result messages into the persisted session and restores the Agent message state before native export. [Execution identity](data-contracts.md#development-profiles-and-execution-identity) defines revision scope.
+[Browser tools](../src/platforms/browser/tools.ts) defines operations. `structure_content` resolves a successful capture from the current task before invoking a tool-free content Agent. Main validates structured links against supplied source evidence. Translation, formatting, and introduction enter through Main services or the saved-material reading worker.
+
+The Pi coding-session factory uses the application system and Pi working-directory section, with explicit tools and empty append-system input. Automatic context, Skill, extension, and template discovery remain disabled. Tool-free Agents use the explicit system directly. [Pi integration](../src/pi/README.md) owns native authentication and model options.
+
+## Recovery and evidence
+
+Browser recovery retains the same session and task budget. Transient model failures permit up to three attempts; invalid output has bounded corrections. Reading text calls use the same bounded transient retry policy. Fidelity validation permits one correction call and retains the original when the correction fails.
+
+The content worker limits tool-free calls to one Agent turn and carries a task cancellation signal. Main bounds concurrent content workers at two and drains cancellation through credential persistence. Search stages share one frozen model lease.
+
+Native Pi JSONL/HTML records systems, actual user tasks, loaded Skill bodies, tool definitions, observations, and responses. Browser sessions add model/settings metadata. [Execution identity](data-contracts.md#development-profiles-and-execution-identity) defines revision and trace association.

@@ -1,44 +1,8 @@
 import { t } from "../i18n";
 import { useEffect, useId, useRef, type ReactNode } from "react";
-import {
-  ArticleIcon,
-  FolderSimpleIcon,
-  CrosshairIcon,
-  PulseIcon,
-  GearSixIcon,
-  TrayIcon,
-  XIcon,
-  CheckCircleIcon,
-  WarningCircleIcon,
-  MinusCircleIcon,
-  ClockIcon,
-} from "@phosphor-icons/react";
+import { XIcon } from "@phosphor-icons/react";
 import { marked } from "marked";
 import DOMPurify from "dompurify";
-export function NavigationIcon({ name }: { name: string }) {
-  const Icon =
-    (
-      {
-        内容: ArticleIcon,
-        项目: FolderSimpleIcon,
-        关注卡: CrosshairIcon,
-        任务: PulseIcon,
-        设置: GearSixIcon,
-      } as Record<string, typeof ArticleIcon>
-    )[name] ?? ArticleIcon;
-  return <Icon size={19} weight="regular" aria-hidden="true" />;
-}
-export function TaskStateIcon({ status }: { status: string }) {
-  const Icon =
-    status === "completed"
-      ? CheckCircleIcon
-      : status === "failed"
-        ? WarningCircleIcon
-        : status === "cancelled"
-          ? MinusCircleIcon
-          : ClockIcon;
-  return <Icon size={19} aria-hidden="true" />;
-}
 let diagramSequence = 0;
 const emptyImages: { url: string; cachedUrl?: string }[] = [];
 export function Markdown({
@@ -184,52 +148,5 @@ export function Dialog({
       </header>
       <div className="dialog-content">{children}</div>
     </dialog>
-  );
-}
-export function Button({
-  children,
-  onClick,
-  disabled = false,
-  type = "button",
-}: {
-  children: ReactNode;
-  onClick?: () => void;
-  disabled?: boolean;
-  type?: "button" | "submit";
-}) {
-  return (
-    <button
-      type={type}
-      className="button"
-      onClick={onClick}
-      disabled={disabled}
-    >
-      {children}
-    </button>
-  );
-}
-export function EmptyState({
-  title,
-  children,
-}: {
-  title: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="empty">
-      <span className="empty-symbol" aria-hidden="true">
-        <TrayIcon size={28} />
-      </span>
-      <h2>{title}</h2>
-      <div>{children}</div>
-    </div>
-  );
-}
-export function Brand() {
-  return (
-    <div className="brand">
-      <img src="../assets/postrove-mark.svg" width="28" height="28" alt="" />
-      <span>Postrove</span>
-    </div>
   );
 }

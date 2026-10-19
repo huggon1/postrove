@@ -99,20 +99,23 @@ try {
     assert.equal(identity.build.dirty, false);
   }
   phase = "navigation";
-  for (const name of ["搜索", "搜索结果", "解析结果", "关注", "设置"])
+  for (const name of ["话题", "阅读", "定时发送"])
     await page
-      .getByRole("navigation")
+      .getByRole("navigation", { name: "主导航" })
       .getByRole("button", { name, exact: true })
       .click();
-  await page.getByRole("button", { name: "任务", exact: true }).click();
+  await page.getByRole("button", { name: "管理成员", exact: true }).click();
   await expect(
-    page.getByRole("dialog", { name: "任务", exact: true }),
+    page.getByRole("dialog", { name: "我的成员", exact: true }),
   ).toBeVisible();
   await page.keyboard.press("Escape");
   phase = "settings";
+  await page.getByRole("button", { name: "设置", exact: true }).click();
+  await page.getByRole("button", { name: "偏好设置", exact: true }).click();
   await expect(page.getByLabel("任务浏览器", { exact: true })).toHaveValue(
     "headless",
   );
+  await page.getByRole("button", { name: "关于", exact: true }).click();
   const updates = page.getByRole("region", { name: "应用更新", exact: true });
   await expect(updates).toContainText(`Postrove ${expected}`);
   const updateState = await page.evaluate(() =>
@@ -129,7 +132,8 @@ try {
     )
     .toBe(true);
   await page.screenshot({ path: join(output, "settings-zh-CN.png") });
-  await page.getByLabel("Language", { exact: true }).selectOption("en");
+  await page.getByRole("button", { name: "偏好设置", exact: true }).click();
+  await page.getByLabel("界面语言", { exact: true }).selectOption("en");
   await expect(page.getByLabel("Task browser", { exact: true })).toHaveValue(
     "headless",
   );
@@ -138,10 +142,14 @@ try {
   application = undefined;
   await launch();
   await page.getByRole("button", { name: "Settings", exact: true }).click();
-  await expect(page.getByLabel("Language", { exact: true })).toHaveValue("en");
+  await page.getByRole("button", { name: "Preferences", exact: true }).click();
+  await expect(
+    page.getByLabel("Interface language", { exact: true }),
+  ).toHaveValue("en");
   await expect(page.getByLabel("Task browser", { exact: true })).toHaveValue(
     "headless",
   );
+  await page.getByRole("button", { name: "About", exact: true }).click();
   await expect(
     page.getByRole("region", { name: "Application updates", exact: true }),
   ).toContainText(`Postrove ${expected}`);

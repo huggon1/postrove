@@ -1,69 +1,52 @@
 # Postrove architecture
 
-[Product specification](product-spec.md) owns behavior; [data contracts](data-contracts.md) owns fields and persistence. [Prompt flow](agent-prompt-flow.md) describes model instructions and tools.
+Postrove is a local Electron application. Main owns configuration, scheduling, persistent state, browser access, and result publication. Pi Agents operate platform pages and process captured text. The renderer reads snapshots and sends validated preload commands.
+
+[Interactive architecture](architecture/index.html) includes each Agent's task, tools, Skill catalog, prompts, and outputs. [Product behavior](product-spec.md), [data contracts](data-contracts.md), and [prompt flow](agent-prompt-flow.md) own their respective details.
+
+![System architecture](architecture/overview.svg)
 
 ## Runtime boundaries and data ownership
 
-Electron Main owns stores, model leases, bot integrations, scheduling, and execution queues. The React renderer sends preload commands and reads saved snapshots. Workers return captures or model output. Main validates identities, persists progress, then publishes changes.
+| Layer | Responsibility |
+| --- | --- |
+| React workspace | Topics, independent replies, reading, schedules, member setup, settings |
+| Electron Main | Admission, frozen identities/languages, queues, model leases, cancellation, stores, receipts, results |
+| Browser worker | One Pi coding session per bridge or capture job; explicit tools and Skill loading |
+| Content worker | Bounded tool-free text Agents for shared content operations |
+| Reading worker | Saved material chunks, translation, fidelity correction, introduction, progress |
+| Shared Chrome | Platform login sessions and serialized HTTPS browser access |
 
-| Store              | Saved state                                                                 |
-| ------------------ | --------------------------------------------------------------------------- |
-| `FocusSearchStore` | `focus-search.json`: follows and independent reports                        |
-| `ForwardingStore`  | `forwarding.json`: submitted sources, material progress, and parsed results |
-| `TaskStore`        | `tasks.json`: task snapshots and activity                                   |
-| `RecordDeletions` | `record-deletions.json`: independent record visibility and timed undo |
-| Trace root         | `browser-traces/`: task-associated Pi sessions and native HTML              |
+`FocusSearchStore` saves topics and schedules in `focus-search.json`. `AdvisorStore` saves enabled language experts in `advisors.json`. Platform connection identity and login are shared by those experts. `ForwardingStore` saves reading tasks and materials in `forwarding.json`; `TaskStore` saves execution events in `tasks.json`. Main validates every update before notifying React. [Data contracts](data-contracts.md) own exact fields and ordering.
 
-## Search and follow orchestration
+## Topic execution
 
-`FocusSearchService` admits manual and scheduled questions into a serial queue. It saves report and task identities, then persists each platform's answer and citation evidence through `PlatformAccess.search`. Candidate submission reserves its parsing identity before entering the forwarding queue. [Scheduling rules](product-spec.md#follows-and-scheduling) own admission behavior.
+A manual or scheduled send resolves enabled experts and freezes role, connection, question language, reading language, run identity, and prompt/Skill revisions. Main acquires an execution lease, calls the shared translation capability, and appends the post-enhancement sentence. It saves the actual question before browser execution.
 
-## Content submission pipeline
+Each expert receives a separate bridge task. The bridge sees a generic system, prepared question, output contract, browser tools, and the selected platform's Skill summary. It selects and loads that Skill. The Skill supplies the platform's fixed entry address and page guide. The bridge submits the prepared question once and captures the stable answer.
 
-The forwarding service first calls `PlatformAccess.collect`. A browser worker collects the main material; Main validates and saves its captures, then separately collects direct references. The reading worker receives those saved materials, translates chunks through lightweight Agents, and generates introductions. Main validates and persists each material update.
+Main commits the answer and acknowledges it. The same Pi session continues into citation extraction. Captures and observed URLs establish provenance; Main validates platform post identity before accepting sources. Main then formats and translates the answer through shared text capabilities. Original and reading versions remain separate. Each expert has its own cancellation signal and receipt state. The global browser lock serializes access.
 
-Search and parsing have separate queues and share the Chrome access lock.
+## Collection and content capabilities
 
-Worker environments inherit explicit proxy variables. On macOS, a GUI launch reads explicit HTTP and HTTPS proxy variables first, then system proxy settings. Native Pi authentication and catalog operations in Main apply the same policy through Node's public proxy dispatcher. Localhost and loopback requests retain direct routing.
+Manual links, collected topic sources, and authorized bot messages use one reading pipeline. A capture Agent receives an address, capture scope, output contract, browser tools, and reading Skill summaries. Main validates and saves the main source, then dispatches direct references one level deep. The reading worker consumes saved material rather than browsing.
 
-## Bot integration boundary
+`translate_content`, `format_content`, `structure_content`, and `introduce_content` share one implementation. Main calls service operations directly for preparation and presentation. Browser Agents can call `structure_content` with a current-task capture ID; Main resolves the evidence and invokes the same isolated implementation. Text Agents receive explicit content and output instructions with empty tool and Skill lists. Text-service concurrency is bounded at two; each task carries cancellation and output budgets.
 
-`integrations/bots/` owns the durable inbox, atomic account stores, authorization, receipt delivery, account lifecycle, history reconciliation, and the management IPC registry. `BotAdapter` defines verification, connection lifecycle, normalization, optional history pagination, and outbound delivery. Channel adapters own protocol payloads and transport credentials.
+The reading worker uses the same translation and introduction implementations with its chunk/progress channel. Markdown fidelity checks preserve links, executable code, and identifiers. One correction attempt repairs fidelity failures. Original captures survive processing failures.
 
-Telegram adapts its existing store through `telegramInboxRepository` and uses the shared inbox while retaining its polling cursor and data format. Feishu implements `BotAdapter` with the official SDK WebSocket transport and REST history and receipt APIs. Each account holds an independent inbox and history checkpoints. SDK event handlers await durable local receipt; queue submission and outbound receipt run in the background.
+## Browser, model, and integration boundaries
 
-The forwarding boundary accepts `BotForwardingSubmission` with a channel, account identity, and message key. Existing application and Telegram task identities remain readable. Adding another channel extends the channel contract and supplies its adapter, credential validation, registry entry, and setup view. Collection and reading consume the same submission contract.
+`PlatformBrowser` owns Chrome, sessions, constrained operations, and the serial access lock. `BrowserAgent` maps worker calls to validated operations and current-task captures. `PlatformAccess` validates source identity and caches images. Both browser Agent types use explicit `load_platform_skill`; automatic project instruction and extension discovery stays disabled in the Pi session factory.
 
-## Platform browser and focus search
+[The Pi bridge](../src/pi/README.md) adapts native ModelRuntime, authentication, stream handling, reasoning, and request options. Main owns active connection selection and leases. A lease freezes model/options and retains its credential directory through worker cleanup. Browser and tool-free sessions export native transcripts under `browser-traces`. Task log export includes expert run IDs and reading attempts.
 
-| Component               | Responsibility                                                               |
-| ----------------------- | ---------------------------------------------------------------------------- |
-| `ChromeProfiles`        | Start Chrome and attach through loopback CDP                                 |
-| `PlatformBrowser`       | Human login, saved sessions, serialized access, and constrained actions      |
-| `BrowserAgent`          | Bridge worker tool requests to Main, retaining observations and captures     |
-| `PlatformAccess`        | Capture provenance, canonical links, material validation, and image caching  |
-| Bundled platform skills | Per-platform search and reading instructions loaded through a dedicated tool |
+Worker environments inherit explicit proxy policy. On macOS, GUI startup resolves explicit proxy variables before system settings. Loopback traffic retains direct routing. Default workers receive the minimal permitted environment; environment-auth connections explicitly opt into native ambient credential resolution.
 
-Browser navigation uses validated HTTPS addresses. Text submission targets recognized platform AI entries. Optional Xiaohongshu retrieval is a separate tool available to reading tasks when its runtime is installed.
+`integrations/bots/` owns durable intake, authorization, account lifecycle, history reconciliation, deduplication, and receipts. Telegram and Feishu adapters own their protocols and transport credentials. Both submit the same forwarding identity contract. Bot acceptance and reading completion have independent receipts.
 
-## Pi model boundary
+## Recovery, files, and profiles
 
-[The Pi bridge](../src/pi/README.md) adapts the installed SDK's public ModelRuntime and authentication interactions. Pi owns provider composition, model metadata, protocol adapters, reasoning mappings, authentication, token rotation, and credential-file locking. Main owns connection selection and execution leases. The renderer presents provider/model data and the text, secret, selection, browser-link, and device-code interactions emitted by Pi.
+Main persists the submitted checkpoint and observed conversation URL before continuing. Recovery of submitted work inspects the existing conversation; it retains captured answers when later stages fail. Queued work keeps its admitted input. Terminal runs publish an atomic, immutable result directory; latest follows the newest admitted terminal run. [Result packages](data-contracts.md#result-packages) define files and retry identities.
 
-Browser coding sessions and lightweight reading Agents share the same runtime stream bridge. Common options use streamSimple. Advanced API JSON uses stream so Pi receives native API fields. Application task tools, prompts, retry limits, output budgets, and explicit resource loading remain owned by Postrove. Provider-specific metadata changes enter through the Pi catalog; SDK API changes enter through this bridge. JSON formats for custom catalogs and advanced API options follow the installed Pi version.
-
-The legacy Codex service supports connections created before this migration. A staged native authorization uses a separate credential directory. A committed connection pointer switches subsequent tasks; legacy lease references finish before local legacy cleanup. Native connections use Pi AuthStorage directly in Main and workers. Stop waits for worker cleanup, with a thirty-five-second fallback that covers Pi's credential-lock wait and token rotation. The bridge lets native getAuth settle before returning caller cancellation, so a worker completion message follows credential persistence. Catalog refresh settles native authentication before its network phase, and shutdown waits for this serialized operation.
-
-## Recovery and native Pi logs
-
-Browser workers use persisted Pi coding sessions. Reading uses lightweight Agents. Their loading and recovery paths are defined in [prompt flow](agent-prompt-flow.md). Task log export copies associated native files using the [trace contract](data-contracts.md#task-snapshots-and-activity-messages).
-
-## Language and profile boundaries
-
-Runtime profiles resolve stores, credentials, browser sessions, and traces under independent data directories. Main completes the [business reset](data-contracts.md#telegram-queue-and-business-reset) before opening writers or integrations. The [development guide](development.md) owns launch and profile preparation.
-
-## Application updater
-
-`ApplicationUpdates` owns update state and explicit download/install actions. `electron-update-driver.ts` uses electron-updater for version checks and ZIP integrity, then Electron's native updater to stage and validate macOS signatures before shutdown. Preload exposes fixed commands and a separate update event so download progress refreshes only update UI.
-
-`ExecutionGate` counts admitted search and parsing jobs through worker and lease cleanup. Installation waiting holds admission in both queues. The updater reads active jobs from this gate, validates the package, then uses Main's service shutdown and native installation path. [Product behavior](product-spec.md#application-updates) owns user choices and failure states.
+Profiles isolate business records, connections, platform sessions, cached media, results, and traces. The topic upgrade preserves those stores and maps legacy platform sections to language experts. Profile copying validates regular local files and includes credentials only through its explicit option. The current startup keeps historical business-generation markers as inert migration evidence.

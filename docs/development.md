@@ -9,7 +9,7 @@ npm ci
 npm run dev
 ```
 
-`dev` builds `dist/` and launches Electron. Quit and rerun after source changes. The default launch uses regular application data. This refactor clears prior-generation test business records at startup and preserves connections and platform sessions through the [reset contract](data-contracts.md#telegram-queue-and-business-reset).
+`dev` builds `dist/` and launches Electron. Quit and rerun after source changes. The default launch uses regular application data. The topic upgrade preserves business records, connections, platform sessions, and results through the [retention contract](data-contracts.md#telegram-queue-and-upgrade-retention).
 
 ## Try changes with separate data
 
@@ -45,20 +45,20 @@ npm run review -- --profile /absolute/path/to/new-review-data --from /absolute/p
 
 Copy preparation requires an inactive source and preserves current-generation records. `--include-auth` includes supported credentials, including the native Pi connection directory and its model catalogs. Review startup keeps bot receiving paused until the selected connection is configured or verified in that instance. The launcher displays build and profile identity.
 
-## Verify the search-first workspace
+## Verify the topic workspace
 
-Use a review profile with the intended model and platform sessions. Submit a question, read both platform sections and source links, save a follow, add a candidate to parsing, stop active work, and export its Pi logs. Check partial-platform results and English output. Record inputs, screenshots, saved state, and observed failures in a local acceptance directory. [Product behavior](product-spec.md) defines expected outcomes.
+Use a review profile with the intended model and platform sessions. Enable language experts, send a topic, read independent replies and member receipts, save a scheduled message, collect sources into Reading, stop an active member, and export its Pi logs. Check partial-platform results and English output. Record inputs, screenshots, saved state, and observed failures in a local acceptance directory. [Product behavior](product-spec.md) defines expected outcomes.
 
 ## Verify reading with live sources
 
-Submit a public source link in Parsed content. Inspect source coverage, translated body, introduction, and direct references. The [reading helper](../scripts/development/verify-reading.ts) submits through Electron IPC and exports saved material:
+Submit a public source link in Reading. Inspect source coverage, translated body, introduction, and direct references. The [reading helper](../scripts/development/verify-reading.ts) submits through Electron IPC and exports saved material:
 
 ```sh
 npm run build
 npx tsx scripts/development/verify-reading.ts --profile /absolute/path/to/review-data --output /absolute/path/to/reading-evidence
 ```
 
-The helper's `--help` lists sample selection. `--retry-existing` exercises the retained internal recovery API; user-facing flows use new submission and Stop.
+The helper's `--help` lists sample selection. `--retry-existing` exercises the retained internal recovery API; user-facing flows expose retry and Stop in reading status.
 
 ## Release preparation
 

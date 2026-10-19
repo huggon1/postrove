@@ -178,220 +178,92 @@ test("reading preserves materials, partial output, frozen language and restart r
       },
     });
     const page = await app.firstWindow();
-    await expect(page.getByRole("navigation")).toBeVisible();
+    await expect(
+      page.getByRole("navigation", { name: "主导航" }),
+    ).toBeVisible();
     return page;
   };
   try {
     let page = await launch();
-    const reply = await page.evaluate(() =>
-      window.postrove.addLink("https://example.com/main"),
-    );
-    expect(reply.ok).toBe(true);
-    const taskId = (reply as any).value;
-    await expect
-      .poll(
-        async () =>
-          JSON.parse(await readFile(join(profile, "forwarding.json"), "utf8"))
-            .tasks[0].state,
-      )
-      .toBe("failed");
+    const add = async (url: string) => {
+      const reply = await page.evaluate(
+        (url) => window.postrove.addLink(url),
+        url,
+      );
+      expect(reply.ok).toBe(true);
+      return (reply as any).value as string;
+    };
+    const saved = async (taskId: string) =>
+      JSON.parse(
+        await readFile(join(profile, "forwarding.json"), "utf8"),
+      ).tasks.find((task: any) => task.taskId === taskId);
+    const id = await add("https://example.com/main");
+    await expect.poll(async () => (await saved(id)).state).toBe("failed");
     await page
-      .getByRole("navigation")
-      .getByRole("button", { name: "解析结果", exact: true })
+      .getByRole("navigation", { name: "主导航" })
+      .getByRole("button", { name: "阅读", exact: true })
       .click();
+    await page
+      .getByRole("button", { name: "Main fixture", exact: true })
+      .click();
+    const reader = page.getByRole("dialog", { name: "阅读内容" });
     await expect(
-      page.getByRole("heading", { name: "主内容", exact: true }),
+      reader.getByRole("heading", { name: "主内容", exact: true }).first(),
     ).toBeVisible();
-    await expect(
-      page.getByText("内容按目标语言（简体中文）呈现。", { exact: true }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: /^(译文|原文)$/ }),
-    ).toHaveCount(0);
-    await expect(page.locator(".markdown")).not.toContainText(
-      "First paragraph.",
-    );
-    await expect(page.locator(".markdown img")).toHaveJSProperty(
+    await expect(reader.locator(".markdown")).toContainText("第一段");
+    await expect(reader.locator(".markdown img")).toHaveJSProperty(
       "naturalWidth",
       300,
     );
-    await expect(page.locator(".markdown svg")).toBeVisible();
-    await expect(page.locator(".markdown svg")).toContainText("草稿");
-    const reader = page.locator(".material-body-scroll");
-    await reader.evaluate((el) => {
-      el.scrollTop = 500;
+    await expect(reader.locator(".markdown svg")).toBeVisible();
+    await reader.getByRole("button", { name: "原文", exact: true }).click();
+    await expect(reader.locator(".markdown")).toContainText("First paragraph");
+    await reader.getByRole("button", { name: "阅读版本", exact: true }).click();
+    await expect(reader.locator(".markdown")).toContainText("第一段");
+    const selector = reader.getByRole("combobox", {
+      name: "材料",
+      exact: true,
     });
-    await expect(reader).toHaveJSProperty("scrollTop", 500);
-    await page.getByRole("button", { name: /Linked article/ }).click();
-    await expect(reader).toHaveJSProperty("scrollTop", 0);
-    await page
-      .locator(".material-index")
-      .getByRole("button", { name: /Main fixture/ })
-      .click();
-    await expect(reader).toHaveJSProperty("scrollTop", 500);
-    await page.getByRole("button", { name: /Linked article/ }).click();
-    await expect(
-      page.getByText("已返回的段落。", { exact: true }),
-    ).toBeVisible();
-    await expect(page.getByText(/输出达到模型上限/)).toBeVisible();
-    await page.screenshot({ path: info.outputPath("partial-material.png") });
-    await page
-      .getByRole("navigation")
-      .getByRole("button", { name: "设置", exact: true })
-      .click();
-    await page.getByLabel("Language", { exact: true }).selectOption("en");
-    await page
-      .getByRole("navigation")
-      .getByRole("button", { name: "Parsed content", exact: true })
-      .click();
-    await expect(
-      page.getByText(
-        "Content is presented in the target language (Simplified Chinese).",
-        { exact: true },
-      ),
-    ).toBeVisible();
+    await selector.selectOption("ref-1");
+    await expect(reader).toContainText("已返回的段落");
+    await selector.selectOption("ref-2");
+    await expect(reader).toContainText("来源访问受限");
+    await page.screenshot({
+      path: info.outputPath("partial-material-reader.png"),
+    });
+    await reader.getByRole("button", { name: "关闭", exact: true }).click();
+    await page.evaluate(() => window.postrove.saveReadingLanguage("en"));
+    const english = await add("https://example.com/english");
+    await expect.poll(async () => (await saved(english)).state).toBe("failed");
+    expect((await saved(id)).outputLanguage).toBe("zh-CN");
+    expect((await saved(english)).outputLanguage).toBe("en");
+    const before = JSON.stringify((await saved(id)).materials);
     await app!.close();
     page = await launch();
+    expect(JSON.stringify((await saved(id)).materials)).toBe(before);
     await page
-      .getByRole("navigation")
-      .getByRole("button", { name: "Parsed content", exact: true })
+      .getByRole("navigation", { name: "主导航" })
+      .getByRole("button", { name: "阅读", exact: true })
       .click();
     await page
-      .locator(".result-row")
-      .filter({ hasText: "Main fixture" })
+      .getByRole("button", { name: "Main fixture", exact: true })
       .click();
-    await page.getByRole("button", { name: /Linked article/ }).click();
-    await expect(
-      page.getByText("已返回的段落。", { exact: true }),
-    ).toBeVisible();
-    const saved = JSON.parse(
-      await readFile(join(profile, "forwarding.json"), "utf8"),
-    ).tasks.find((task: any) => task.taskId === taskId);
-    expect(saved.materials[1].state).toBe("partial");
-    expect(saved.outputLanguage).toBe("zh-CN");
-    expect(
-      calls.filter((c) => c.route === "/translate" && c.material.id === "main"),
-    ).toHaveLength(1);
-    expect(
-      calls
-        .filter((c) => c.route === "/translate")
-        .every((c) => c.language === "zh-CN"),
-    ).toBe(true);
-    // Access parameters survive only in the owner-only recovery field. The
-    // visible task identity and persisted material use the canonical note URL.
-    const noteUrl =
-      "https://www.xiaohongshu.com/explore/abcdef1234567890abcdef12";
-    const added = await page.evaluate(
-      (url) => window.postrove.addLink(url),
-      `${noteUrl}?xsec_token=fictional-recovery`,
+    await expect(page.getByRole("dialog", { name: "阅读内容" })).toContainText(
+      "第一段",
     );
-    expect(added.ok).toBe(true);
-    await expect
-      .poll(async () => {
-        const state = JSON.parse(
-          await readFile(join(profile, "forwarding.json"), "utf8"),
-        );
-        return state.tasks.find((t: any) => t.taskId === (added as any).value)
-          ?.state;
-      })
-      .toBe("failed");
-    const noteState = JSON.parse(
-      await readFile(join(profile, "forwarding.json"), "utf8"),
-    ).tasks.find((t: any) => t.taskId === (added as any).value);
-    expect(noteState.target.sourceUrl).toBe(noteUrl);
-    expect(noteState.xhsAccessTokenCiphertext).toMatch(/^local-v1:/);
-    expect(noteState.materials[0].source.sourceUrl).toBe(noteUrl);
-    const recovery = await page.evaluate(() =>
-      window.postrove.addLink("https://example.com/recover"),
+    expect(calls.filter((call) => call.route === "/collect")).toHaveLength(2);
+    const resultRoot = join(
+      profile,
+      "results/reading",
+      (await saved(id)).resultId,
     );
-    expect(recovery.ok).toBe(true);
-    await expect
-      .poll(async () => {
-        const detail = await page.evaluate(
-          (id) => window.postrove.forwardingTask(id),
-          (recovery as any).value,
-        );
-        return detail.ok && detail.value.task.state;
-      })
-      .toBe("failed");
-    await page
-      .getByRole("navigation")
-      .getByRole("button", { name: "Parsed content", exact: true })
-      .click();
-    await page
-      .locator(".result-row")
-      .filter({ hasText: "Recoverable main" })
-      .click();
     await expect(
-      page.getByText("来源暂时不可读", { exact: true }),
-    ).toBeVisible();
-    await expect(
-      page.getByText("Content is presented in the target language (English).", {
-        exact: true,
-      }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("button", {
-        name: "Continue unfinished materials",
-        exact: true,
-      }),
-    ).toHaveCount(0);
-    await page.setViewportSize({ width: 780, height: 780 });
-    await page.screenshot({ path: info.outputPath("compact-reading.png") });
-    const english = await page.evaluate(() =>
-      window.postrove.addLink("https://example.com/english"),
-    );
-    expect(english.ok).toBe(true);
-    await expect
-      .poll(async () => {
-        const detail = await page.evaluate(
-          (id) => window.postrove.forwardingTask(id),
-          (english as any).value,
-        );
-        return detail.ok && detail.value.task.state;
-      })
-      .toBe("failed");
-    await page.setViewportSize({ width: 1280, height: 800 });
-    await page
-      .locator(".result-row")
-      .filter({ hasText: "English fixture" })
-      .click();
-    await expect(
-      page.getByText("Content is presented in the target language (English).", {
-        exact: true,
-      }),
-    ).toBeVisible();
-    await expect(page.locator(".markdown")).toContainText("First paragraph.");
-    await expect(
-      page.getByRole("button", { name: /^(Translation|Original)$/ }),
-    ).toHaveCount(0);
-    await page
-      .getByRole("navigation")
-      .getByRole("button", { name: "Settings", exact: true })
-      .click();
-    await page.getByLabel("Language", { exact: true }).selectOption("zh-CN");
-    await page
-      .getByRole("navigation")
-      .getByRole("button", { name: "解析结果", exact: true })
-      .click();
-    await expect(
-      page.getByText("内容按目标语言（英文）呈现。", { exact: true }),
-    ).toBeVisible();
-    await expect(page.locator(".markdown")).toContainText("First paragraph.");
-    await page.screenshot({
-      path: info.outputPath("same-language-reading.png"),
-    });
-    await info.attach("saved-reading-state", {
-      body: await readFile(join(profile, "forwarding.json")),
-      contentType: "application/json",
-    });
-    await info.attach("adapter-calls", {
-      body: JSON.stringify(calls),
-      contentType: "application/json",
-    });
+      readFile(join(resultRoot, "result.md"), "utf8"),
+    ).resolves.toContain("第一段");
   } finally {
     await app?.close();
-    await new Promise<void>((r) => server.close(() => r()));
+    server.closeAllConnections();
+    await new Promise<void>((done) => server.close(() => done()));
     await rm(root, { recursive: true, force: true });
   }
 });

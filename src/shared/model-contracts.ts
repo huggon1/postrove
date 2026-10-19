@@ -222,6 +222,7 @@ export interface ModelView {
   models: PiModelOption[];
   auth: LegacyModelView["auth"];
   authSource?: string;
+  authFailure?: boolean;
   authPrompt?: {
     id: string;
     type: "text" | "secret" | "manual_code" | "select";

@@ -1,3 +1,4 @@
+import type { ContentRequest } from "../../../shared/content-contracts";
 import type { ExecutionGate } from "../execution-gate";
 import { randomUUID } from "node:crypto";
 import {
@@ -13,6 +14,11 @@ import {
 import { FocusSearchStore } from "../../storage/focus-search-store";
 import type { TaskService } from "../tasks/task-service";
 import type { ForwardingPipelineService } from "../forwarding/service";
+import {
+  advisorById,
+  legacyAdvisor,
+  type AdvisorId,
+} from "../../../shared/advisor-contracts";
 import { searchInstruction } from "../../../platforms/browser/prompts";
 import type { SearchProgress } from "../browser-agent";
 import { localizedText, type Language } from "../../../shared/language";
@@ -34,6 +40,11 @@ export function nextFollowRun(schedule: FollowSchedule, after: Date): string {
 }
 
 type SearchExecution = {
+  content?: (
+    input: ContentRequest,
+    signal: AbortSignal,
+    runId: string,
+  ) => Promise<string>;
   execute: (
     section: SearchSection,
     signal: AbortSignal,
@@ -133,10 +144,12 @@ function searchStatus(sections: SearchSection[]) {
   return completed.length < sections.length ||
     sections.some(
       (section) =>
-        section.citationExtraction &&
-        ["pending", "running", "failed"].includes(
-          section.citationExtraction.state,
-        ),
+        section.cancelled ||
+        section.processingIssue ||
+        (section.citationExtraction &&
+          ["pending", "running", "failed", "empty"].includes(
+            section.citationExtraction.state,
+          )),
     )
     ? ("partial" as const)
     : ("completed" as const);
@@ -144,6 +157,7 @@ function searchStatus(sections: SearchSection[]) {
 
 export class FocusSearchService {
   private active = new Map<string, AbortController>();
+  private sectionControllers = new Map<string, AbortController>();
   private queue: Promise<unknown> = Promise.resolve();
   private mutations: Promise<unknown> = Promise.resolve();
   private schedules: Promise<unknown> = Promise.resolve();
@@ -162,6 +176,21 @@ export class FocusSearchService {
       schedulerIntervalMs?: number;
       executionGate?: ExecutionGate;
       language?: () => "zh-CN" | "en";
+      advisorIds?: () => AdvisorId[];
+      prepareQuestion?: (
+        question: string,
+        language: Language,
+        signal: AbortSignal,
+      ) => Promise<string>;
+      prepareReply?: (
+        reply: string,
+        language: Language,
+        signal: AbortSignal,
+      ) => Promise<string>;
+      revisions?: (
+        platform: SearchSection["platform"],
+      ) => Promise<{ skillRevision: string; promptRevision: string }>;
+      publish?: (report: FocusSearchReport) => Promise<unknown>;
     } = {},
   ) {}
   private clock() {
@@ -203,6 +232,17 @@ export class FocusSearchService {
           )
         )
           continue;
+        if (
+          report.status === "running" &&
+          report.sections.some(
+            (section) => section.checkpoint?.state === "submitted",
+          )
+        ) {
+          report.status = "queued";
+          for (const section of report.sections)
+            if (section.state === "running") section.state = "pending";
+          continue;
+        }
         const interrupted =
           report.status === "queued" ||
           report.status === "running" ||
@@ -237,12 +277,7 @@ export class FocusSearchService {
         follow.nextRunAt = this.nextRun(follow);
     });
     for (const report of this.reports()) {
-      if (
-        report.status === "queued" &&
-        report.sections.every(
-          (section) => section.state === "pending" && !section.rawReply,
-        )
-      ) {
+      if (report.status === "queued") {
         await this.tasks.create({
           taskId: report.taskId,
           kind: "focus_search",
@@ -282,6 +317,8 @@ export class FocusSearchService {
           ),
         });
     }
+    for (const report of this.reports())
+      if (report.finishedAt) await this.options.publish?.(report);
     if (this.timer) clearInterval(this.timer);
     const interval = this.options.schedulerIntervalMs ?? 1000;
     if (interval > 0) {
@@ -294,6 +331,7 @@ export class FocusSearchService {
   }
   async saveFollow(raw: unknown): Promise<Follow> {
     const input = saveFollowSchema.parse(raw);
+    this.validateAdvisors(input.advisorIds);
     const follow: Follow = {
       ...input,
       name: input.name ?? input.question.slice(0, 80),
@@ -312,6 +350,7 @@ export class FocusSearchService {
   }
   async updateFollow(raw: unknown): Promise<Follow> {
     const input = updateFollowSchema.parse(raw);
+    this.validateAdvisors(input.advisorIds);
     let result!: Follow;
     await this.serialSchedule(() =>
       this.store.update((state) => {
@@ -329,12 +368,44 @@ export class FocusSearchService {
     this.changed();
     return result;
   }
+  private validateAdvisors(ids?: AdvisorId[]) {
+    if (
+      ids &&
+      this.options.advisorIds &&
+      ids.some((id) => !this.options.advisorIds!().includes(id))
+    )
+      throw new Error("Advisor is unavailable");
+  }
+  async reconcileAdvisors() {
+    if (!this.options.advisorIds) return;
+    const enabled = this.options.advisorIds();
+    await this.store.update((state) => {
+      for (const follow of state.follows) {
+        const ids = (
+          follow.advisorIds ??
+          follow.platforms.map((platform) => legacyAdvisor(platform))
+        ).filter((id) => enabled.includes(id));
+        if (ids.length) {
+          follow.advisorIds = ids;
+          follow.platforms = [
+            ...new Set(ids.map((id) => advisorById(id).platform)),
+          ];
+        } else follow.paused = true;
+      }
+    });
+    this.changed();
+  }
   async setFollowPaused(followId: string, paused: boolean) {
     if (typeof paused !== "boolean") throw new Error("Invalid pause state");
     await this.serialSchedule(() =>
       this.store.update((state) => {
         const follow = state.follows.find((f) => f.followId === followId);
         if (!follow) throw new Error("Follow not found");
+        if (!paused)
+          this.validateAdvisors(
+            follow.advisorIds ??
+              follow.platforms.map((platform) => legacyAdvisor(platform)),
+          );
         follow.paused = paused;
         follow.updatedAt = this.now();
         follow.nextRunAt = this.nextRun(follow);
@@ -391,7 +462,8 @@ export class FocusSearchService {
             {
               question: follow.question,
               platforms: follow.platforms,
-              period: follow.period,
+              period: "all",
+              advisorIds: follow.advisorIds,
             },
             follow,
           );
@@ -405,6 +477,41 @@ export class FocusSearchService {
   private async startRun(raw: unknown, follow?: Follow) {
     if (this.closed) throw new Error("Search service is closed");
     const input = startFocusSearchSchema.parse(raw);
+    const ids =
+      input.advisorIds ??
+      input.platforms.map((platform) => legacyAdvisor(platform));
+    if (
+      this.options.advisorIds &&
+      ids.some((id) => !this.options.advisorIds!().includes(id))
+    )
+      throw new Error("Advisor is unavailable");
+    const selectedPlatforms = [
+      ...new Set(ids.map((id) => advisorById(id).platform)),
+    ];
+    if (
+      selectedPlatforms.length !== input.platforms.length ||
+      selectedPlatforms.some((platform) => !input.platforms.includes(platform))
+    )
+      throw new Error("Advisor platform mismatch");
+    const sections: SearchSection[] = [];
+    for (const id of ids) {
+      const advisor = advisorById(id);
+      sections.push({
+        sectionId: randomUUID(),
+        runId: randomUUID(),
+        advisorId: id,
+        connectionId: advisor.connectionId,
+        platform: advisor.platform,
+        promptLanguage: advisor.language,
+        prompt: input.question,
+        ...(await this.options.revisions?.(advisor.platform)),
+        checkpoint: { state: "prepared" },
+        state: "pending",
+        rawReply: "",
+        candidates: [],
+        citationExtraction: { state: "pending" },
+      });
+    }
     const taskId = randomUUID();
     const report: FocusSearchReport = {
       reportId: randomUUID(),
@@ -425,16 +532,7 @@ export class FocusSearchService {
             scheduledFor: follow.nextRunAt,
           }
         : {}),
-      sections: input.platforms.map((platform) => ({
-        sectionId: randomUUID(),
-        platform,
-        promptLanguage: platform === "x" ? "en" : "zh-CN",
-        prompt: searchInstruction(platform, input.question, input.period),
-        state: "pending",
-        rawReply: "",
-        candidates: [],
-        citationExtraction: { state: "pending" },
-      })),
+      sections,
     };
     await this.store.update((s) => s.reports.push(report));
     try {
@@ -501,9 +599,18 @@ export class FocusSearchService {
       });
       this.changed();
       execution = await this.prepareExecution();
-      for (const initial of this.readTask(taskId).sections) {
+      for (const queued of this.readTask(taskId).sections) {
         if (controller.signal.aborted) break;
-        if (initial.state === "completed") continue;
+        const initial = this.readTask(taskId).sections.find(
+          (section) => section.sectionId === queued.sectionId,
+        )!;
+        if (initial.state === "completed" || initial.cancelled) continue;
+        const sectionController = new AbortController();
+        const cancelSection = () => sectionController.abort();
+        controller.signal.addEventListener("abort", cancelSection, {
+          once: true,
+        });
+        this.sectionControllers.set(initial.sectionId, sectionController);
         await this.store.update((s) => {
           const section = s.reports
             .find((r) => r.taskId === taskId)!
@@ -523,27 +630,71 @@ export class FocusSearchService {
           ),
         });
         try {
+          if (!initial.checkpoint || initial.checkpoint.state === "prepared") {
+            try {
+              const question = execution.content
+                ? await execution.content(
+                    {
+                      operation: "translate_content",
+                      text: this.readTask(taskId).question,
+                      targetLanguage: initial.promptLanguage,
+                    },
+                    sectionController.signal,
+                    initial.runId ?? taskId,
+                  )
+                : this.options.prepareQuestion
+                  ? await this.options.prepareQuestion(
+                      this.readTask(taskId).question,
+                      initial.promptLanguage,
+                      sectionController.signal,
+                    )
+                  : this.readTask(taskId).question;
+              initial.prompt = searchInstruction(
+                initial.platform,
+                question,
+                "all",
+                initial.promptLanguage,
+              );
+              await this.store.update((state) => {
+                state.reports
+                  .find((r) => r.taskId === taskId)!
+                  .sections.find(
+                    (s) => s.sectionId === initial.sectionId,
+                  )!.prompt = initial.prompt;
+              });
+            } catch (error) {
+              await this.store.update((state) => {
+                state.reports
+                  .find((r) => r.taskId === taskId)!
+                  .sections.find(
+                    (s) => s.sectionId === initial.sectionId,
+                  )!.failureStage = "preparation";
+              });
+              throw error;
+            }
+          }
           const result = await execution.execute(
             initial,
-            controller.signal,
-            taskId,
+            sectionController.signal,
+            initial.runId ?? taskId,
             async (progress) => {
-              if (controller.signal.aborted) return;
+              if (sectionController.signal.aborted) return;
               await this.store.update((s) => {
                 const section = s.reports
                   .find((r) => r.taskId === taskId)!
                   .sections.find((v) => v.sectionId === initial.sectionId)!;
                 Object.assign(section, progress);
               });
-              await this.tasks.receive(taskId, {
-                type: "phase",
-                taskId,
-                phase: localizedText(
-                  language,
-                  `提取 ${initial.platform} 引用帖子`,
-                  `Extracting ${initial.platform} citations`,
-                ),
-              });
+              if (progress.rawReply)
+                await this.tasks.receive(taskId, {
+                  type: "phase",
+                  taskId,
+                  phase: localizedText(
+                    language,
+                    `提取 ${initial.platform} 引用帖子`,
+                    `Extracting ${initial.platform} citations`,
+                  ),
+                });
               this.changed();
             },
           );
@@ -552,18 +703,85 @@ export class FocusSearchService {
               result.citationExtraction.error,
               language,
             );
-          if (controller.signal.aborted) break;
+          if (sectionController.signal.aborted) continue;
           await this.store.update((s) => {
             const section = s.reports
               .find((r) => r.taskId === taskId)!
               .sections.find((v) => v.sectionId === initial.sectionId)!;
             Object.assign(section, result, {
-              state: "completed",
-              finishedAt: this.now(),
+              state: "running",
+              checkpoint: {
+                state: "answered",
+                conversationUrl: this.readTask(taskId).sections.find(
+                  (s) => s.sectionId === initial.sectionId,
+                )?.checkpoint?.conversationUrl,
+              },
             });
+            if (result.citationExtraction?.state === "failed")
+              section.failureStage = "sources";
           });
+          if (
+            result.rawReply &&
+            (execution.content || this.options.prepareReply)
+          ) {
+            try {
+              const targetLanguage = language ?? "zh-CN";
+              const readingReply = execution.content
+                ? await execution.content(
+                    {
+                      operation: "translate_content",
+                      text: await execution.content(
+                        {
+                          operation: "format_content",
+                          text: result.rawReply,
+                          targetLanguage,
+                        },
+                        sectionController.signal,
+                        initial.runId ?? taskId,
+                      ),
+                      targetLanguage,
+                    },
+                    sectionController.signal,
+                    initial.runId ?? taskId,
+                  )
+                : await this.options.prepareReply!(
+                    result.rawReply,
+                    targetLanguage,
+                    sectionController.signal,
+                  );
+              if (!sectionController.signal.aborted)
+                await this.store.update((state) => {
+                  state.reports
+                    .find((r) => r.taskId === taskId)!
+                    .sections.find(
+                      (s) => s.sectionId === initial.sectionId,
+                    )!.readingReply = readingReply;
+                });
+            } catch {
+              if (!sectionController.signal.aborted)
+                await this.store.update((state) => {
+                  const section = state.reports
+                    .find((r) => r.taskId === taskId)!
+                    .sections.find((s) => s.sectionId === initial.sectionId)!;
+                  section.processingIssue = localizedText(
+                    language,
+                    "阅读版本生成失败",
+                    "Reading version failed",
+                  );
+                  section.failureStage = "processing";
+                });
+            }
+          }
+          if (!sectionController.signal.aborted)
+            await this.store.update((state) => {
+              const section = state.reports
+                .find((r) => r.taskId === taskId)!
+                .sections.find((s) => s.sectionId === initial.sectionId)!;
+              section.state = "completed";
+              section.finishedAt = this.now();
+            });
         } catch (error) {
-          if (controller.signal.aborted) break;
+          if (sectionController.signal.aborted) continue;
           const code = error instanceof Error ? error.message : "";
           const accessMessages: Record<string, string> = {
             login_required: localizedText(
@@ -604,11 +822,20 @@ export class FocusSearchService {
             if (section.rawReply.trim()) {
               section.state = "completed";
               delete section.error;
+              section.failureStage = "sources";
               finishCitation(section, citationFailureReason(code, language));
               section.finishedAt = this.now();
               return;
             }
             section.state = "failed";
+            section.failureStage ??= [
+              "login_required",
+              "verification_required",
+              "action_required",
+              "access_limited",
+            ].includes(code)
+              ? "platform"
+              : "bridge";
             section.error =
               accessMessages[code] ??
               localizedText(
@@ -618,6 +845,9 @@ export class FocusSearchService {
               );
             section.finishedAt = this.now();
           });
+        } finally {
+          controller.signal.removeEventListener("abort", cancelSection);
+          this.sectionControllers.delete(initial.sectionId);
         }
         const report = this.readTask(taskId);
         await this.tasks.receive(taskId, {
@@ -664,13 +894,16 @@ export class FocusSearchService {
           const report = state.reports.find((r) => r.taskId === taskId)!;
           const reason = localizedText(
             language,
-            "搜索执行中断",
-            "Search was interrupted",
+            execution ? "搜索执行中断" : "后台模型连接不可用，请检查设置",
+            execution
+              ? "Search was interrupted"
+              : "Background model unavailable; check Settings",
           );
           for (const section of report.sections) {
             if (section.state !== "completed") {
               section.state = section.rawReply.trim() ? "completed" : "failed";
               section.error = section.rawReply.trim() ? undefined : reason;
+              section.failureStage ??= "bridge";
               section.finishedAt = this.now();
             }
             finishCitation(section, reason);
@@ -696,16 +929,41 @@ export class FocusSearchService {
       } finally {
         this.active.delete(taskId);
         release?.();
+        await this.options.publish?.(this.readTask(taskId));
         this.changed();
       }
     }
+  }
+  async cancelSection(taskId: string, sectionId: string) {
+    const report = this.readTask(taskId);
+    const section = report.sections.find(
+      (item) => item.sectionId === sectionId,
+    );
+    if (!section) throw new Error("Advisor run not found");
+    if (
+      ["completed", "failed"].includes(section.state) &&
+      !this.sectionControllers.has(sectionId)
+    )
+      return;
+    this.sectionControllers.get(sectionId)?.abort();
+    await this.store.update((state) => {
+      const section = state.reports
+        .find((r) => r.taskId === taskId)!
+        .sections.find((s) => s.sectionId === sectionId)!;
+      section.cancelled = true;
+      section.state = section.rawReply ? "completed" : "failed";
+      section.error = localizedText(report.outputLanguage, "已停止", "Stopped");
+      section.finishedAt = this.now();
+      finishCitation(section, section.error);
+    });
+    this.changed();
   }
   async retry(_taskId: string): Promise<string> {
     throw new Error(
       localizedText(
         this.options.language?.(),
-        "请使用搜索页提交新的搜索",
-        "Submit a new search from Search",
+        "请发起新话题",
+        "Start a new topic",
       ),
     );
   }
@@ -717,7 +975,8 @@ export class FocusSearchService {
       const report = state.reports.find((r) => r.taskId === taskId)!;
       for (const section of report.sections)
         if (section.state === "running" || section.state === "pending") {
-          section.state = "failed";
+          section.cancelled = true;
+          section.state = section.rawReply.trim() ? "completed" : "failed";
           section.error = localizedText(
             report.outputLanguage,
             "用户已停止运行",
@@ -731,6 +990,7 @@ export class FocusSearchService {
       report.finishedAt = this.now();
     });
     await this.tasks.cancel(taskId);
+    await this.options.publish?.(this.readTask(taskId));
     this.changed();
   }
   add(reportId: string, candidateIds: string[]): Promise<SearchAddition[]> {

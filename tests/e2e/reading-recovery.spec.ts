@@ -282,8 +282,19 @@ test("reading recovers bounded model failures and reports saved incomplete work"
       path: callsFile,
       contentType: "application/json",
     });
-    await page.getByRole("button", { name: "Tasks", exact: true }).click();
-    await expect(page.getByRole("dialog", { name: "Tasks", exact: true })).toBeVisible();
+    await page
+      .getByRole("navigation", { name: "Main navigation" })
+      .getByRole("button", { name: "Reading", exact: true })
+      .click();
+    await page.getByRole("button", { name: "auth", exact: true }).click();
+    const reader = page.getByRole("dialog", {
+      name: "Reading",
+      exact: true,
+    });
+    await reader
+      .getByRole("button", { name: "Processing status", exact: true })
+      .click();
+    await expect(reader).toContainText("Failed");
     await page.screenshot({
       path: info.outputPath("reading-failure-tasks.png"),
       animations: "disabled",

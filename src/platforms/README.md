@@ -1,6 +1,6 @@
 # Platforms
 
-[Prompt flow](../../docs/agent-prompt-flow.md) owns loading; [architecture](../../docs/architecture-overview.md#platform-browser-and-focus-search) owns browser access.
+[Prompt flow](../../docs/agent-prompt-flow.md) owns loading; [architecture](../../docs/architecture-overview.md#browser-model-and-integration-boundaries) owns browser access.
 
 | Path | Responsibility |
 | --- | --- |

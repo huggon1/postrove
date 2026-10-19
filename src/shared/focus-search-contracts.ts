@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { advisorIdSchema, advisorById } from "./advisor-contracts";
 import { xPostUrlSchema, xhsNoteUrlSchema } from "./source-contracts";
 
 export const searchPlatformSchema = z.enum(["xiaohongshu", "x"]);
@@ -10,7 +11,12 @@ export const startFocusSearchSchema = z
       .array(searchPlatformSchema)
       .min(1)
       .refine((ids) => new Set(ids).size === ids.length),
-    period: searchPeriodSchema,
+    period: searchPeriodSchema.default("all"),
+    advisorIds: z
+      .array(advisorIdSchema)
+      .min(1)
+      .refine((ids) => new Set(ids).size === ids.length)
+      .optional(),
   })
   .strict();
 export const searchCandidateSchema = z
@@ -27,6 +33,25 @@ export const searchSectionSchema = z
   .object({
     sectionId: z.string().uuid(),
     platform: searchPlatformSchema,
+    advisorId: advisorIdSchema.optional(),
+    connectionId: z.string().optional(),
+    runId: z.string().uuid().optional(),
+    skillRevision: z.string().optional(),
+    promptRevision: z.string().optional(),
+    readingReply: z.string().optional(),
+    cancelled: z.boolean().optional(),
+    processingIssue: z.string().max(1000).optional(),
+    failureStage: z
+      .enum(["preparation", "bridge", "platform", "sources", "processing"])
+      .optional(),
+    checkpoint: z
+      .object({
+        state: z.enum(["prepared", "submitted", "answered"]),
+        conversationUrl: z.string().url().optional(),
+        submittedAt: z.string().datetime().optional(),
+      })
+      .strict()
+      .optional(),
     promptLanguage: z.enum(["zh-CN", "en"]),
     prompt: z.string(),
     platformPrompt: z.string().optional(),
@@ -89,7 +114,7 @@ export const focusSearchReportSchema = z
       sectionIds = new Set<string>(),
       candidates = new Set<string>();
     for (const section of report.sections) {
-      const pair = section.platform;
+      const pair = section.advisorId ?? section.platform;
       if (
         !report.platforms.includes(section.platform) ||
         pairs.has(pair) ||
@@ -100,7 +125,11 @@ export const focusSearchReportSchema = z
           message: "Each section must reference one selected platform",
         });
       if (
-        section.promptLanguage !== (section.platform === "x" ? "en" : "zh-CN")
+        section.advisorId
+          ? advisorById(section.advisorId).platform !== section.platform ||
+            advisorById(section.advisorId).language !== section.promptLanguage
+          : section.promptLanguage !==
+            (section.platform === "x" ? "en" : "zh-CN")
       )
         ctx.addIssue({
           code: "custom",
@@ -128,7 +157,8 @@ export const focusSearchReportSchema = z
     }
     if (
       new Set(report.platforms).size !== report.platforms.length ||
-      pairs.size !== report.platforms.length
+      new Set(report.sections.map((section) => section.platform)).size !==
+        report.platforms.length
     )
       ctx.addIssue({
         code: "custom",
@@ -170,7 +200,12 @@ export const saveFollowSchema = z
       .array(searchPlatformSchema)
       .min(1)
       .refine((ids) => new Set(ids).size === ids.length),
-    period: searchPeriodSchema,
+    period: searchPeriodSchema.default("all"),
+    advisorIds: z
+      .array(advisorIdSchema)
+      .min(1)
+      .refine((ids) => new Set(ids).size === ids.length)
+      .optional(),
     schedule: followScheduleSchema,
   })
   .strict();

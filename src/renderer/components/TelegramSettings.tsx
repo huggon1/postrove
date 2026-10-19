@@ -89,7 +89,7 @@ export function TelegramSettings(props: TelegramSettingsProps) {
         ))
       ) : (
         <p className="muted-copy">
-          {t("授权后，该聊天发送的新链接会加入解析。")}
+          {t("向 Bot 发送 /start 后，在这里授权聊天。")}
         </p>
       )}
       <h4>{t("待授权聊天")}</h4>
@@ -131,7 +131,6 @@ export function TelegramSettings(props: TelegramSettingsProps) {
       >
         <span>
           <strong>Telegram</strong>
-          <small>{t("链接转发到应用内阅读")}</small>
         </span>
         <span>
           <span
@@ -207,7 +206,6 @@ export function TelegramSettings(props: TelegramSettingsProps) {
             </>
           ) : (
             <>
-              <p>{t("连接一个 Bot，并授权用于发送链接的聊天。")}</p>
               <button className="button" onClick={start}>
                 {t("开始配置")}
               </button>
@@ -264,7 +262,6 @@ export function TelegramSettings(props: TelegramSettingsProps) {
                   }
                   disabled={busy}
                 />
-                <small>{t("Token 保存在本机当前用户的凭据文件中。")}</small>
               </label>
               <button
                 className="button button-primary"
@@ -324,11 +321,7 @@ export function TelegramSettings(props: TelegramSettingsProps) {
           {step === 2 && (
             <>
               <h3>{t("接入已配置")}</h3>
-              <p>
-                {t(
-                  "现在可以向已授权聊天发送一条 HTTPS 链接。Bot 确认收取后，在内容中查看解析结果，在顶部任务面板查看进度。",
-                )}
-              </p>
+
               <div className="settings-actions">
                 <button
                   className="button button-quiet"
@@ -337,7 +330,7 @@ export function TelegramSettings(props: TelegramSettingsProps) {
                     props.onOpenContent();
                   }}
                 >
-                  {t("查看解析结果")}
+                  {t("查看阅读内容")}
                 </button>
                 <button className="button button-primary" onClick={finish}>
                   {t("完成")}
@@ -352,11 +345,6 @@ export function TelegramSettings(props: TelegramSettingsProps) {
           title={confirmation.title}
           onClose={() => setConfirmation(undefined)}
         >
-          <p>
-            {t(
-              "后续链接按更新后的配置接收。已保存的内容、任务和收取记录保留。",
-            )}
-          </p>
           <div className="dialog-actions">
             <button
               className="button"

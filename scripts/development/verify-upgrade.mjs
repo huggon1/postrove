@@ -275,6 +275,8 @@ require("./main.cjs");\n`,
     originalProcess = application.process();
     page = await application.firstWindow({ timeout: 30000 });
     await page.getByRole("button", { name: "设置", exact: true }).click();
+    const about = page.getByRole("button", { name: "关于", exact: true });
+    if (await about.isVisible()) await about.click();
     const updates = page.getByRole("region", { name: "应用更新", exact: true });
     await checkpoint("check update feed");
     const check = updates.getByRole("button", {

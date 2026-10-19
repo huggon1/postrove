@@ -1,17 +1,20 @@
 # Renderer
 
-[Product specification](../../docs/product-spec.md) owns page behavior. UI changes follow the repository [AGENTS.md](../../AGENTS.md).
+[Product specification](../../docs/product-spec.md) owns page behavior. The workspace follows the approved topic prototype.
 
 | Path | Responsibility |
 | --- | --- |
-| `components/TaskPanel.tsx` | Global task entry, grouped history, details, and clearing |
-| `App.tsx` | Navigation and page assembly |
-| `refactor.css` | Existing shell and responsive layouts |
-| `components/MaterialReader.tsx` | Material directory and saved body reader |
-| `components/FeishuSettings.tsx` | Feishu onboarding through the shared bot management API |
-| `components/TelegramSettings.tsx` | Collapsed connection summary, setup drawer, and chat authorization |
-| `components/SettingsPage.tsx` | Settings assembly |
-| `components/Primitives.tsx` | Controls, dialogs, and sanitized Markdown |
-| `design/Components.tsx`, `design/tokens-and-controls.css` | Existing disclosure and control components |
-| `bridge.ts`, `product-ui.ts` | Desktop calls and view mapping |
-| `i18n/` | Interface language and labels |
+| `App.tsx` | Top navigation, page assembly, selected records, deletion/undo |
+| `workspace/Topics.tsx` | Composer, topic cards, replies, source actions, member receipts |
+| `workspace/Members.tsx` | Shared platform connections and language experts |
+| `workspace/Reading.tsx` | HTTPS intake, library, material reader and reading status |
+| `workspace/Schedules.tsx` | Scheduled messages and editor |
+| `workspace/Settings.tsx` | Settings categories and preferences |
+| `workspace/use-workspace.ts` | Snapshot refresh, operation/error state |
+| `workspace/ui.tsx` | Avatars, accessible modal, icon controls and saved-time rendering |
+| `workspace/workspace.css`, `workspace/settings.css`, `workspace/production.css` | Approved visual system and production control styles |
+| `components/ModelSettings.tsx` | Staged native Pi connection/auth/model editor |
+| `components/TelegramSettings.tsx`, `components/FeishuSettings.tsx` | Bot onboarding and management |
+| `components/Primitives.tsx` | Sanitized Markdown, diagrams and setup dialogs |
+| `components/ApplicationUpdates.tsx` | Update notices, confirmation and About controls |
+| `bridge.ts`, `product-ui.ts`, `i18n/` | Desktop API, saved-view mapping and translations |

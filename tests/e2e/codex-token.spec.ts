@@ -79,24 +79,22 @@ test("subscription reading uses the isolated file credential after app-server re
   try {
     const page = await app.firstWindow();
     await page.getByRole("navigation").waitFor();
-    await page
-      .getByRole("navigation")
-      .getByRole("button", { name: "设置", exact: true })
-      .click();
-    await page.getByRole("button", { name: "刷新模型", exact: true }).click();
-    const models = page.getByRole("combobox", { name: "模型", exact: true });
-    await expect(
-      models.locator('option[value="gpt-6.1-sol"]'),
-    ).toHaveJSProperty("disabled", false);
-    await expect(models.locator('option[value="gpt-6-luna"]')).toHaveJSProperty(
-      "disabled",
-      false,
+    await page.getByRole("button", { name: "设置", exact: true }).click();
+    await page.evaluate(() => window.postrove.refreshModels());
+    const available = await page.evaluate(() => window.postrove.modelView());
+    expect(available.ok).toBe(true);
+    if (!available.ok) throw new Error("Missing model view");
+    expect(
+      available.value.legacy?.models.find((item) => item.id === "gpt-6.1-sol")
+        ?.compatible,
+    ).toBe(true);
+    const updated = await page.evaluate(() =>
+      window.postrove.saveModel({
+        method: "codex_subscription",
+        modelId: "gpt-6.1-sol",
+      }),
     );
-    await expect(
-      models.locator('option[value="fixture-unknown"]'),
-    ).toHaveJSProperty("disabled", true);
-    await models.selectOption("gpt-6.1-sol");
-    await page.getByRole("button", { name: "保存连接", exact: true }).click();
+    expect(updated.ok).toBe(true);
     await expect
       .poll(
         async () =>
@@ -105,8 +103,12 @@ test("subscription reading uses the isolated file credential after app-server re
           ).modelId,
       )
       .toBe("gpt-6.1-sol");
+    await page.getByRole("button", { name: "后台模型", exact: true }).click();
+    await expect(
+      page.getByRole("button", { name: "迁移连接", exact: true }),
+    ).toBeVisible();
     await page.screenshot({
-      path: info.outputPath("gpt-6-1-model-settings.png"),
+      path: info.outputPath("legacy-connection-migration.png"),
     });
     const reply = await page.evaluate(() =>
       window.postrove.addLink("https://example.com/credential-fixture"),

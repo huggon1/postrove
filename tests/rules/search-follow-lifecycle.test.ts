@@ -198,7 +198,7 @@ test("scheduler skips outstanding same follow, queues other follows, freezes con
     await f.service.deleteFollow(a.followId);
     release();
     await waitUntil(() =>
-      f.service.reports().every((r) => r.status === "completed"),
+      f.service.reports().every((r) => r.status === "partial"),
     );
     assert.equal(peak, 1);
     assert.ok(seen[1].includes(conditions.question));
@@ -254,7 +254,7 @@ test("restart after saved platform evidence terminalizes the run from its sectio
   }));
   try {
     const id = await f.service.start(conditions);
-    await waitUntil(() => f.service.readTask(id).status === "completed");
+    await waitUntil(() => f.service.readTask(id).status === "partial");
     await f.store.update((state) => {
       const report = state.reports.find((r) => r.taskId === id)!;
       report.status = "running";
@@ -262,7 +262,7 @@ test("restart after saved platform evidence terminalizes the run from its sectio
     });
     await f.service.recover();
     const report = f.service.readTask(id);
-    assert.equal(report.status, "completed");
+    assert.equal(report.status, "partial");
     assert.equal("synthesis" in report, false);
     assert.equal(report.sections[0].rawReply, "已获取的原始回答");
     assert.ok(report.finishedAt);
@@ -281,7 +281,7 @@ test("clock rollback and restart preserve an already admitted daily occurrence",
     await f.service.saveFollow({ ...conditions, schedule: daily });
     now = new Date("2026-10-12T09:00:00");
     await f.service.tickSchedules();
-    await waitUntil(() => f.service.reports()[0]?.status === "completed");
+    await waitUntil(() => f.service.reports()[0]?.status === "partial");
     now = new Date("2026-10-12T08:30:00");
     await f.service.recover();
     now = new Date("2026-10-12T09:00:00");
@@ -307,7 +307,7 @@ test("startup reconciles committed report outcomes after task-status persistence
   }));
   try {
     const id = await f.service.start(conditions);
-    await waitUntil(() => f.service.readTask(id).status === "completed");
+    await waitUntil(() => f.service.readTask(id).status === "partial");
     await f.taskStore.update((state) => {
       const task = state.tasks.find((t) => t.taskId === id)!;
       task.state = "running";

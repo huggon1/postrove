@@ -21,8 +21,12 @@ await build({
 
 await build({
   define: { __POSTROVE_BUILD_IDENTITY__: JSON.stringify(identity) },
-  entryPoints: ["tests/support/update-app.ts"],
-  outfile: "dist/main/update-test.cjs",
+  entryPoints: {
+    "update-test": "tests/support/update-app.ts",
+    "content-test": "tests/support/content-app.ts",
+  },
+  outdir: "dist/main",
+  outExtension: { ".js": ".cjs" },
   platform: "node",
   bundle: true,
   format: "cjs",

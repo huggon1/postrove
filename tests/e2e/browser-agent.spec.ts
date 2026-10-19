@@ -253,8 +253,13 @@ test("real Agent worker uses Chrome tools and returns captured platform text", a
     );
     expect(result.captures[0]).toBe(result.output.rawReply);
     expect(result.captures).toHaveLength(2);
-    expect(result.progress[0].rawReply).toBe(result.output.rawReply);
-    expect(result.progress[0].citationExtraction.state).toBe("running");
+    expect(result.progress.find((entry: any) => entry.rawReply).rawReply).toBe(
+      result.output.rawReply,
+    );
+    expect(
+      result.progress.find((entry: any) => entry.rawReply).citationExtraction
+        .state,
+    ).toBe("running");
     expect(result.validated.citationExtraction.state).toBe("completed");
     expect(mixedRejected).toBe(true);
     expect(
@@ -739,11 +744,16 @@ for (const mode of [
           mode,
         },
       );
-      expect(outcome.progress[0].rawReply).toBe(
-        "Captured platform answer with separate sources.",
+      expect(
+        outcome.progress.find((entry: any) => entry.rawReply).rawReply,
+      ).toBe("Captured platform answer with separate sources.");
+      expect(
+        outcome.progress.find((entry: any) => entry.rawReply).citationExtraction
+          .state,
+      ).toBe("running");
+      expect(outcome.result.rawReply).toBe(
+        outcome.progress.find((entry: any) => entry.rawReply).rawReply,
       );
-      expect(outcome.progress[0].citationExtraction.state).toBe("running");
-      expect(outcome.result.rawReply).toBe(outcome.progress[0].rawReply);
       if (mode === "saved-inline") {
         expect(outcome.failedClicks).toBe(1);
         expect(observations.some((o) => o.toolError)).toBe(true);
@@ -801,7 +811,7 @@ for (const mode of [
         );
         expect(outcome.report).not.toHaveProperty("synthesis");
         expect(outcome.report.sections[0].rawReply).toBe(
-          outcome.progress[0].rawReply,
+          outcome.progress.find((entry: any) => entry.rawReply).rawReply,
         );
         expect(outcome.result.citationExtraction.error).toMatch(
           mode === "cancel" ? /stopped/i : /worker/i,
@@ -1143,10 +1153,14 @@ for (const mode of [
         expect(outcome.entryLoads).toBeGreaterThanOrEqual(2);
         expect(hostileRefs[0]).toBe(priorSourceRef);
       }
-      expect(outcome.progress[0].rawReply).toBe(
+      expect(
+        outcome.progress.find((entry: any) => entry.rawReply).rawReply,
+      ).toBe(
         "Complete final answer from the platform with separately disclosed sources.",
       );
-      expect(outcome.result.rawReply).toBe(outcome.progress[0].rawReply);
+      expect(outcome.result.rawReply).toBe(
+        outcome.progress.find((entry: any) => entry.rawReply).rawReply,
+      );
       expect(outcome.remainingPages).toBe(0);
       expect(outcome.result.citationExtraction.state).toBe(
         mode === "expanded-empty" ? "empty" : "failed",
@@ -1458,7 +1472,9 @@ for (const mode of [
       } else {
         expect(outcome.result.rawReply).toContain("Captured platform answer");
         expect(outcome.result.rawReply).toContain("A cited note");
-        expect(outcome.progress[0].rawReply).toBe(outcome.result.rawReply);
+        expect(
+          outcome.progress.find((entry: any) => entry.rawReply).rawReply,
+        ).toBe(outcome.result.rawReply);
         const admitted = [
           "card-preferred",
           "inline-readable",

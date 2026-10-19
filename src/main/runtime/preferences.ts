@@ -9,6 +9,12 @@ import { z } from "zod";
 export class Preferences {
   language: Language = "zh-CN";
   taskBrowserVisible = false;
+  readingLanguage: ApplicationPreferences["readingLanguage"] = "app";
+  get resolvedReadingLanguage(): Language {
+    return this.readingLanguage === "app"
+      ? this.language
+      : this.readingLanguage;
+  }
   private queue: Promise<void> = Promise.resolve();
   constructor(private directory: string) {}
   async open() {
@@ -19,6 +25,7 @@ export class Preferences {
         ),
       );
       this.language = value.language;
+      this.readingLanguage = value.readingLanguage;
       this.taskBrowserVisible = value.taskBrowserVisible;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
@@ -31,9 +38,15 @@ export class Preferences {
   saveTaskBrowserVisible(visible: unknown): Promise<void> {
     return this.update({ taskBrowserVisible: z.boolean().parse(visible) });
   }
+  saveReadingLanguage(value: unknown) {
+    return this.update({
+      readingLanguage: preferencesSchema.shape.readingLanguage.parse(value),
+    });
+  }
   view(): ApplicationPreferences {
     return {
       language: this.language,
+      readingLanguage: this.readingLanguage,
       taskBrowserVisible: this.taskBrowserVisible,
     };
   }
@@ -47,6 +60,7 @@ export class Preferences {
       });
       await rename(path + ".tmp", path);
       this.language = value.language;
+      this.readingLanguage = value.readingLanguage;
       this.taskBrowserVisible = value.taskBrowserVisible;
     });
     this.queue = operation.catch(() => {});

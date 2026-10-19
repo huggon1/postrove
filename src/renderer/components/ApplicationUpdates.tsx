@@ -72,7 +72,7 @@ export function UpdateSettings({
   const { state, release, progress, failure } = view;
   const messages: Record<ApplicationUpdateView["state"], string> = {
     disabled: "安装版支持应用更新。",
-    idle: "检查是否有新版本。",
+    idle: "",
     checking: "正在检查更新…",
     latest: "已是最新版本",
     available: "有新版本可用",
@@ -108,10 +108,12 @@ export function UpdateSettings({
           <p className="muted">Postrove {view.version}</p>
         </div>
       </div>
-      <p role="status">
-        {t(messages[state])}
-        {release && <> · {release.version}</>}
-      </p>
+      {messages[state] && (
+        <p role="status">
+          {t(messages[state])}
+          {release && <> · {release.version}</>}
+        </p>
+      )}
       {view.checkedAt &&
         !["downloading", "waiting", "installing"].includes(state) && (
           <p className="muted">
@@ -230,7 +232,7 @@ function JobList({ view }: { view: ApplicationUpdateView }) {
     <ul className="update-jobs">
       {view.jobs.map((job) => (
         <li key={job.id}>
-          <span>{t(job.kind === "search" ? "搜索" : "解析")}</span>
+          <span>{t(job.kind === "search" ? "话题" : "阅读")}</span>
           <strong>{job.label}</strong>
         </li>
       ))}
