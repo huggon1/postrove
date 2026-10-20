@@ -32,7 +32,6 @@ test("shared content service uses isolated Pi calls, bounded concurrency, cancel
       held = true;
       return;
     }
-    await new Promise((done) => setTimeout(done, 120));
     const body = input.messages.at(-1).content;
     const content =
       typeof body === "string"
@@ -75,7 +74,11 @@ test("shared content service uses isolated Pi calls, bounded concurrency, cancel
     });
     expect(results.every((result) => result.value === text)).toBe(true);
     expect(Math.max(...results.map((result) => result.released))).toBe(4);
-    expect(peak).toBe(2);
+    // Worker startup varies by OS. Admission concurrency is measured at the
+    // service lease boundary; HTTP requests may overlap less than their workers.
+    expect(Math.max(...results.map((result) => result.peakLeases))).toBe(2);
+    expect(peak).toBeLessThanOrEqual(2);
+    expect(calls).toHaveLength(4);
     expect(calls.every((call) => call.tools.length === 0)).toBe(true);
     const id = randomUUID();
     const stopped = app.evaluate(
@@ -106,7 +109,10 @@ test("shared content service uses isolated Pi calls, bounded concurrency, cancel
     await info.attach("content-service-boundary", {
       body: JSON.stringify({
         isolatedCalls: calls.length,
-        peakConcurrency: peak,
+        peakLeaseConcurrency: Math.max(
+          ...results.map((result) => result.peakLeases),
+        ),
+        peakRequestConcurrency: peak,
         releasedLeases: 5,
         taskTraceIds: inputs.map((input) => input.id),
       }),

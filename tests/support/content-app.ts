@@ -4,7 +4,9 @@ import type { ContentRequest } from "../../src/shared/content-contracts";
 import type { ModelExecutionConfig } from "../../src/shared/model-contracts";
 const root = process.env.POSTROVE_CONTENT_FIXTURE_ROOT!;
 app.setPath("userData", root);
-let released = 0;
+let released = 0,
+  activeLeases = 0,
+  peakLeases = 0;
 const controllers = new Map<string, AbortController>();
 Object.assign(globalThis, {
   async contentFixture(input: {
@@ -20,15 +22,17 @@ Object.assign(globalThis, {
       credential: "fictional",
     };
     const service: ContentService = ((globalThis as any).__contentService ??=
-      new ContentService(
-        async () => ({
+      new ContentService(async () => {
+        activeLeases++;
+        peakLeases = Math.max(peakLeases, activeLeases);
+        return {
           config,
           release: async () => {
+            activeLeases--;
             released++;
           },
-        }),
-        root + "/traces",
-      ));
+        };
+      }, root + "/traces"));
     const controller = new AbortController();
     controllers.set(input.id, controller);
     try {
@@ -40,9 +44,10 @@ Object.assign(globalThis, {
           input.id,
         ),
         released,
+        peakLeases,
       };
     } catch (error) {
-      return { error: (error as Error).message, released };
+      return { error: (error as Error).message, released, peakLeases };
     } finally {
       controllers.delete(input.id);
     }
