@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Clock,
   DotsThree,
@@ -25,6 +25,7 @@ import {
   advisorName,
 } from "./ui";
 import type { Workspace } from "./use-workspace";
+import { ConfirmDialog, Feedback } from "./forms";
 
 export const followAdvisors = (follow: Follow) =>
   follow.advisorIds ??
@@ -120,41 +121,23 @@ export function ScheduleList({
         </div>
       )}
       {confirm && (
-        <Modal
-          label={t("删除定时消息")}
-          className="compact-modal"
+        <ConfirmDialog
+          title={t("删除定时消息")}
+          confirmLabel={t("删除")}
+          busy={workspace.busy}
+          error={workspace.error}
           onClose={() => setConfirm(undefined)}
+          onConfirm={async () => {
+            if (
+              await workspace.booleanAction(() =>
+                bridge.deleteFollow(confirm.followId),
+              )
+            )
+              setConfirm(undefined);
+          }}
         >
-          <ModalHeader
-            title={t("删除定时消息")}
-            onClose={() => setConfirm(undefined)}
-          />
-          <div className="compact-body">
-            <p className="confirm-copy">{confirm.name}</p>
-            <div className="config-actions">
-              <button
-                className="secondary"
-                onClick={() => setConfirm(undefined)}
-              >
-                {t("取消")}
-              </button>
-              <button
-                className="primary"
-                disabled={workspace.busy}
-                onClick={async () => {
-                  if (
-                    await workspace.booleanAction(() =>
-                      bridge.deleteFollow(confirm.followId),
-                    )
-                  )
-                    setConfirm(undefined);
-                }}
-              >
-                {t("删除")}
-              </button>
-            </div>
-          </div>
-        </Modal>
+          {confirm.name}
+        </ConfirmDialog>
       )}
     </>
   );
@@ -163,10 +146,12 @@ export function ScheduleEditor({
   workspace,
   value,
   onClose,
+  onMembers,
 }: {
   workspace: Workspace;
   value?: Follow;
   onClose(): void;
+  onMembers(): void;
 }) {
   const [name, setName] = useState(value?.name ?? ""),
     [question, setQuestion] = useState(value?.question ?? "");
@@ -177,6 +162,12 @@ export function ScheduleEditor({
         )
       : (workspace.members?.enabled ?? []),
   );
+  useEffect(() => {
+    if (workspace.members)
+      setSelected((old) =>
+        old.filter((id) => workspace.members!.enabled.includes(id)),
+      );
+  }, [workspace.members?.enabled.join(",")]);
   const [cadence, setCadence] = useState<"daily" | "weekly">(
       value?.schedule.cadence ?? "daily",
     ),
@@ -218,11 +209,7 @@ export function ScheduleEditor({
           if (result) onClose();
         }}
       >
-        {workspace.error && (
-          <p className="inline-error" role="alert">
-            {workspace.error}
-          </p>
-        )}
+        {workspace.error && <Feedback error>{workspace.error}</Feedback>}
         <label className="config-field">
           <span>{t("名称")}</span>
           <input
@@ -294,6 +281,12 @@ export function ScheduleEditor({
         </div>
         <fieldset className="recipient-field">
           <legend>{t("接收成员")}</legend>
+          {!workspace.members?.enabled.length && (
+            <button type="button" className="secondary" onClick={onMembers}>
+              <Plus />
+              {t("管理成员")}
+            </button>
+          )}
           <div className="recipient-chips">
             {workspace.members?.enabled.map((id) => (
               <button

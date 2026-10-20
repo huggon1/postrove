@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -19,6 +19,8 @@ import {
 import { bridge } from "../bridge";
 import { t } from "../i18n";
 import { Avatar, IconButton, Modal, ModalHeader, advisorName } from "./ui";
+import { ConfirmDialog, Feedback, SetupSteps } from "./forms";
+import { usePlatformStatus } from "./use-platform-status";
 import type { Workspace } from "./use-workspace";
 
 const connections = [advisors[0], advisors[2]];
@@ -32,45 +34,16 @@ export function Members({
   initial?: string;
 }) {
   const [selected, setSelected] = useState(initial);
-  const [status, setStatus] = useState<
-    Record<string, { signedIn: boolean; installed: boolean }>
-  >({});
+  const [status, setStatus] = usePlatformStatus();
+  const [disabling, setDisabling] = useState<Advisor>();
   const [busy, setBusy] = useState(false),
     [waiting, setWaiting] = useState(false),
     [error, setError] = useState("");
   const [signingOut, setSigningOut] = useState(false);
   const [disconnect, setDisconnect] = useState(false);
   const current = connections.find((item) => item.connectionId === selected);
-  useEffect(() => {
-    let alive = true;
-    const load = async () => {
-      const values = await Promise.allSettled([
-        bridge.xStatus(),
-        bridge.xhsStatus(),
-      ]);
-      if (!alive) return;
-      values.forEach((value, index) => {
-        if (value.status === "fulfilled" && value.value.ok) {
-          const state = value.value.value;
-          setStatus((old) => ({
-            ...old,
-            [connections[index].connectionId]: {
-              signedIn: state.signedIn,
-              installed: "installed" in state ? !!state.installed : true,
-            },
-          }));
-        }
-      });
-    };
-    void load();
-    const off = bridge.onChanged(() => void load());
-    return () => {
-      alive = false;
-      off();
-    };
-  }, []);
   async function action(kind: "login" | "check" | "logout") {
-    if (!current) return;
+    if (!current) return false;
     setBusy(true);
     setError("");
     try {
@@ -84,7 +57,7 @@ export function Members({
             : await (kind === "login" ? bridge.loginXhs() : bridge.logoutXhs());
       if (!reply.ok) {
         setError(reply.message);
-        return;
+        return false;
       }
       const check =
         current.platform === "x"
@@ -104,8 +77,10 @@ export function Members({
       }
       if (kind === "login") setWaiting(true);
       if (kind === "logout") setWaiting(false);
+      return check.ok;
     } catch {
       setError(t("平台登录操作未完成，请稍后重试"));
+      return false;
     } finally {
       setBusy(false);
       setSigningOut(false);
@@ -122,8 +97,10 @@ export function Members({
       const reply = await bridge.saveAdvisorSettings({ enabled: next });
       if (!reply.ok) setError(reply.message);
       else await workspace.refresh();
+      return reply.ok;
     } catch {
       setError(t("设置保存失败"));
+      return false;
     } finally {
       setBusy(false);
     }
@@ -148,7 +125,9 @@ export function Members({
                   (!status[connection.connectionId]?.signedIn && !active)
                 }
                 className="expert-option"
-                onClick={() => void toggle(advisor)}
+                onClick={() =>
+                  active ? setDisabling(advisor) : void toggle(advisor)
+                }
               >
                 <span className="expert-language-symbol">
                   {advisor.language === "en" ? "En" : "中"}
@@ -181,20 +160,21 @@ export function Members({
             : t("我的成员")
         }
         onClose={onClose}
-      >
-        {current && (
-          <IconButton
-            label={t("返回成员列表")}
-            onClick={() => {
-              setSelected(undefined);
-              setError("");
-              setWaiting(false);
-            }}
-          >
-            <ArrowLeft />
-          </IconButton>
-        )}
-      </ModalHeader>
+        leading={
+          current && (
+            <IconButton
+              label={t("返回成员列表")}
+              onClick={() => {
+                setSelected(undefined);
+                setError("");
+                setWaiting(false);
+              }}
+            >
+              <ArrowLeft />
+            </IconButton>
+          )
+        }
+      />
       {!current ? (
         <div className="member-catalog shared-member-catalog">
           {connections.map((connection) => (
@@ -295,16 +275,10 @@ export function Members({
               </>
             ) : (
               <>
-                <ol className="setup-steps">
-                  <li aria-current="step">
-                    <span>1</span>
-                    <b>{t("平台登录")}</b>
-                  </li>
-                  <li>
-                    <span>2</span>
-                    <b>{t("启用专家")}</b>
-                  </li>
-                </ol>
+                <SetupSteps
+                  items={[t("平台登录"), t("启用专家")]}
+                  current={0}
+                />
                 <div className="setup-state">
                   <span className="state-symbol">
                     {waiting ? <CircleNotch className="spin" /> : <Globe />}
@@ -347,51 +321,47 @@ export function Members({
                 </button>
               )}
             </div>
-            {error && (
-              <p className="setup-feedback is-error" role="alert">
-                {error}
-              </p>
+            {error && !disconnect && !disabling && (
+              <Feedback error>{error}</Feedback>
             )}
           </div>
         </div>
       )}
-      {!current && error && (
-        <p className="inline-error" role="alert">
-          {error}
-        </p>
+      {!current && error && !disabling && (
+        <div className="member-catalog-feedback">
+          <Feedback error>{error}</Feedback>
+        </div>
       )}
       {disconnect && (
-        <Modal
-          label={t("退出登录")}
-          className="compact-modal"
+        <ConfirmDialog
+          title={t("退出登录")}
+          confirmLabel={t("退出登录")}
+          busy={signingOut}
+          error={error}
           onClose={() => setDisconnect(false)}
+          onConfirm={async () => {
+            setSigningOut(true);
+            if (await action("logout")) setDisconnect(false);
+          }}
         >
-          <ModalHeader
-            title={t("退出登录")}
-            onClose={() => setDisconnect(false)}
-          />
-          <div className="compact-body">
-            <div className="config-actions">
-              <button
-                className="secondary"
-                onClick={() => setDisconnect(false)}
-              >
-                {t("取消")}
-              </button>
-              <button
-                className="primary"
-                disabled={signingOut}
-                onClick={async () => {
-                  setSigningOut(true);
-                  await action("logout");
-                  setDisconnect(false);
-                }}
-              >
-                {t("退出登录")}
-              </button>
-            </div>
-          </div>
-        </Modal>
+          {current?.platform === "x"
+            ? "Grok · X"
+            : `${t("点点")} · ${t("小红书")}`}
+        </ConfirmDialog>
+      )}
+      {disabling && (
+        <ConfirmDialog
+          title={t("停用专家")}
+          confirmLabel={t("停用专家")}
+          busy={busy}
+          error={error}
+          onClose={() => setDisabling(undefined)}
+          onConfirm={async () => {
+            if (await toggle(disabling)) setDisabling(undefined);
+          }}
+        >
+          {advisorName(disabling.id)}
+        </ConfirmDialog>
       )}
     </Modal>
   );

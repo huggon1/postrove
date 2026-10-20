@@ -3,11 +3,9 @@ import {
   ArrowRight,
   Check,
   CircleNotch,
-  PencilSimple,
   Plus,
   ShieldCheck,
   Sparkle,
-  Trash,
 } from "@phosphor-icons/react";
 import {
   defaultPiOptions,
@@ -19,7 +17,14 @@ import {
 import { failureMessages } from "../../shared/task-failure";
 import { bridge } from "../bridge";
 import { t } from "../i18n";
-import { IconButton, Modal, ModalHeader } from "../workspace/ui";
+import { Modal, ModalHeader } from "../workspace/ui";
+import {
+  ConfirmDialog,
+  Feedback,
+  SectionHeading,
+  SecretField,
+  SetupSteps,
+} from "../workspace/forms";
 
 const customTemplate = JSON.stringify(
   {
@@ -45,6 +50,13 @@ const customTemplate = JSON.stringify(
   null,
   2,
 );
+
+function jsonObject(value: string): PiOptions["apiOptions"] {
+  const parsed: unknown = JSON.parse(value);
+  if (!parsed || Array.isArray(parsed) || typeof parsed !== "object")
+    throw new Error();
+  return parsed as PiOptions["apiOptions"];
+}
 
 export function ModelSettings() {
   const [view, setView] = useState<ModelView>();
@@ -122,13 +134,7 @@ export function ModelSettings() {
     if (!selected) return;
     let apiOptions: PiOptions["apiOptions"];
     try {
-      apiOptions = JSON.parse(apiJson);
-      if (
-        !apiOptions ||
-        Array.isArray(apiOptions) ||
-        typeof apiOptions !== "object"
-      )
-        throw new Error();
+      apiOptions = jsonObject(apiJson);
     } catch {
       setError(t("请填写有效的 JSON 对象"));
       return;
@@ -166,21 +172,23 @@ export function ModelSettings() {
           : "";
   return (
     <section className="model-settings" aria-label={t("后台模型")}>
-      <div className="settings-section-head">
-        <h2>{t("后台模型")}</h2>
-        <button
-          className="primary"
-          onClick={() => {
-            setEditing(true);
-            setStep(0);
-            setProviderId("");
-            setError("");
-          }}
-        >
-          <Plus />
-          {t("新建连接")}
-        </button>
-      </div>
+      <SectionHeading
+        title={t("后台模型")}
+        action={
+          <button
+            className="primary small-primary"
+            onClick={() => {
+              setEditing(true);
+              setStep(0);
+              setProviderId("");
+              setError("");
+            }}
+          >
+            <Plus />
+            {t("新建连接")}
+          </button>
+        }
+      />
       <div className="model-connection-list">
         {view?.connections.map((connection) => {
           const current =
@@ -191,24 +199,27 @@ export function ModelSettings() {
               className={`model-connection-card ${current ? "current" : ""}`}
               key={connection.id}
             >
-              <span className="model-connection-icon">
-                <Sparkle />
-              </span>
-              <div>
-                <h3>{connection.name}</h3>
-                <p>
-                  {connection.providerId} · {connection.modelId}
-                </p>
-              </div>
-              <div className="model-connection-actions">
+              <div className="model-connection-heading">
+                <span className="model-connection-icon">
+                  <Sparkle />
+                </span>
+                <div className="model-connection-name">
+                  <h3>{connection.name}</h3>
+                  <p>
+                    {connection.providerId} · {connection.modelId}
+                  </p>
+                </div>
                 {current && (
                   <span className="connection-pill connected">
                     <i />
                     {t("正在使用")}
                   </span>
                 )}
-                <IconButton
-                  label={t("编辑连接")}
+              </div>
+              <div className="model-connection-actions">
+                <button
+                  className="text-button"
+                  aria-label={t("编辑连接")}
                   disabled={busy}
                   onClick={async () => {
                     if (
@@ -224,22 +235,24 @@ export function ModelSettings() {
                     }
                   }}
                 >
-                  <PencilSimple />
-                </IconButton>
-                <IconButton
-                  label={t("移除连接")}
+                  {t("编辑")}
+                  <ArrowRight />
+                </button>
+                <button
+                  className="text-button danger-text"
+                  aria-label={t("移除连接")}
                   disabled={busy}
                   onClick={() => setRemoving(connection.id)}
                 >
-                  <Trash />
-                </IconButton>
+                  {t("移除")}
+                </button>
               </div>
             </article>
           );
         })}
       </div>
       {view?.migration && (
-        <article className="model-connection-card">
+        <article className="model-connection-card migration-card">
           <Sparkle />
           <div>
             <h3>{t("Codex 订阅")}</h3>
@@ -264,7 +277,7 @@ export function ModelSettings() {
         </article>
       )}
       {view && !view.current && !view.connections.length && (
-        <div className="empty-state small-empty">
+        <div className="settings-empty">
           <Sparkle />
           <h3>{t("尚未连接模型")}</h3>
         </div>
@@ -285,14 +298,15 @@ export function ModelSettings() {
             <ShieldCheck />
             {t(view.check === "running" ? "取消连接检查" : "检查连接")}
           </button>
-          {checkStatus && <span role="status">{checkStatus}</span>}
+          {checkStatus &&
+            (view.check === "running" ? (
+              <span role="status">{checkStatus}</span>
+            ) : (
+              <Feedback error={view.check === "failed"}>{checkStatus}</Feedback>
+            ))}
         </div>
       )}
-      {error && !editing && (
-        <p className="inline-error" role="alert">
-          {error}
-        </p>
-      )}
+      {error && !editing && !removing && <Feedback error>{error}</Feedback>}
       {editing && (
         <Modal
           label={t("模型连接配置")}
@@ -301,18 +315,10 @@ export function ModelSettings() {
         >
           <ModalHeader title={t("模型连接配置")} onClose={close} />
           <div className="model-workspace">
-            <ol className="setup-steps">
-              {["连接方式", "认证", "模型与参数"].map((label, index) => (
-                <li
-                  key={label}
-                  aria-current={step === index ? "step" : undefined}
-                  className={step > index ? "complete" : ""}
-                >
-                  <span>{step > index ? <Check /> : index + 1}</span>
-                  <b>{t(label)}</b>
-                </li>
-              ))}
-            </ol>
+            <SetupSteps
+              items={[t("连接方式"), t("认证"), t("模型与参数")]}
+              current={step}
+            />
             {step === 0 && (
               <>
                 <label className="config-field">
@@ -330,21 +336,6 @@ export function ModelSettings() {
                     ))}
                   </select>
                 </label>
-                <button
-                  className="primary full-width"
-                  disabled={!providerId || busy}
-                  onClick={async () => {
-                    if (
-                      await action(() =>
-                        bridge.selectModelConnection({ providerId }),
-                      )
-                    )
-                      setStep(1);
-                  }}
-                >
-                  {t("继续")}
-                  <ArrowRight />
-                </button>
                 <details className="config-details">
                   <summary>{t("自定义模型目录")}</summary>
                   <label className="config-field">
@@ -370,6 +361,12 @@ export function ModelSettings() {
                     className="secondary"
                     disabled={busy}
                     onClick={async () => {
+                      try {
+                        jsonObject(customJson);
+                      } catch {
+                        setError(t("请填写有效的 JSON 对象"));
+                        return;
+                      }
                       if (
                         await action(() =>
                           bridge.configureModelCatalog({
@@ -385,6 +382,21 @@ export function ModelSettings() {
                     <ArrowRight />
                   </button>
                 </details>
+                <button
+                  className="primary full-width"
+                  disabled={!providerId || busy}
+                  onClick={async () => {
+                    if (
+                      await action(() =>
+                        bridge.selectModelConnection({ providerId }),
+                      )
+                    )
+                      setStep(1);
+                  }}
+                >
+                  {t("继续")}
+                  <ArrowRight />
+                </button>
               </>
             )}
             {step === 1 && (
@@ -484,31 +496,41 @@ export function ModelSettings() {
                       );
                     }}
                   >
-                    <label className="config-field">
-                      <span>{prompt.message}</span>
-                      {prompt.type === "select" ? (
-                        <select
-                          value={answer}
-                          onChange={(event) => setAnswer(event.target.value)}
-                        >
-                          <option value="">{t("请选择")}</option>
-                          {prompt.options?.map((option) => (
-                            <option key={option.id} value={option.id}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <input
-                          type={prompt.type === "secret" ? "password" : "text"}
-                          autoComplete="off"
-                          autoFocus
-                          value={answer}
-                          placeholder={prompt.placeholder}
-                          onChange={(event) => setAnswer(event.target.value)}
-                        />
-                      )}
-                    </label>
+                    {prompt.type === "secret" ? (
+                      <SecretField
+                        label={prompt.message}
+                        autoFocus
+                        value={answer}
+                        placeholder={prompt.placeholder}
+                        onChange={(event) => setAnswer(event.target.value)}
+                      />
+                    ) : (
+                      <label className="config-field">
+                        <span>{prompt.message}</span>
+                        {prompt.type === "select" ? (
+                          <select
+                            value={answer}
+                            onChange={(event) => setAnswer(event.target.value)}
+                          >
+                            <option value="">{t("请选择")}</option>
+                            {prompt.options?.map((option) => (
+                              <option key={option.id} value={option.id}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input
+                            type="text"
+                            autoComplete="off"
+                            autoFocus
+                            value={answer}
+                            placeholder={prompt.placeholder}
+                            onChange={(event) => setAnswer(event.target.value)}
+                          />
+                        )}
+                      </label>
+                    )}
                     <button
                       className="primary"
                       type="submit"
@@ -534,23 +556,21 @@ export function ModelSettings() {
                   )}
                 </div>
                 {view?.authFailure && (
-                  <p className="inline-error" role="alert">
-                    {t("认证未完成，请重试")}
-                  </p>
+                  <Feedback error>{t("认证未完成，请重试")}</Feedback>
                 )}
                 {view?.catalog === "failed" && (
-                  <p className="inline-error" role="alert">
-                    {t("模型目录刷新失败")}
-                  </p>
+                  <Feedback error>{t("模型目录刷新失败")}</Feedback>
                 )}
-                <button
-                  className="primary full-width"
-                  disabled={busy || view?.auth !== "signed_in"}
-                  onClick={() => setStep(2)}
-                >
-                  {t("继续")}
-                  <ArrowRight />
-                </button>
+                {view?.auth === "signed_in" && (
+                  <button
+                    className="primary full-width"
+                    disabled={busy}
+                    onClick={() => setStep(2)}
+                  >
+                    {t("继续")}
+                    <ArrowRight />
+                  </button>
+                )}
               </>
             )}
             {step === 2 && (
@@ -589,13 +609,6 @@ export function ModelSettings() {
                     ))}
                   </select>
                 </label>
-                <button
-                  className="text-button"
-                  disabled={busy}
-                  onClick={() => void action(bridge.refreshModels)}
-                >
-                  {t("刷新目录")}
-                </button>
                 <div className="reasoning-fields">
                   {(["browser", "reading"] as const).map((role) => {
                     const key =
@@ -720,7 +733,10 @@ export function ModelSettings() {
                       className="code-input"
                       rows={7}
                       value={apiJson}
-                      onChange={(event) => setApiJson(event.target.value)}
+                      onChange={(event) => {
+                        setApiJson(event.target.value);
+                        setError("");
+                      }}
                     />
                   </label>
                   {advanced && (
@@ -742,11 +758,7 @@ export function ModelSettings() {
                 </button>
               </>
             )}
-            {error && (
-              <p className="inline-error" role="alert">
-                {error}
-              </p>
-            )}
+            {error && <Feedback error>{error}</Feedback>}
             <footer className="setup-footer">
               {step > 0 && (
                 <button
@@ -767,48 +779,26 @@ export function ModelSettings() {
         </Modal>
       )}
       {removing && (
-        <Modal
-          label={t("移除模型连接")}
-          className="compact-modal"
+        <ConfirmDialog
+          title={t("移除模型连接")}
+          confirmLabel={t("移除")}
+          busy={busy}
+          error={error}
           onClose={() => setRemoving(undefined)}
+          onConfirm={async () => {
+            if (
+              await action(() =>
+                bridge.removeModelConnection({ connectionId: removing }),
+              )
+            )
+              setRemoving(undefined);
+          }}
         >
-          <ModalHeader
-            title={t("移除模型连接")}
-            onClose={() => setRemoving(undefined)}
-          />
-          <div className="compact-body">
-            <p className="confirm-copy">
-              {
-                view?.connections.find(
-                  (connection) => connection.id === removing,
-                )?.name
-              }
-            </p>
-            <div className="config-actions">
-              <button
-                className="secondary"
-                onClick={() => setRemoving(undefined)}
-              >
-                {t("取消")}
-              </button>
-              <button
-                className="primary"
-                disabled={busy}
-                onClick={async () => {
-                  const connectionId = removing;
-                  if (
-                    await action(() =>
-                      bridge.removeModelConnection({ connectionId }),
-                    )
-                  )
-                    setRemoving(undefined);
-                }}
-              >
-                {t("移除")}
-              </button>
-            </div>
-          </div>
-        </Modal>
+          {
+            view?.connections.find((connection) => connection.id === removing)
+              ?.name
+          }
+        </ConfirmDialog>
       )}
     </section>
   );

@@ -238,13 +238,16 @@ test("Feishu setup, durable receipts, history recovery and account isolation", a
   let app = await launch();
   try {
     let page = await app.firstWindow();
+    const capture = (name: string) =>
+      page.screenshot({
+        path: info.outputPath(name + ".png"),
+        animations: "disabled",
+      });
     await page.getByRole("button", { name: "设置", exact: true }).click();
     let section = page.getByRole("region", { name: "飞书", exact: true });
     await section.locator(".telegram-summary").click();
-    await section
-      .getByRole("button", { name: "开始配置", exact: true })
-      .click();
     let guide = page.getByRole("dialog", { name: "飞书接入", exact: true });
+    await capture("feishu-scan-start");
     await guide
       .getByRole("button", { name: "使用已有应用", exact: true })
       .click();
@@ -271,17 +274,39 @@ test("Feishu setup, durable receipts, history recovery and account isolation", a
       .getByRole("button", { name: "保存并验证", exact: true })
       .click();
     await expect(guide.getByRole("alert")).toBeVisible();
+    await capture("feishu-verification-error");
     reject = false;
     await guide
       .getByRole("button", { name: "保存并验证", exact: true })
       .click();
+    await expect(
+      guide.getByRole("heading", { name: "应用权限", exact: true }),
+    ).toBeVisible();
+    await capture("feishu-permissions");
+    await guide
+      .getByRole("button", { name: "验证连接并继续", exact: true })
+      .click();
     await expect.poll(() => sockets.clients.size).toBe(1);
+    await capture("feishu-awaiting-chat");
     send(message("discover", "hello"));
     await expect(
       guide.getByRole("button", { name: /授权.*oc_private/ }),
     ).toBeVisible();
+    await capture("feishu-pending-chat");
     await guide.getByRole("button", { name: /授权.*oc_private/ }).click();
+    await expect(guide.locator(".chat-option.authorized")).toBeVisible();
+    await capture("feishu-authorized-chat");
+    await guide.locator(".chat-option.authorized button").click();
+    const revokeDialog = page.getByRole("dialog", {
+      name: "撤销聊天授权",
+      exact: true,
+    });
+    await capture("feishu-revoke-confirmation");
+    await revokeDialog
+      .getByRole("button", { name: "保留配置", exact: true })
+      .click();
     await guide.getByRole("button", { name: "继续", exact: true }).click();
+    await capture("feishu-complete");
     await guide.getByRole("button", { name: "完成", exact: true }).click();
     const grantAt = Date.now();
     await new Promise((done) => setTimeout(done, 10));
@@ -423,6 +448,13 @@ test("Feishu setup, durable receipts, history recovery and account isolation", a
     await page.getByRole("button", { name: "设置", exact: true }).click();
     section = page.getByRole("region", { name: "飞书", exact: true });
     await section.locator(".telegram-summary").click();
+    guide = page.getByRole("dialog", { name: "飞书接入", exact: true });
+    await capture("feishu-management");
+    await page.getByText("维护", { exact: true }).click();
+    await guide.getByRole("button", { name: "清除配置", exact: true }).click();
+    const clear = page.getByRole("dialog", { name: "清除配置", exact: true });
+    await capture("feishu-clear-confirmation");
+    await clear.getByRole("button", { name: "保留配置", exact: true }).click();
     await section
       .getByRole("button", { name: "查看接入步骤", exact: true })
       .click();
@@ -452,7 +484,6 @@ test("Feishu setup, durable receipts, history recovery and account isolation", a
       .getByRole("button", { name: "View setup steps", exact: true })
       .click();
     guide = page.getByRole("dialog", { name: "Feishu setup", exact: true });
-    await guide.getByRole("button", { name: "Previous", exact: true }).click();
     await guide
       .getByRole("button", { name: "Use existing app", exact: true })
       .click();
@@ -536,7 +567,7 @@ test("Feishu registration cancellation keeps the configured app", async ({}, inf
     res.end(
       JSON.stringify({
         url: "https://accounts.feishu.cn/fixture-register",
-        expireIn: 60,
+        expireIn: 3,
       }),
     );
   });
@@ -553,17 +584,32 @@ test("Feishu registration cancellation keeps the configured app", async ({}, inf
   });
   try {
     const page = await app.firstWindow();
-    const started = await page.evaluate(() =>
-      window.postrove.startBotRegistration("feishu"),
-    );
-    expect(started.ok).toBe(true);
+    await page.getByRole("button", { name: "设置", exact: true }).click();
+    await page.locator(".bot-settings .inbox-card").click();
+    const guide = page.getByRole("dialog", { name: "飞书接入", exact: true });
+    await guide
+      .getByRole("button", { name: "查看接入步骤", exact: true })
+      .click();
+    await guide
+      .getByRole("button", { name: "扫码创建应用", exact: true })
+      .last()
+      .click();
+    await expect(
+      guide.getByRole("button", { name: "打开扫码授权页面", exact: true }),
+    ).toBeVisible();
+    await page.screenshot({ path: info.outputPath("feishu-scan-waiting.png") });
     const registration = await page.evaluate(() =>
       window.postrove.botStatus("feishu"),
     );
     expect(registration.ok && registration.value.registration?.url).toMatch(
       /^https:\/\/accounts.feishu.cn\//,
     );
-    await page.evaluate(() => window.postrove.cancelBotRegistration("feishu"));
+    await expect(guide.getByRole("alert")).toContainText("扫码链接已过期");
+    await page.screenshot({ path: info.outputPath("feishu-scan-expired.png") });
+    await guide
+      .getByRole("button", { name: "使用已有应用", exact: true })
+      .click();
+    await expect(guide.getByLabel("App Secret", { exact: true })).toBeVisible();
     const cancelled = await page.evaluate(() =>
       window.postrove.botStatus("feishu"),
     );

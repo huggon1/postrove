@@ -24,6 +24,7 @@ import {
   stateLabel,
 } from "./ui";
 import type { Workspace } from "./use-workspace";
+import { Feedback } from "./forms";
 
 export function CollectLink({
   initial = "",
@@ -77,9 +78,7 @@ export function CollectLink({
           />
         </label>
         {(error || workspace.error) && (
-          <p role="alert" className="inline-error">
-            {error || workspace.error}
-          </p>
+          <Feedback error>{error || workspace.error}</Feedback>
         )}
         <button
           className="primary full-width"

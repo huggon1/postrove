@@ -77,6 +77,7 @@ test("native Pi UI, reasoning, API options, leases, and restart share one model 
   const profile = join(root, "profile");
   await mkdir(profile);
   const calls: any[] = [];
+  let rejectCheck = false;
   let releaseSource: (() => void) | undefined;
   const sourceGate = new Promise<void>((done) => {
     releaseSource = done;
@@ -115,6 +116,11 @@ test("native Pi UI, reasoning, API options, leases, and restart share one model 
       return;
     }
     const check = JSON.stringify(input.messages).includes("connection check");
+    if (check && rejectCheck) {
+      res.writeHead(503);
+      res.end("Connection unavailable");
+      return;
+    }
     calls.push({
       model: input.model,
       reasoning: input.reasoning_effort,
@@ -147,6 +153,12 @@ test("native Pi UI, reasoning, API options, leases, and restart share one model 
     let launched = await launch(profile, { POSTROVE_TEST_ENDPOINT: endpoint });
     app = launched.app;
     let page = launched.page;
+    const capture = (name: string) =>
+      page.screenshot({
+        path: info.outputPath(name + ".png"),
+        animations: "disabled",
+      });
+    await capture("model-empty");
     const initial = await modelView(page);
     const ids = initial.providers.map((p: any) => p.id);
     expect(ids).toEqual(expect.arrayContaining(getBuiltinProviders()));
@@ -158,7 +170,9 @@ test("native Pi UI, reasoning, API options, leases, and restart share one model 
       ),
     ).toBe(true);
     await page.getByRole("button", { name: "新建连接", exact: true }).click();
+    await capture("model-provider");
     await page.getByText("自定义模型目录", { exact: true }).click();
+    await capture("model-catalog");
     const catalog = {
       providers: {
         "fixture-provider": {
@@ -182,6 +196,10 @@ test("native Pi UI, reasoning, API options, leases, and restart share one model 
     await page
       .getByLabel("供应商 ID", { exact: true })
       .fill("fixture-provider");
+    await page.getByLabel("Pi models.json", { exact: true }).fill("{");
+    await page.getByRole("button", { name: "载入目录", exact: true }).click();
+    await expect(page.getByRole("dialog").getByRole("alert")).toBeVisible();
+    await capture("model-catalog-validation");
     await page
       .getByLabel("Pi models.json", { exact: true })
       .fill(JSON.stringify(catalog));
@@ -189,6 +207,7 @@ test("native Pi UI, reasoning, API options, leases, and restart share one model 
     await expect(
       page.getByRole("heading", { name: "Fixture provider", exact: true }),
     ).toBeVisible();
+    await capture("model-auth-methods");
     const native = await modelView(page);
     const authType = native.providers.find(
       (p: any) => p.id === "fixture-provider",
@@ -199,11 +218,13 @@ test("native Pi UI, reasoning, API options, leases, and restart share one model 
     await expect(
       page.locator('.model-auth-prompt input[type="password"]'),
     ).toBeVisible();
+    await capture("model-api-key");
     await page
       .locator('.model-auth-prompt input[type="password"]')
       .fill("fictional-native-key");
     await page.getByRole("button", { name: "继续认证", exact: true }).click();
     await expect(page.getByText("认证已配置", { exact: false })).toBeVisible();
+    await capture("model-authenticated");
     await page.getByRole("button", { name: "继续", exact: true }).click();
     await page
       .getByRole("combobox", { name: "模型", exact: true })
@@ -216,15 +237,19 @@ test("native Pi UI, reasoning, API options, leases, and restart share one model 
       name: "浏览任务 Reasoning",
       exact: true,
     });
+    await capture("model-options");
     await reading.selectOption("low");
     await browser.selectOption("high");
     await page.getByText("更多任务参数", { exact: true }).click();
     await page.getByLabel("Temperature", { exact: true }).fill("0.3");
     await page.getByLabel("最大输出 token", { exact: true }).fill("4096");
+    await capture("model-parameters");
     await page.getByRole("button", { name: "保存连接", exact: true }).click();
     await expect
       .poll(async () => (await saved(profile)).connections[0]?.modelId)
       .toBe("fixture@local");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await capture("model-saved");
     const store = await saved(profile),
       id = store.activeId;
     const authFile = join(profile, "pi", "connections", id, "auth.json");
@@ -237,6 +262,10 @@ test("native Pi UI, reasoning, API options, leases, and restart share one model 
     );
     await page.getByRole("button", { name: "检查连接", exact: true }).click();
     await expect(page.getByText("连接检查通过", { exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "检查连接", exact: true }),
+    ).toBeEnabled();
+    await capture("model-check-passed");
     expect(calls[0]).toMatchObject({
       model: "fixture@local",
       reasoning: "low",
@@ -244,6 +273,13 @@ test("native Pi UI, reasoning, API options, leases, and restart share one model 
       maxTokens: 2048,
       authenticated: true,
     });
+    rejectCheck = true;
+    await page.getByRole("button", { name: "检查连接", exact: true }).click();
+    await expect(
+      page.locator(".model-check-row .setup-feedback.is-error"),
+    ).toBeVisible();
+    await capture("model-check-failed");
+    rejectCheck = false;
     const paths = {
       authPath: authFile,
       modelsPath: join(profile, "pi", "connections", id, "models.json"),
@@ -317,6 +353,14 @@ test("native Pi UI, reasoning, API options, leases, and restart share one model 
     await expect.poll(async () => (await task(first))?.state).toBe("running");
     await page.getByRole("button", { name: "编辑连接", exact: true }).click();
     await page.getByText("高级 API 参数", { exact: true }).click();
+    await page.getByLabel("Pi API options JSON", { exact: true }).fill("[]");
+    await page.getByRole("button", { name: "保存连接", exact: true }).click();
+    await expect(
+      page
+        .getByRole("dialog", { name: "模型连接配置", exact: true })
+        .getByRole("alert"),
+    ).toContainText("请填写有效的 JSON 对象");
+    await capture("model-advanced-validation");
     await page.getByLabel("Pi API options JSON", { exact: true }).fill(
       JSON.stringify({
         reasoningEffort: "high",
@@ -324,6 +368,12 @@ test("native Pi UI, reasoning, API options, leases, and restart share one model 
       }),
     );
     await expect(reading).toBeDisabled();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page
+      .getByRole("button", { name: "保存连接", exact: true })
+      .scrollIntoViewIfNeeded();
+    await capture("model-advanced-narrow");
+    await page.setViewportSize({ width: 1100, height: 760 });
     await page.getByRole("button", { name: "保存连接", exact: true }).click();
     await expect
       .poll(
@@ -473,6 +523,11 @@ test("legacy Codex survives cancelled and failed native auth, then migrates atom
     });
     app = launched.app;
     let page = launched.page;
+    const capture = (name: string) =>
+      page.screenshot({
+        path: info.outputPath(name + ".png"),
+        animations: "disabled",
+      });
     expect((await modelView(page)).current.method).toBe("codex_subscription");
     await app.evaluate(() => {
       const actualFetch = globalThis.fetch;
@@ -524,6 +579,7 @@ test("legacy Codex survives cancelled and failed native auth, then migrates atom
         .find((p: any) => p.id === "openai-codex")
         .authMethods.find((m: any) => m.type === "oauth");
       await page.getByRole("button", { name: auth.name, exact: true }).click();
+      await capture("model-oauth-methods");
       await page
         .getByRole("combobox", {
           name: "Select OpenAI Codex login method:",
@@ -536,11 +592,13 @@ test("legacy Codex survives cancelled and failed native auth, then migrates atom
     await expect(
       page.getByRole("button", { name: "打开认证页面", exact: true }),
     ).toBeVisible();
+    await capture("model-browser-oauth");
     expect((await modelView(page)).current.method).toBe("codex_subscription");
     await page.getByRole("button", { name: "取消登录", exact: true }).click();
     await expect
       .poll(async () => (await modelView(page)).auth)
       .toBe("signed_out");
+    await capture("model-oauth-cancelled");
     expect(
       JSON.parse(
         await readFile(join(profile, "model-connection.json"), "utf8"),
@@ -552,6 +610,7 @@ test("legacy Codex survives cancelled and failed native auth, then migrates atom
         exact: true,
       }),
     ).toBeVisible();
+    await capture("model-device-oauth-error");
     expect((await modelView(page)).current.method).toBe("codex_subscription");
     expect(await stat(join(home, "auth.json"))).toBeTruthy();
     await app.evaluate(() => {
@@ -623,6 +682,7 @@ test("legacy Codex survives cancelled and failed native auth, then migrates atom
     });
     expect((await modelView(page)).migration).toBeUndefined();
     await page.getByRole("button", { name: "移除连接", exact: true }).click();
+    await capture("model-remove-confirmation");
     await page.getByRole("button", { name: "移除", exact: true }).click();
     await expect.poll(async () => (await modelView(page)).current).toBeNull();
     await expect

@@ -1,6 +1,4 @@
-import { t } from "../i18n";
-import { useEffect, useId, useRef, type ReactNode } from "react";
-import { XIcon } from "@phosphor-icons/react";
+import { useEffect, useRef } from "react";
 import { marked } from "marked";
 import DOMPurify from "dompurify";
 let diagramSequence = 0;
@@ -98,55 +96,5 @@ export function Markdown({
       }}
       dangerouslySetInnerHTML={{ __html: html }}
     />
-  );
-}
-export function Dialog({
-  title,
-  className = "",
-  children,
-  onClose,
-}: {
-  title: string;
-  className?: string;
-  children: ReactNode;
-  onClose: () => void;
-}) {
-  const ref = useRef<HTMLDialogElement>(null);
-  const id = useId();
-  useEffect(() => {
-    const dialog = ref.current!;
-    const trigger = document.activeElement as HTMLElement | null;
-    dialog.showModal();
-    dialog.querySelector<HTMLElement>("textarea, input")?.focus();
-    return () => {
-      dialog.close();
-      trigger?.focus();
-    };
-  }, []);
-  return (
-    <dialog
-      ref={ref}
-      className={`workspace-dialog ${className}`}
-      aria-labelledby={id}
-      onCancel={(event) => {
-        event.preventDefault();
-        onClose();
-      }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <header>
-        <h2 id={id}>{title}</h2>
-        <button
-          className="icon-button"
-          aria-label={t("关闭")}
-          onClick={onClose}
-        >
-          <XIcon size={20} />
-        </button>
-      </header>
-      <div className="dialog-content">{children}</div>
-    </dialog>
   );
 }

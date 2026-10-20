@@ -274,7 +274,7 @@ export function App() {
               </button>
             ) : null}
           </div>
-          {workspace.error && (
+          {workspace.error && !link && !schedule && (
             <div className="workspace-error" role="alert">
               <span>{workspace.error}</span>
               <button
@@ -483,6 +483,10 @@ export function App() {
         <ScheduleEditor
           workspace={workspace}
           value={schedule.value}
+          onMembers={() => {
+            setMemberConnection(undefined);
+            setMemberOpen(true);
+          }}
           onClose={() => setSchedule(undefined)}
         />
       )}

@@ -51,6 +51,8 @@ export function IconButton({
     />
   );
 }
+const openModals = new Set<HTMLDialogElement>();
+let savedBodyOverflow = "";
 export function Modal({
   label,
   className = "",
@@ -67,11 +69,13 @@ export function Modal({
     const dialog = ref.current!,
       focus = document.activeElement as HTMLElement | null;
     dialog.showModal();
-    const previous = document.body.style.overflow;
+    if (!openModals.size) savedBodyOverflow = document.body.style.overflow;
+    openModals.add(dialog);
     document.body.style.overflow = "hidden";
     return () => {
       dialog.close();
-      document.body.style.overflow = previous;
+      openModals.delete(dialog);
+      if (!openModals.size) document.body.style.overflow = savedBodyOverflow;
       if (focus?.isConnected) focus.focus();
     };
   }, []);
@@ -96,14 +100,19 @@ export function ModalHeader({
   title,
   onClose,
   children,
+  leading,
 }: {
   title: string;
   children?: ReactNode;
+  leading?: ReactNode;
   onClose(): void;
 }) {
   return (
     <header className="modal-top">
-      <h2>{title}</h2>
+      <div className="modal-title">
+        {leading}
+        <h2>{title}</h2>
+      </div>
       <div className="modal-header-actions">
         {children}
         <IconButton label={t("关闭")} onClick={onClose}>

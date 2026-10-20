@@ -391,7 +391,8 @@ test("review with copied Telegram credentials shows receiving paused", async ({}
       exact: true,
     })
     .click();
-  await expect(page.locator(".telegram-settings .status-tag")).toHaveText(
+  await page.getByRole("button", { name: "收件连接", exact: true }).click();
+  await expect(page.locator(".telegram-settings .connection-pill")).toHaveText(
     "已配置",
   );
   const reply = await page.evaluate(() =>

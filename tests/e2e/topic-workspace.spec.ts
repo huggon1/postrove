@@ -132,7 +132,10 @@ test("topic workspace connects experts, sends independently, reads and schedules
     await expect(
       members.getByRole("button", { name: "打开登录窗口", exact: true }),
     ).toBeVisible();
-    await page.screenshot({ path: info.outputPath("member-sign-in.png") });
+    await page.screenshot({
+      animations: "disabled",
+      path: info.outputPath("member-sign-in.png"),
+    });
     await members.getByRole("button", { name: "关闭", exact: true }).click();
     // A platform session is observed through its real status boundary.
     await writeFile(
@@ -152,8 +155,41 @@ test("topic workspace connects experts, sends independently, reads and schedules
       members.getByRole("switch", { name: "Grok · 中文" }),
     ).toBeChecked();
     await page.screenshot({
+      animations: "disabled",
       path: info.outputPath("shared-language-experts.png"),
     });
+    await members.getByRole("switch", { name: "Grok · 英文" }).click();
+    const disable = page.getByRole("dialog", { name: "停用专家", exact: true });
+    await expect(disable).toHaveCSS("opacity", "1");
+    await page.screenshot({
+      animations: "disabled",
+      path: info.outputPath("member-disable-confirmation.png"),
+    });
+    await disable
+      .getByRole("button", { name: "停用专家", exact: true })
+      .click();
+    await expect(
+      members.getByRole("switch", { name: "Grok · 英文" }),
+    ).not.toBeChecked();
+    await members.getByRole("switch", { name: "Grok · 英文" }).click();
+    await members
+      .getByRole("button", { name: "管理配置", exact: true })
+      .first()
+      .click();
+    await page.screenshot({
+      animations: "disabled",
+      path: info.outputPath("member-shared-connection.png"),
+    });
+    await members
+      .getByRole("button", { name: "退出登录", exact: true })
+      .click();
+    const logout = page.getByRole("dialog", { name: "退出登录", exact: true });
+    await page.screenshot({
+      animations: "disabled",
+      path: info.outputPath("member-logout-confirmation.png"),
+    });
+    await logout.getByRole("button", { name: "取消", exact: true }).click();
+    await expect(members).toBeVisible();
     await members.getByRole("button", { name: "关闭", exact: true }).click();
     // Recipient selection is deliberate after membership changes.
     for (const name of ["Grok · 中文", "Grok · 英文", "点点 · 中文"])
@@ -181,7 +217,10 @@ test("topic workspace connects experts, sends independently, reads and schedules
     await expect(thread.getByLabel("成员回执", { exact: true })).toContainText(
       "失败",
     );
-    await page.screenshot({ path: info.outputPath("topic-with-receipts.png") });
+    await page.screenshot({
+      animations: "disabled",
+      path: info.outputPath("topic-with-receipts.png"),
+    });
     await expect
       .poll(
         async () =>
@@ -228,7 +267,10 @@ test("topic workspace connects experts, sends independently, reads and schedules
     await expect(reader).toContainText("保持一个小队列");
     await reader.getByRole("button", { name: "原文", exact: true }).click();
     await expect(reader).toContainText("Keep a small queue");
-    await page.screenshot({ path: info.outputPath("reading-original.png") });
+    await page.screenshot({
+      animations: "disabled",
+      path: info.outputPath("reading-original.png"),
+    });
     await reader.getByRole("button", { name: "关闭", exact: true }).click();
     await page.getByRole("button", { name: "设置", exact: true }).click();
     await page.getByRole("button", { name: "偏好设置", exact: true }).click();
@@ -255,11 +297,24 @@ test("topic workspace connects experts, sends independently, reads and schedules
       .fill("每周有哪些值得读的长文章？");
     await editor.getByLabel("重复", { exact: true }).selectOption("weekly");
     await editor.getByLabel("发送时间", { exact: true }).fill("08:30");
+    await page.screenshot({
+      animations: "disabled",
+      path: info.outputPath("schedule-weekly-form.png"),
+    });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.screenshot({
+      animations: "disabled",
+      path: info.outputPath("schedule-weekly-narrow.png"),
+    });
+    await page.setViewportSize({ width: 1100, height: 760 });
     await editor.getByRole("button", { name: "保存定时消息" }).click();
     await expect(
       page.getByRole("heading", { name: "每周有哪些值得读的长文章？" }),
     ).toBeVisible();
-    await page.screenshot({ path: info.outputPath("scheduled-message.png") });
+    await page.screenshot({
+      animations: "disabled",
+      path: info.outputPath("scheduled-message.png"),
+    });
     await page
       .getByRole("navigation", { name: "主导航" })
       .getByRole("button", { name: "话题", exact: true })
@@ -283,7 +338,10 @@ test("topic workspace connects experts, sends independently, reads and schedules
       animations: "disabled",
     });
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.screenshot({ path: info.outputPath("topic-compact.png") });
+    await page.screenshot({
+      animations: "disabled",
+      path: info.outputPath("topic-compact.png"),
+    });
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,
