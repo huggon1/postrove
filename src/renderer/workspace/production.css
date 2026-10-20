@@ -1065,3 +1065,288 @@ select {
   transform: none;
   pointer-events: auto;
 }
+
+/* Alarm-style scheduling shares the workspace dialog and form controls. */
+.modal.schedule-editor {
+  width: min(840px, calc(100vw - 40px));
+  max-width: none;
+}
+.schedule-editor .compact-body {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+.schedule-editor-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: 26px;
+  padding: 24px;
+  overflow: auto;
+  min-height: 0;
+}
+.schedule-message-fields {
+  min-width: 0;
+  padding-right: 24px;
+  border-right: 1px solid var(--line);
+}
+.schedule-message-fields > .config-field:first-child,
+.schedule-rules > .config-field:first-child {
+  margin-top: 0;
+}
+.schedule-rules {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.schedule-rules .config-field {
+  margin-top: 0;
+}
+.schedule-times {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.schedule-time-input {
+  display: flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--soft);
+}
+.schedule-time-input input[type="time"] {
+  font-size: 26px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.6px;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  width: 158px;
+  min-height: 42px;
+}
+.schedule-time-input .icon-button {
+  width: 28px;
+  height: 32px;
+}
+.schedule-add-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+.schedule-weekly,
+.schedule-monthly {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+.schedule-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+.schedule-weekdays button {
+  min-width: 0;
+  aspect-ratio: 1;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  font-size: 12px;
+  padding: 0;
+}
+.schedule-weekdays button[aria-pressed="true"] {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.schedule-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.schedule-presets button {
+  padding: 5px 8px;
+  border-radius: 7px;
+  font-size: 12px;
+  background: var(--soft);
+  color: var(--muted);
+}
+.schedule-presets button[aria-pressed="true"] {
+  background: var(--accent-light);
+  color: var(--accent);
+}
+.schedule-every {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+.schedule-every input,
+.schedule-every select {
+  background: #fff;
+  border: 1px solid #dde4ef;
+  border-radius: 10px;
+  min-height: 42px;
+  padding: 8px 10px;
+  color: #39465c;
+}
+.schedule-every input {
+  width: 64px;
+  text-align: center;
+}
+.schedule-every select {
+  width: auto;
+  max-width: 100%;
+}
+.schedule-month-position,
+.schedule-date-bounds {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+}
+.schedule-hint {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0;
+}
+.schedule-more {
+  border-top: 1px solid var(--line);
+  padding-top: 13px;
+}
+.schedule-more summary {
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+}
+.schedule-more > .config-field,
+.schedule-date-bounds {
+  margin-top: 14px;
+}
+.schedule-date-bounds input {
+  padding: 10px 8px;
+  font-size: 12px;
+}
+.schedule-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.schedule-preview strong {
+  font-weight: 500;
+  color: var(--accent);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.schedule-preview time {
+  font-variant-numeric: tabular-nums;
+  color: #52627a;
+}
+.schedule-preview small,
+.schedule-zone {
+  font-size: 11px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.schedule-preview .schedule-validation {
+  margin: 0;
+  color: var(--danger);
+}
+.schedule-editor-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 24px;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+  flex: none;
+}
+.schedule-content > .schedule-rule-summary {
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+.schedule-zone {
+  display: block;
+  margin-top: 7px;
+}
+.schedule-switch {
+  appearance: none;
+  width: 38px;
+  height: 23px;
+  border: 1px solid #d7dce6;
+  border-radius: 20px;
+  background: #d7dce6;
+  position: relative;
+  flex: none;
+  margin: 3px 8px 0 0;
+  cursor: pointer;
+}
+.schedule-switch:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.schedule-switch:after {
+  content: "";
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: #fff;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.15s;
+}
+.schedule-switch:checked:after {
+  transform: translateX(15px);
+}
+.schedule-switch:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+@media (max-width: 660px) {
+  .modal.schedule-editor {
+    width: calc(100vw - 28px);
+  }
+  .schedule-editor-columns {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+    padding: 21px;
+  }
+  .schedule-message-fields {
+    border-right: 0;
+    padding-right: 0;
+  }
+  .schedule-rules {
+    border-top: 1px solid var(--line);
+    padding-top: 21px;
+  }
+  .schedule-editor-actions {
+    padding: 14px 21px;
+    flex-wrap: wrap;
+  }
+  .schedule-date-bounds {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .schedule-weekdays {
+    gap: 4px;
+  }
+  .schedule-actions {
+    flex-wrap: wrap;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .schedule-switch:after {
+    transition: none;
+  }
+}

@@ -170,8 +170,8 @@ export function App() {
     }
   }
   const next = workspace.follows
-    .filter((follow) => !follow.paused)
-    .sort((a, b) => a.nextRunAt.localeCompare(b.nextRunAt))[0];
+    .filter((follow) => !follow.paused && follow.nextRunAt)
+    .sort((a, b) => a.nextRunAt!.localeCompare(b.nextRunAt!))[0];
   const heading = t(
     {
       topics: "话题",
@@ -415,7 +415,7 @@ export function App() {
                 >
                   <span>
                     <Clock />
-                    <Time value={next.nextRunAt} />
+                    <Time value={next.nextRunAt!} />
                   </span>
                   <strong>{next.question}</strong>
                   <ArrowRight />

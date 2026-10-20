@@ -6,6 +6,8 @@ import {
 } from "./advisor-contracts";
 import { xPostUrlSchema, xhsNoteUrlSchema } from "./source-contracts";
 import { redditPost, youtubeVideo } from "./source-profiles";
+import { followScheduleSchema } from "./schedule-contracts";
+export { followScheduleSchema } from "./schedule-contracts";
 
 export const searchPlatformSchema = z.enum([
   "xiaohongshu",
@@ -218,16 +220,6 @@ export const focusSearchReportSchema = z
       submitted.add(submission.postKey);
     }
   });
-export const followScheduleSchema = z
-  .object({
-    cadence: z.enum(["daily", "weekly"]),
-    time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
-    weekday: z.number().int().min(0).max(6).optional(),
-  })
-  .strict()
-  .refine((s) => s.cadence !== "weekly" || s.weekday !== undefined, {
-    message: "Weekly schedule needs a weekday",
-  });
 export const saveFollowSchema = z
   .object({
     name: z.string().trim().min(1).max(200).optional(),
@@ -256,7 +248,8 @@ export const followSchema = saveFollowSchema
     revision: z.number().int().positive(),
     createdAt: z.string().datetime(),
     updatedAt: z.string().datetime(),
-    nextRunAt: z.string().datetime(),
+    nextRunAt: z.string().datetime().nullable(),
+    lastEvaluatedAt: z.string().datetime().optional(),
     lastSkippedAt: z.string().datetime().optional(),
     lastOccurrenceAt: z.string().datetime().optional(),
   })

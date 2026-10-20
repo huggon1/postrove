@@ -11,7 +11,7 @@ The [architecture](architecture-overview.md#runtime-boundaries-and-data-ownershi
 | `followId`               | Saved search conditions and recurring schedule           |
 | `reportId`               | One independent search report                            |
 | `taskId`                 | One search or parsing execution                          |
-| `sectionId`              | One language expert's reply in a topic                 |
+| `sectionId`              | One language expert's reply in a topic                   |
 | `candidateId`, `postKey` | A candidate occurrence and its canonical source identity |
 | `resultId`, `materialId` | Parsing delivery identity and saved reading report       |
 
@@ -23,7 +23,21 @@ Preferences and reading-task commits replace their JSON files atomically before 
 
 `StartFocusSearch` accepts `question`, unique selected `advisorIds`, and matching unique `platforms`. The service trims outer question whitespace. New sends use `period: all`; historical period values remain readable. An advisor is one supported platform AI plus query language. `x-grok-zh` and `x-grok-en` share `connectionId: x-grok`; `xiaohongshu-diandian-zh` uses `xiaohongshu-diandian`. `advisors.json` stores the enabled IDs. Legacy callers and historical sections map X to English and Xiaohongshu to Chinese. Interface, query, and reading languages are independent. `preferences.json` stores interface language, reading language (`app`, `zh-CN`, `en`), and browser visibility.
 
-`Follow` saves `followId`, name, question, platforms, period, schedule, paused state, revision, creation/update times, and `nextRunAt`. A schedule has `cadence` daily or weekly, `time` in local HH:mm, and a weekday for weekly execution. Weekday uses zero for Sunday through six for Saturday. `lastSkippedAt` records the latest skipped occurrence when available. `lastOccurrenceAt` retains the latest consumed occurrence so a clock rollback and restart preserve schedule admission identity.
+`Follow` saves `followId`, name, question, platforms, period, schedule, paused state, revision, creation/update times, and nullable `nextRunAt`. A null next run marks exhaustion. `lastSkippedAt` records the latest skipped occurrence. `lastOccurrenceAt` records the latest consumed occurrence. `lastEvaluatedAt` retains the evaluation watermark across clock rollback and restart.
+
+Version 2 schedules save `version: 2`, an IANA `timeZone`, `startDate` in YYYY-MM-DD, optional inclusive `endDate`, and unique HH:mm `times`. Calendar rules allow one to six times. Cadence selects these fields:
+
+| Cadence    | Fields                                                                                                             |
+| ---------- | ------------------------------------------------------------------------------------------------------------------ |
+| `once`     | One time on `startDate`                                                                                            |
+| `daily`    | Integer `interval` from 1 through 52                                                                               |
+| `weekly`   | Integer `interval` from 1 through 52 and unique `weekdays` (0 Sunday through 6 Saturday)                           |
+| `monthly`  | Integer `interval` from 1 through 52 and `monthly`: day 1–31 or `last`, or weekday with ordinal 1–4 or -1 for last |
+| `interval` | One anchor time, integer `interval` from 1 through 1440, and `unit` minutes or hours                               |
+
+The shared schema validates real calendar dates, zones, unique times and weekdays, integer bounds, and end-date ordering. The renderer and service use the same occurrence calculator. [Scheduling behavior](product-spec.md#scheduled-messages) owns calendar semantics.
+
+Legacy daily and weekly schedules retain their `time` and `weekday`. Opening the store derives version 2 rules using the current device zone and the record's creation date. The next successful store mutation saves the normalized rules through the existing atomic replacement path.
 
 `FocusSearchReport` saves `reportId`, `taskId`, question, output language, creation time, origin manual or follow, period, platforms, sections, and candidate submissions. Follow runs add `followId`, `followName`, `followRevision`, and `scheduledFor`. New runs freeze these inputs when admitted to the queue.
 
@@ -41,7 +55,7 @@ A submission association maps report plus canonical post identity to reserved pa
 
 ## Schedule admission and recovery
 
-Follow changes and ticks use serialized mutations. A due occurrence advances `nextRunAt` before admission. `lastOccurrenceAt` protects occurrence identity across clock rollback. [Product scheduling](product-spec.md#scheduled-messages) owns skip and queue rules. Startup derives terminal report status from saved platform and citation states, preserves stopped reports, and retains saved answers after interruption.
+Follow changes and ticks use serialized mutations. A due occurrence advances `nextRunAt` before admission. `lastOccurrenceAt` and `lastEvaluatedAt` protect occurrence identity and expired periods across clock rollback. Exhaustion saves a null `nextRunAt`. [Product scheduling](product-spec.md#scheduled-messages) owns skip and queue rules. Startup derives terminal report status from saved platform and citation states, preserves stopped reports, and retains saved answers after interruption.
 
 ## Submitted sources and reports
 
