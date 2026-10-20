@@ -1,6 +1,6 @@
 # Postrove data and message contracts
 
-This document defines logical objects, cross-process fields, and persistence order for the search-first product. The [product specification](product-spec.md) owns business behavior; [architecture](architecture-overview.md) owns runtime responsibilities. TypeScript schemas define the exact implemented field shapes.
+This document defines logical objects, cross-process fields, and persistence order for the topic workspace. The [product specification](product-spec.md) owns business behavior; [architecture](architecture-overview.md) owns runtime responsibilities. TypeScript schemas define the exact implemented field shapes.
 
 ## Identity and persistence ownership
 
@@ -11,7 +11,7 @@ The [architecture](architecture-overview.md#runtime-boundaries-and-data-ownershi
 | `followId`               | Saved search conditions and recurring schedule           |
 | `reportId`               | One independent search report                            |
 | `taskId`                 | One search or parsing execution                          |
-| `sectionId`              | One selected platform's part of a search                 |
+| `sectionId`              | One language expert's reply in a topic                 |
 | `candidateId`, `postKey` | A candidate occurrence and its canonical source identity |
 | `resultId`, `materialId` | Parsing delivery identity and saved reading report       |
 
@@ -19,13 +19,13 @@ Timestamps use ISO strings with timezone information. The interface displays loc
 
 ## Search conditions, follows, and reports
 
-`StartFocusSearch` accepts `question`, unique selected `platforms`, and `period`. The current platforms are `x` and `xiaohongshu`; periods are `day`, `week`, `month`, and `all`. The service trims outer question whitespace. Platform prompt language is independent of the output language.
+`StartFocusSearch` accepts `question`, unique selected `advisorIds`, and matching unique `platforms`. The service trims outer question whitespace. New sends use `period: all`; historical period values remain readable. An advisor is one supported platform AI plus query language. `x-grok-zh` and `x-grok-en` share `connectionId: x-grok`; `xiaohongshu-diandian-zh` uses `xiaohongshu-diandian`. `advisors.json` stores the enabled IDs. Legacy callers and historical sections map X to English and Xiaohongshu to Chinese. Interface, query, and reading languages are independent. `preferences.json` stores interface language, reading language (`app`, `zh-CN`, `en`), and browser visibility.
 
 `Follow` saves `followId`, name, question, platforms, period, schedule, paused state, revision, creation/update times, and `nextRunAt`. A schedule has `cadence` daily or weekly, `time` in local HH:mm, and a weekday for weekly execution. Weekday uses zero for Sunday through six for Saturday. `lastSkippedAt` records the latest skipped occurrence when available. `lastOccurrenceAt` retains the latest consumed occurrence so a clock rollback and restart preserve schedule admission identity.
 
 `FocusSearchReport` saves `reportId`, `taskId`, question, output language, creation time, origin manual or follow, period, platforms, sections, and candidate submissions. Follow runs add `followId`, `followName`, `followRevision`, and `scheduledFor`. New runs freeze these inputs when admitted to the queue.
 
-Report status is queued, running, completed, partial, failed, or stopped. `finishedAt` records its terminal time. `taskOutcome` persists completion, failure, or cancellation so startup can reconcile an interrupted task event after report commit. Each section saves prompt language, exact task and submitted platform prompts, captured reply bytes, candidates, state, warnings, and failure reason.
+Report status is queued, running, completed, partial, failed, or stopped. `finishedAt` records its terminal time. `taskOutcome` persists completion, failure, or cancellation so startup can reconcile an interrupted task event after report commit. Each section saves `advisorId`, `connectionId`, independent `runId`, query language, prompt/Skill revisions, exact prepared and submitted prompts, original reply bytes, optional `readingReply`, candidates, state, warnings, and failure stage. `checkpoint` records prepared, submitted, or answered plus the observed conversation URL. `processingIssue` retains reading-version failure alongside the original answer. Cancellation is scoped to the section or parent topic.
 
 Section `citationExtraction` records pending, running, completed, empty, or failed, with an optional error. The main process commits the captured answer before acknowledging source extraction. Interrupted reports retain those committed replies.
 
@@ -39,7 +39,7 @@ A submission association maps report plus canonical post identity to reserved pa
 
 ## Schedule admission and recovery
 
-Follow changes and ticks use serialized mutations. A due occurrence advances `nextRunAt` before admission. `lastOccurrenceAt` protects occurrence identity across clock rollback. [Product scheduling](product-spec.md#follows-and-scheduling) owns skip and queue rules. Startup derives terminal report status from saved platform and citation states, preserves stopped reports, and retains saved answers after interruption.
+Follow changes and ticks use serialized mutations. A due occurrence advances `nextRunAt` before admission. `lastOccurrenceAt` protects occurrence identity across clock rollback. [Product scheduling](product-spec.md#scheduled-messages) owns skip and queue rules. Startup derives terminal report status from saved platform and citation states, preserves stopped reports, and retains saved answers after interruption.
 
 ## Submitted sources and reports
 
@@ -53,7 +53,7 @@ Workers emit initial materials, individual material updates, phases, execution i
 
 ## Task snapshots and activity messages
 
-`TaskSnapshot` is the task center's view of task identity, kind, state, phase, progress, update time, readable error, and result reference. Search reports use result kind `focus_search_report`. Parsing records contribute their queue and processing states through the unified view.
+`TaskSnapshot` is the execution view of task identity, kind, state, phase, progress, update time, readable error, and result reference. Search reports use result kind `focus_search_report`. Parsing records contribute their queue and processing states through the unified view.
 
 The main process saves the initial task and report before execution, then validates and saves progress before notifying the renderer. Final report persistence precedes terminal task status. Search report partial state expresses useful saved material when task execution has ended.
 
@@ -93,13 +93,11 @@ Reauthorizing a saved connection stages a new credential directory with its exis
 
 Credentials and file paths cross the private execution channel. Public task snapshots and model views contain connection metadata, option identities, and classified failures. Authentication errors use bounded application messages. Native session export follows the local trace boundary above.
 
-## Telegram queue and business reset
+## Telegram queue and upgrade retention
 
 Telegram state saves an optional verified `botUsername`, authorized chats, pending authorization candidates, confirmed `updateOffset`, inbound receipts, queued forwarding, and connection status. Accepted receipt, queue identity, pending acknowledgment, and cursor advance persist together. Successful forwarding submission and acknowledgment delivery then save their progress. Chat and message identity form the deduplication key. Successful Bot verification saves its username separately from credentials; status returns that username while a Token is configured. Token save verifies the submitted Bot before committing its credentials and username; Token clearing removes the cached identity. Polling connection updates preserve the verified identity and chat authorization.
 
-A fresh business generation clears old test projects, cards, task records, reports, and allowlisted business traces and caches. It preserves model and bot credentials, platform profiles, authorized chats, and receipt progress. Each cleared receipt keeps its inbound key and update identity with outcome `retired_by_reset`; old task references and acknowledgments are removed. Old queued forwarding is cleared before integration startup.
-
-`business-generation.json` records generation `search-follow-v1` and state resetting or committed. A resetting marker causes idempotent cleanup to resume before writers start. A committed marker preserves later-generation records. The reset validates affected regular files and Telegram and Feishu schemas before destructive steps. The explicit allowlist protects credential and browser storage boundaries.
+The topic upgrade preserves business records, pending receipt identities, credentials, browser sessions, cached images, and result packages. Legacy `business-generation.json` remains historical evidence. Current startup reads the live stores directly. `FocusSearchStore` maps old platform sections and schedules to language experts; original questions, replies, source associations, dates, and historical periods retain their saved values.
 
 ## Shared bot receipts and Feishu accounts
 
@@ -107,12 +105,50 @@ A fresh business generation clears old test projects, cards, task records, repor
 
 `feishu.json` stores application-keyed account identities, authorized chat IDs, sender-bound grants, discovered chats, durable receipts, queued submissions, and per-chat history checkpoints. A receipt and its reserved task and result identities persist in one atomic store update. Concurrent deliveries deduplicate within that update. Submission progress and pending acknowledgement state persist separately after delivery. Receipt retries use a stable outbound UUID derived from application and message identities.
 
-History scans freeze an end time and overlap the prior checkpoint by one second. Authorization time and sender identity filter admission. Every page enters the same inbox as live events. The checkpoint advances after complete pagination. Revocation removes future admission; previously accepted submissions retain their identities. The business reset retires receipt task references and clears queued submissions while preserving account authorization and checkpoints.
+History scans freeze an end time and overlap the prior checkpoint by one second. Authorization time and sender identity filter admission. Every page enters the same inbox as live events. The checkpoint advances after complete pagination. Revocation removes future admission; previously accepted submissions retain their identities.
 
 `feishu-credentials.json` stores the active application credentials in a current-user file with mode 0600. Profile copying includes this file and bot account state only with `--include-auth`. Status, task views, and exported receipt evidence contain connection and message metadata. App Secrets and transport access tokens stay within Main's credential and transport boundaries. Scan registration uses the official account authorization host and keeps cancellation state in memory.
 
 ## Update receipt and queue recovery
 
-`application-update.json` stores the current and target versions immediately before installation. Startup consumes a matching target receipt and exposes the previous version for the completion notice. A failed installation clears the receipt. Upgrades keep the selected runtime profile and its committed business generation.
+`application-update.json` stores the current and target versions immediately before installation. Startup consumes a matching target receipt and exposes the previous version for the completion notice. A failed installation clears the receipt. Upgrades keep the selected runtime profile and its saved business records.
 
-A queued search with pending, empty platform sections resumes from its saved conditions at startup. Queued task snapshots keep that state. Searches that already ran follow the saved-result recovery path. Parsing retains its queued records through shutdown. The [updater behavior](product-spec.md#application-updates) owns installation admission and user actions.
+A queued search with pending, empty platform sections resumes from its saved conditions at startup. A submitted checkpoint resumes observation of the saved conversation; interrupted captured answers remain readable. Queued task snapshots keep that state. Searches that already ran follow the saved-result recovery path. Parsing retains its queued records through shutdown. The [updater behavior](product-spec.md#application-updates) owns installation admission and user actions.
+
+## Result packages
+
+Main publishes each terminal search and reading attempt under the current profile:
+
+```text
+results/
+  search/<taskId>/
+    result.md
+    input.json
+    manifest.json
+    sources/<candidateId>.md
+    assets/<cached-image>
+  reading/<attemptId-or-legacy-resultId>/
+    result.md
+    input.json
+    manifest.json
+    sources/material-<index>.md
+    assets/<cached-image>
+  search/latest.md
+  search/latest.json
+  reading/latest.md
+  reading/latest.json
+```
+
+`result.md` contains readable replies or materials, sources, and actual terminal receipts. `input.json` contains saved non-secret input and language/identity metadata. `manifest.json` records version, run identity, admission/publication times, status, SHA-256 of the canonical result, and absolute result path. Source files preserve their captured text or saved citation reference. Cached images use package-relative paths.
+
+Main writes a private staging directory, then renames it into place after all files finish. A published package remains fixed. Reading retries create a fresh `attemptId` and `attemptStartedAt` while retaining the previous package. `latest.md` contains the full content of the newest admitted terminal run plus its canonical absolute path. Admission time governs ordering when older runs finish later or are republished after restart. `latest.json` records that identity. A result-file action regenerates a missing terminal package before revealing it.
+
+Result files use mode 0600 and new directories use mode 0700. Credentials, model auth paths, and browser sessions remain in connection storage. Published packages preserve historical evidence after record visibility changes. Profile copying retains result packages and cached images while its credential option controls authentication storage.
+
+## Source routes and transcript evidence
+
+Search sections retain optional `routeId` and `sourceProfileRevision` alongside the existing advisor, connection, language, and prompt fields. Existing X and Xiaohongshu identities retain their saved values. New source records keep the canonical identifier in `sourceKey`; `sourceIdentity` retains the observed author or title for presentation. A YouTube video uses `youtube:video:<id>`; watch, short, Shorts, and live URL variants share that key. Citation timestamps remain locators on the saved URL. Reddit posts use `reddit:post:<id>` and selected comments use `reddit:comment:<id>`.
+
+YouTube captures retain original track language, creator/automatic track kind, stable segment IDs, start/end times, timestamp links, transcript coverage, and separate visual coverage. Raw extraction writes to `capture-evidence/<attemptId>/youtube/<videoId>/` under the selected profile. `reader-attempt.json` records running, completed, or unavailable state. Repeated reads in the same attempt reuse that state; a retry uses its new attempt identity.
+
+A successful reader preserves `metadata.json`, `captions.json3`, `segments.json`, `references.json`, and the source record. Terminal reading publication copies raw evidence and completed or unavailable reader state into `results/reading/<attemptId>/evidence/youtube/<videoId>/`. The package manifest records capture identity, actual coverage, reader-attempt paths, and evidence-file SHA-256 hashes. Profile copying retains capture evidence with business material. Website credentials remain in browser storage.

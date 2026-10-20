@@ -4,26 +4,42 @@
 
 [English](README.md)
 
-Postrove 是一款桌面应用，通过各平台自身的 AI 查找相关帖子，并统一收集感兴趣的内容，方便稍后阅读。
+让平台 AI 帮你找内容，把值得读的内容留下来。
 
-![查看平台 AI 回答和来源帖子的搜索结果](assets/screenshots/search-zh-CN.png)
+向不同平台的 AI 成员提出同一个问题，看看各自的回答，再把有用的来源收进阅读库。自动翻译让你用自己的语言提问，也用自己的语言阅读。
 
-*演示数据：截图中的问题、平台回答、来源链接和阅读材料均为虚构示例。*
+[下载 macOS 版](https://github.com/huggon1/postrove/releases/latest) · [下载 Windows 版](https://github.com/huggon1/postrove/releases/latest) · [开始使用](#安装与使用)
+
+![话题首页：查看不同平台 AI 成员的独立回复](assets/screenshots/topics-zh-CN.png)
+
+_截图使用虚构的问题、回答、来源和阅读材料，展示当前源码界面。安装包功能以对应版本说明为准。_
 
 ## 功能
 
-### 通过平台 AI 搜索
+### 向 AI 成员提问
 
-选择想搜索的信息源和时间范围，输入问题，就能查看各平台 AI 找到的相关帖子和来源链接，以及 AI 的原回答。感兴趣的来源可以直接加入解析。
+发起一个话题，选择本次回答的成员。各成员独立回答，并附上平台帖子和来源。打开话题后，可以阅读回复、查看成员回执，按单条、选中或全部收集来源。
 
-你也可以把搜索条件保存为关注，让应用在运行时按每天或每周的计划持续搜索。
+![话题详情：阅读成员回答，将有用的来源收进阅读库](assets/screenshots/topic-zh-CN.png)
 
-![已保存的关注、每周执行计划和下次运行时间](assets/screenshots/follows-zh-CN.png)
+| 内容平台 | 平台 AI               | 登录站点                      | 专家语言   | 状态   |
+| -------- | --------------------- | ----------------------------- | ---------- | ------ |
+| X        | Grok                  | X                             | 中文、英文 | 已接入 |
+| 小红书   | 点点                  | 小红书                        | 中文       | 已接入 |
+| YouTube  | Gemini                | Gemini Apps，使用 Google 账号 | 中文、英文 | 试用   |
+| Reddit   | Reddit AI 搜索（Ask） | 可选：Reddit                  | 英文       | 试用   |
 
-| AI 搜索入口 | 信息源 |
-| --- | --- |
-| X 内的 Grok | X |
-| 点点 AI | 小红书 |
+同一次平台登录可以启用多位语言专家。Grok 中文和英文共用 X 连接，Gemini 的 YouTube 专家共用 Google 登录。
+
+专家语言指应用与这位平台 AI 交流时使用的语言，也会影响它检索内容的倾向。
+
+定时发送可以每天或每周发送已保存的问题。应用运行时，每次发送创建一个新话题。
+
+### 用自己的语言提问和阅读
+
+比如用中文提问，选择 Grok 英文专家。Postrove 会将问题译成英文，再将回复转成中文。使用英文的读者向点点中文专家提问时，也会完成相应的翻译。
+
+阅读语言可以单独设置。成员回复和收集的材料都会生成阅读版本，同时保留原文和链接，随时可以切回原文对照。
 
 ### 收集内容，稍后阅读
 
@@ -31,30 +47,45 @@ Postrove 是一款桌面应用，通过各平台自身的 AI 查找相关帖子�
 
 比如看到一篇很长的技术文章，想留到以后读，可以把链接转发给配置好的 Telegram 或飞书应用机器人。Postrove 会读取内容并生成摘要，之后你就可以在应用中先看摘要，再阅读正文。链接也可以直接在应用中添加。
 
-![阅读文章正文、摘要、配图和引用材料](assets/screenshots/reading-zh-CN.png)
+![阅读页：查看译文、摘要和配图，随时切回原文](assets/screenshots/reading-zh-CN.png)
 
-| 来源 | 解析目标 | 能力说明 |
-| --- | --- | --- |
-| 通用网页 | 正文、图片及直接引用材料 | 基础浏览器读取 |
-| X 帖子 | 正文、图片、引用帖子及作者提供的材料链接 | 基础浏览器读取，配合内置 X 阅读 Skill |
-| 小红书笔记 | 笔记文字和图片 | 基础浏览器读取与内置阅读 Skill；macOS 安装包自带 `xiaohongshu-mcp`，增强笔记读取 |
-| GitHub 仓库 | 默认 README | 基础浏览器读取，配合内置 GitHub 阅读 Skill |
+读取规则明确要采集的内容。Agent 按实际页面加载对应 Skill。其他页面使用通用网页规则，由 Agent 识别正文并选择读取方式。
 
-平台访问权限和登录状态决定实际读取范围。部分读取成功时，应用保留已获取的内容，并显示读取范围。
+| 页面                  | 需要登录       | 读取范围                                             | Skill / 读取工具                                                                                                               | 状态   |
+| --------------------- | -------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ------ |
+| X 帖子                | 是，登录 X     | 正文、按顺序排列的图片、引用帖子及作者提供的材料链接 | [x-reading](src/platforms/browser/skills/x-reading/SKILL.md)                                                                   | 已接入 |
+| 小红书笔记            | 是，登录小红书 | 笔记标题、正文和按顺序排列的图片轮播                 | [xiaohongshu-reading](src/platforms/browser/skills/xiaohongshu-reading/SKILL.md)；可用时调用 `read_xiaohongshu`                | 已接入 |
+| GitHub 公开仓库       | 否             | 默认 README，包含代码、表格、图片和链接              | [github-reading](src/platforms/browser/skills/github-reading/SKILL.md)                                                         | 已接入 |
+| YouTube 公开视频      | 否             | 视频信息、公开字幕、时间点链接及作者提供的材料       | [youtube-reading](src/platforms/browser/skills/youtube-reading/SKILL.md)；可用时调用 `read_youtube_transcript`，结合浏览器采集 | 已接入 |
+| Reddit 公开帖子或评论 | 否             | 帖子正文，或选中评论及其父帖和必要的上级评论         | [reddit-reading](src/platforms/browser/skills/reddit-reading/SKILL.md)                                                         | 已接入 |
+| 其他网页              | 按网站要求     | 可访问的正文、图片、嵌入页面及直接引用材料           | [web-reading](src/platforms/browser/skills/web-reading/SKILL.md)                                                               | 已接入 |
+
+Skill 约定读取范围，工具提供对应来源的获取方式。两端安装包均包含用于笔记读取的 `xiaohongshu-mcp`，以及已校验的 yt-dlp 和 Deno，用于读取 YouTube 字幕。YouTube 和 Reddit 的读取流程见[平台扩展设计](docs/platform-expansion-design.md)。
+
+在成员管理中登录 X 或小红书后，提问和内容读取共用该账号。部分读取成功时，应用保留已获取的内容，并显示读取范围。
+
+## 架构
+
+![Postrove 架构](docs/architecture/zh-CN/overview.svg)
+
+[交互架构图（下载 HTML 后打开）](docs/architecture/zh-CN/index.html) · [Agent 提示词与工具](docs/agent-prompt-flow.md) · [Markdown 结果文件](docs/data-contracts.md#result-packages)
 
 ## 安装与使用
 
-目前提供 macOS Apple silicon 安装包。
+| 系统                  | 下载入口                                                                     |
+| --------------------- | ---------------------------------------------------------------------------- |
+| macOS · Apple silicon | [GitHub Releases](https://github.com/huggon1/postrove/releases/latest) · DMG |
+| Windows · x64         | [GitHub Releases](https://github.com/huggon1/postrove/releases/latest) · EXE |
 
 1. 安装 Google Chrome。
-2. 从 [GitHub Releases](https://github.com/huggon1/postrove/releases) 下载 DMG，将 Postrove 拖入 Applications 并打开。安装包使用项目签名，首次打开时，macOS 可能要求在“系统设置 → 隐私与安全”中选择“仍要打开”。
-3. 在“设置”中选择 Pi 供应商，完成认证并保存模型连接，再登录需要使用的平台。
-4. 在“搜索”中输入问题，或在“内容 → 解析结果”中添加链接。使用机器人转发时，先在设置中配置 Telegram 或飞书并授权聊天。飞书支持官方扫码创建应用，或连接具备单聊接收、发送和历史消息权限的已有应用。
+2. 安装 Postrove。macOS 用户打开 DMG，将 Postrove 拖入 Applications。安装包使用项目签名，首次打开时，macOS 可能要求在“系统设置 → 隐私与安全”中选择“仍要打开”。Windows 用户运行 EXE 安装程序并选择安装目录。Windows 安装程序当前未签名。
+3. 在“设置 → 后台模型”中新建连接，完成认证并选择模型。打开成员管理，登录平台并启用语言专家。
+4. 发起话题，或在阅读页添加链接。使用机器人转发时，先在设置中配置 Telegram 或飞书并授权聊天。飞书支持官方扫码创建应用，或连接具备单聊接收、发送和历史消息权限的已有应用。
 
-报告和网站会话保存在本机。任务执行时，相关问题和材料会发送给配置的模型。后续版本可以通过“设置 → 应用更新”下载安装。
+报告和网站会话保存在本机。任务执行时，相关问题和材料会发送给配置的模型。macOS 和 Windows 均支持通过“设置 → 关于”下载并安装应用更新。
 
 ## 账号风险
 
 > ⚠️ Postrove 使用已登录的平台账号执行自动搜索和内容读取。这类操作可能触发平台风控，导致额外验证、限流、账号限制或封禁。建议为 X、小红书等平台使用专用小号，以降低账号受限时的影响。
 
-[开发指南](docs/development.md) · [0.1.2 发布说明](docs/releases/0.1.2.md) · [发布指南](docs/releasing.md) · [MIT 许可证](LICENSE)
+[开发指南](docs/development.md) · [0.1.0 发布说明](docs/releases/0.1.0.md) · [发布指南](docs/releasing.md) · [MIT 许可证](LICENSE)

@@ -7,7 +7,7 @@ import { resolveModel, runWithPi } from "../../pi-runtime";
 import { promptExecution } from "../../prompt-execution";
 import { localizedText } from "../../../shared/language";
 import { translationSystem, summarySystem } from "./reading-prompts";
-import { preserveReadingSyntax } from "./reading-fidelity";
+import { executeContent } from "../../content/capabilities";
 import {
   ExecutionFailure,
   failureMessages,
@@ -116,48 +116,22 @@ export async function runReadingJob(
     translate: async (material, text, index) => {
       let partial = "";
       try {
-        const translated = await callModel(
-          material,
-          "translation",
-          `${command.taskId}:${material.id}:${index}`,
-          text,
-          translationSystem(language),
+        const translated = await executeContent(
+          { operation: "translate_content", text, targetLanguage: language },
+          (content, system, onPartial) =>
+            callModel(
+              material,
+              "translation",
+              `${command.taskId}:${material.id}:${index}:${randomUUID()}`,
+              content,
+              system,
+              onPartial,
+            ),
           (text) => {
             partial = text;
           },
         );
-        let checked = preserveReadingSyntax(text, translated);
-        if (!checked.valid) {
-          const repaired = await callModel(
-            material,
-            "translation",
-            `${command.taskId}:${material.id}:${index}:repair`,
-            JSON.stringify({
-              original: text,
-              translation: checked.text,
-              missingUrls: checked.missingUrls,
-              inventedUrls: checked.inventedUrls,
-              missingCode: checked.missingCode,
-              missingIdentifiers: checked.missingIdentifiers,
-            }),
-            translationSystem(language) +
-              " Repair this translation. Keep every original link and image destination in its source position. Preserve command blocks and inline identifiers exactly. Return the complete corrected translation only.",
-            (value) => {
-              partial = value;
-            },
-          );
-          checked = preserveReadingSyntax(text, repaired);
-        }
-        return checked.valid
-          ? { text: checked.text, truncated: false }
-          : {
-              text: checked.text,
-              truncated: true,
-              issue:
-                language === "en"
-                  ? "Link or code preservation is incomplete; saved text and the original source are available for review."
-                  : "链接或代码的保留校验尚未通过；可查看已保存内容和原文。",
-            };
+        return { text: translated, truncated: false };
       } catch (error) {
         if (partial) return { text: partial, truncated: true };
         throw error;
@@ -192,16 +166,24 @@ export async function runReadingJob(
         pieces = next;
         level++;
       }
-      return callModel(
-        material,
-        "summary",
-        `${command.taskId}:${material.id}:summary`,
-        JSON.stringify({
-          title: material.title,
-          coverage: material.state,
-          text: pieces.join("\n\n"),
-        }),
-        summarySystem(language),
+      return executeContent(
+        {
+          operation: "introduce_content",
+          targetLanguage: language,
+          text: JSON.stringify({
+            title: material.title,
+            coverage: material.state,
+            text: pieces.join("\n\n"),
+          }),
+        },
+        (text, system) =>
+          callModel(
+            material,
+            "summary",
+            `${command.taskId}:${material.id}:summary`,
+            text,
+            system,
+          ),
       );
     },
     ...overrides,

@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import sharp from "sharp";
 
-if (process.platform === "win32") {
+{
   const sizes = [16, 24, 32, 48, 64, 128, 256];
   const images = await Promise.all(
     sizes.map((size) =>
@@ -30,9 +30,8 @@ if (process.platform === "win32") {
   });
   await mkdir("build", { recursive: true });
   await writeFile("build/postrove.ico", Buffer.concat([header, ...images]));
-} else {
-  if (process.platform !== "darwin")
-    throw new Error("Icon build requires macOS or Windows");
+}
+if (process.platform === "darwin") {
   const temporary = await mkdtemp(join(tmpdir(), "postrove-icon-"));
   const iconset = join(temporary, "postrove.iconset");
   await mkdir(iconset);
@@ -62,4 +61,6 @@ if (process.platform === "win32") {
   } finally {
     await rm(temporary, { recursive: true, force: true });
   }
+} else if (process.platform !== "win32") {
+  throw new Error("Icon build requires macOS or Windows");
 }

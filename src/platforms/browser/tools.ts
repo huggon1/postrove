@@ -6,6 +6,7 @@ export function createBrowserTools(
   skills: PlatformSkillSummary[],
   enhancedReading: boolean,
   operate: (operation: Record<string, unknown>) => Promise<unknown>,
+  youtubeReading = false,
 ): ToolDefinition[] {
   const result = (value: unknown) => ({
     content: [{ type: "text" as const, text: JSON.stringify(value) }],
@@ -94,5 +95,34 @@ export function createBrowserTools(
           }),
         ),
     });
+  if (youtubeReading)
+    tools.push({
+      name: "read_youtube_transcript",
+      label: "Read YouTube transcript",
+      description:
+        "Read original captions and metadata for a YouTube video observed in this task. Returns a captureId, timestamped original text and actual coverage, or a saved unavailable state for browser fallback. Repeated requests in one attempt reuse the saved result.",
+      parameters: Type.Object({ url: Type.String() }),
+      execute: async (_id, params) =>
+        result(
+          await operate({
+            action: "read_youtube_transcript",
+            value: (params as { url: string }).url,
+          }),
+        ),
+    });
+  tools.push({
+    name: "structure_content",
+    label: "Structure captured content",
+    description:
+      "Extract a title, full Markdown and citations from a successful capture in this task. The application resolves the capture and runs an isolated text agent. Returns structured content with original destinations preserved.",
+    parameters: Type.Object({ captureId: Type.String() }),
+    execute: async (_id, params) =>
+      result(
+        await operate({
+          action: "structure_content",
+          captureId: (params as { captureId: string }).captureId,
+        }),
+      ),
+  });
   return tools;
 }

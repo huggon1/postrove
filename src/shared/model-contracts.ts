@@ -193,6 +193,7 @@ export interface ModelView {
   models: PiModelOption[];
   auth: "signed_out" | "logging_in" | "signed_in" | "unavailable";
   authSource?: string;
+  authFailure?: boolean;
   authPrompt?: {
     id: string;
     type: "text" | "secret" | "manual_code" | "select";

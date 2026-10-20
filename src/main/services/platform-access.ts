@@ -1,3 +1,8 @@
+import {
+  sourcePlatform,
+  youtubeVideo,
+  redditPost,
+} from "../../shared/source-profiles";
 import type { ReadingMaterial } from "../../shared/reading-contracts";
 import { readingMaterialsSchema } from "../../shared/reading-contracts";
 import { webUrlSchema } from "../../shared/source-contracts";
@@ -30,6 +35,9 @@ function samePage(left: string, right: string) {
   a.hash = "";
   b.hash = "";
   if (a.href === b.href) return true;
+  const canonical = youtubeVideo(right) || redditPost(right);
+  if (canonical)
+    return (youtubeVideo(left) || redditPost(left))?.key === canonical.key;
   const platform = xPostUrlSchema.safeParse(right).success
     ? "x"
     : xhsNoteUrlSchema.safeParse(right).success
@@ -71,14 +79,9 @@ export class PlatformAccess {
       changedId?: string,
     ) => Promise<void>,
     accessToken?: string,
+    attemptId = taskId,
   ) {
-    const platform = xPostUrlSchema.safeParse(url).success
-      ? "x"
-      : xhsNoteUrlSchema.safeParse(url).success
-        ? "xiaohongshu"
-        : new URL(url).hostname === "github.com"
-          ? "github"
-          : "web";
+    const platform = sourcePlatform(url);
     const browserUrl = new URL(url);
     if (platform === "xiaohongshu" && accessToken)
       browserUrl.searchParams.set("xsec_token", accessToken);
@@ -89,11 +92,21 @@ export class PlatformAccess {
       materialCollectionInstruction(url, includeReferences, browserUrl.href),
       signal,
       "collect",
+      undefined,
+      undefined,
+      undefined,
+      attemptId,
     );
     const main = result.output.materials[0];
     if (main.role !== "main" || main.url !== url)
       throw new Error("Main material identity changed");
     const mainPage = result.navigations.get(browserUrl.href) ?? browserUrl.href;
+    if (
+      (platform === "youtube" || platform === "reddit") &&
+      canonicalPost(platform, mainPage)?.key !==
+        canonicalPost(platform, url)?.key
+    )
+      throw new Error("Original source identity changed");
     const provenance = new Set<string>([
       ...(main.sourceCaptureIds ?? []),
       ...(result.output.authorCaptureIds ?? []),
@@ -191,17 +204,15 @@ export class PlatformAccess {
         }
         material.source = sourceSchema.parse({
           sourceUrl: item.url,
-          platform:
-            item === main
-              ? platform
-              : new URL(item.url).hostname === "github.com"
-                ? "github"
-                : "web",
+          platform: item === main ? platform : sourcePlatform(item.url),
           title: material.title,
           sourceIdentity: String(item.sourceIdentity ?? material.title).slice(
             0,
             300,
           ),
+          ...(platform === "youtube" || platform === "reddit"
+            ? { sourceKey: canonicalPost(platform, finalUrl)?.key }
+            : {}),
           fetchedAt: new Date().toISOString(),
           markdown,
           contentBlocks: Array.from(
@@ -217,6 +228,14 @@ export class PlatformAccess {
           )
             ? item.completeness
             : "unknown",
+          ...(captures.find((capture: BrowserCapture) => capture.evidence)
+            ?.evidence
+            ? {
+                evidence: captures.find(
+                  (capture: BrowserCapture) => capture.evidence,
+                )!.evidence,
+              }
+            : {}),
           completenessNote: String(
             item.completenessNote ?? "Captured readable page body",
           ).slice(0, 1500),
@@ -237,6 +256,9 @@ export class PlatformAccess {
             config,
             signal,
             false,
+            undefined,
+            undefined,
+            attemptId,
           );
           material.source = collected[0].source;
           material.title = collected[0].title;
@@ -262,10 +284,22 @@ export class PlatformAccess {
       section.platform,
       taskId,
       config,
-      platformSearchInstruction(section.platform, section.prompt),
+      platformSearchInstruction(
+        section.platform,
+        section.prompt,
+        section.checkpoint,
+        section.routeId,
+      ),
       signal,
       "search",
       onProgress,
+      section.checkpoint && section.checkpoint.state !== "prepared"
+        ? {
+            prompt: section.platformPrompt || section.prompt,
+            conversationUrl: section.checkpoint.conversationUrl,
+          }
+        : undefined,
+      section.routeId,
     );
     if (
       typeof result.output.rawReply !== "string" ||

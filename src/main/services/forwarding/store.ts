@@ -42,6 +42,8 @@ export const forwardingActivitySchema = z
 const forwardingTaskSchema = z
   .object({
     taskId: z.string().uuid(),
+    attemptId: z.string().uuid().optional(),
+    attemptStartedAt: z.string().datetime().optional(),
     materials: readingMaterialsSchema.optional(),
     materialId: z.string().uuid(),
     resultId: z.string().uuid(),

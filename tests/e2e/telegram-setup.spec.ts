@@ -1,4 +1,5 @@
-import { test, expect, _electron as electron } from "@playwright/test";
+import { launchChineseApplication } from "../support/application";
+import { test, expect } from "@playwright/test";
 import { createServer } from "node:http";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -71,7 +72,7 @@ test("collapsed Telegram settings guide connection and authorization", async ({}
   });
   await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
   const launch = () =>
-    electron.launch({
+    launchChineseApplication({
       args: ["."],
       env: {
         ...process.env,
@@ -85,24 +86,27 @@ test("collapsed Telegram settings guide connection and authorization", async ({}
   let app = await launch();
   try {
     let page = await app.firstWindow();
-    await page
-      .getByRole("navigation")
-      .getByRole("button", { name: "设置", exact: true })
-      .click();
+    const capture = (name: string) =>
+      page.screenshot({
+        path: info.outputPath(name + ".png"),
+        animations: "disabled",
+      });
+    await page.getByRole("button", { name: "设置", exact: true }).click();
     const summary = page.locator(".telegram-settings .telegram-summary");
     await expect(summary).toHaveAttribute("aria-expanded", "false");
     await expect(page.getByLabel("Bot Token", { exact: true })).toHaveCount(0);
     await summary.click();
-    await page.getByRole("button", { name: "开始配置", exact: true }).click();
     let guide = page.getByRole("dialog", {
       name: "Telegram 接入",
       exact: true,
     });
+    await capture("telegram-credentials");
     await guide.getByLabel("Bot Token", { exact: true }).fill("invalid");
     await guide
       .getByRole("button", { name: "保存并验证", exact: true })
       .click();
     await expect(guide.getByRole("alert")).toBeVisible();
+    await capture("telegram-validation");
     await guide
       .getByLabel("Bot Token", { exact: true })
       .fill(`123456:${"A".repeat(24)}`);
@@ -111,6 +115,7 @@ test("collapsed Telegram settings guide connection and authorization", async ({}
       .getByRole("button", { name: "保存并验证", exact: true })
       .click();
     await expect(guide.getByRole("alert")).toBeVisible();
+    await capture("telegram-verification-error");
     rejectBot = false;
     await guide
       .getByRole("button", { name: "保存并验证", exact: true })
@@ -118,11 +123,23 @@ test("collapsed Telegram settings guide connection and authorization", async ({}
     await expect(
       guide.getByRole("heading", { name: "授权聊天", exact: true }),
     ).toBeVisible();
+    await capture("telegram-awaiting-chat");
     discover = true;
     await expect(guide.getByText("Review chat", { exact: true })).toBeVisible();
+    await capture("telegram-pending-chat");
     await guide
       .getByRole("button", { name: "授权 Review chat", exact: true })
       .click();
+    await expect(guide.locator(".chat-option.authorized")).toBeVisible();
+    await capture("telegram-authorized-chat");
+    await guide.locator(".chat-option.authorized button").click();
+    const revoke = page.getByRole("dialog", {
+      name: "撤销聊天授权",
+      exact: true,
+    });
+    await expect(revoke).toContainText("Review chat");
+    await capture("telegram-revoke-confirmation");
+    await revoke.getByRole("button", { name: "保留配置", exact: true }).click();
     await guide.getByRole("button", { name: "继续", exact: true }).click();
     await expect(
       guide.getByRole("heading", { name: "接入已配置", exact: true }),
@@ -170,10 +187,7 @@ test("collapsed Telegram settings guide connection and authorization", async ({}
     await app.close();
     app = await launch();
     page = await app.firstWindow();
-    await page
-      .getByRole("navigation")
-      .getByRole("button", { name: "设置", exact: true })
-      .click();
+    await page.getByRole("button", { name: "设置", exact: true }).click();
     await expect(
       page.locator(".telegram-settings .telegram-summary"),
     ).toContainText("@review_setup_bot");
@@ -182,8 +196,10 @@ test("collapsed Telegram settings guide connection and authorization", async ({}
     ).toHaveAttribute("aria-expanded", "false");
     await page.locator(".telegram-settings .telegram-summary").click();
     await expect(page.getByText("Review chat", { exact: true })).toBeVisible();
+    await capture("telegram-management");
     await page.getByText("维护", { exact: true }).click();
     await page.getByRole("button", { name: "清除 Token", exact: true }).click();
+    await capture("telegram-clear-confirmation");
     await page
       .getByRole("dialog")
       .getByRole("button", { name: "保留配置", exact: true })
@@ -206,6 +222,8 @@ test("collapsed Telegram settings guide connection and authorization", async ({}
     });
     await page.keyboard.press("Escape");
     await expect(guide).toBeHidden();
+    await page.locator(".telegram-settings .telegram-summary").click();
+    await page.getByText("维护", { exact: true }).click();
     await page.getByRole("button", { name: "清除 Token", exact: true }).click();
     await page
       .getByRole("dialog")

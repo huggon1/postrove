@@ -78,6 +78,7 @@ export class ModelService {
     ModelView,
     | "auth"
     | "authSource"
+    | "authFailure"
     | "authPrompt"
     | "authEvents"
     | "catalog"
@@ -384,6 +385,7 @@ export class ModelService {
     };
     this.state.authEvents = [];
     this.state.authPrompt = undefined;
+    this.state.authFailure = false;
     this.syncAuth();
   }
   async select(input: unknown) {
@@ -479,6 +481,7 @@ export class ModelService {
     const target = this.candidate!;
     const controller = (this.loginAbort = new AbortController());
     this.state.auth = "logging_in";
+    this.state.authFailure = false;
     this.state.authEvents = [];
     this.state.authPrompt = undefined;
     this.state.message = "请按 Pi 提示完成认证";
@@ -572,6 +575,7 @@ export class ModelService {
           : "认证已完成，请选择模型并保存连接";
       } catch {
         // Provider errors may contain secrets or login callback URLs.
+        this.state.authFailure = !controller.signal.aborted;
         this.state.message = controller.signal.aborted
           ? "登录已取消，原连接继续使用"
           : "Pi 认证未完成，请检查输入或重试。原连接继续使用";

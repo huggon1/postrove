@@ -1,3 +1,4 @@
+import { capturedText } from "../../platforms/browser/dom";
 import { type BrowserContext, type Page } from "playwright-core";
 import { join } from "node:path";
 import { mkdir, writeFile, access } from "node:fs/promises";
@@ -5,6 +6,66 @@ import { z } from "zod";
 import type { Platform } from "../../platforms/types";
 import type { XhsAuth } from "./xhs-auth";
 import { ChromeProfiles, chromeExecutable } from "./chrome-profiles";
+type BrowserSite = Platform | "gemini";
+type LoginSite = "x" | "xiaohongshu" | "gemini" | "reddit";
+const loginSites = ["x", "xiaohongshu", "gemini", "reddit"] as const;
+const loginUrls: Record<LoginSite, string> = {
+  x: "https://x.com/i/flow/login",
+  xiaohongshu: "https://www.xiaohongshu.com/explore",
+  gemini: "https://gemini.google.com/app",
+  reddit: "https://www.reddit.com/login/",
+};
+const sessionDomains: Record<LoginSite, RegExp> = {
+  x: /(^|\.)x\.com$/,
+  xiaohongshu: /(^|\.)xiaohongshu\.com$/,
+  gemini: /(^|\.)google\.com$/,
+  reddit: /(^|\.)reddit\.com$/,
+};
+function signedIn(
+  site: LoginSite,
+  cookies: { name: string; domain?: string; expires: number }[],
+  legacyMetadata = false,
+) {
+  const groups =
+    site === "x"
+      ? [["auth_token"], ["ct0"]]
+      : site === "xiaohongshu"
+        ? [["web_session"]]
+        : site === "gemini"
+          ? [["__Secure-1PSID", "__Secure-3PSID", "SID"]]
+          : [["reddit_session"]];
+  return groups.every((names) =>
+    cookies.some(
+      (c) =>
+        names.includes(c.name) &&
+        ((!!c.domain && sessionDomains[site].test(c.domain)) ||
+          // The previous launcher saved X/XHS cookie names and expiry only.
+          (legacyMetadata &&
+            !c.domain &&
+            (site === "x" || site === "xiaohongshu"))) &&
+        (c.expires === -1 || c.expires > Date.now() / 1000),
+    ),
+  );
+}
+export function isPlatformAiEntry(raw: string) {
+  try {
+    const u = new URL(raw);
+    if (u.protocol !== "https:" || u.username || u.password || u.port)
+      return false;
+    return (
+      (["x.com", "www.x.com", "grok.com"].includes(u.hostname) &&
+        /^\/(?:i\/)?grok(?:\/|$)/.test(u.pathname)) ||
+      (["xiaohongshu.com", "www.xiaohongshu.com"].includes(u.hostname) &&
+        /^\/ai_chat(?:\/|$)/.test(u.pathname)) ||
+      (u.hostname === "gemini.google.com" &&
+        /^\/(?:u\/\d+\/)?app(?:\/|$)/.test(u.pathname)) ||
+      (["reddit.com", "www.reddit.com"].includes(u.hostname) &&
+        /^\/(?:answers|ask)(?:\/|$)/.test(u.pathname))
+    );
+  } catch {
+    return false;
+  }
+}
 const operationSchema = z
   .object({
     action: z.enum([
@@ -27,12 +88,12 @@ export class PlatformBrowser {
   private contexts = new Map<Platform, Promise<BrowserContext>>();
   private contextHeadless?: boolean;
   private contextQueue: Promise<unknown> = Promise.resolve();
-  private statusCache = new Map<Platform, string>();
+  private statusCache = new Map<BrowserSite, string>();
   private locked = new Map<Platform, Promise<unknown>>();
   private chrome = new ChromeProfiles();
   private taskPages = new WeakSet<Page>();
   private activeTask = false;
-  private loginPages = new Map<Platform, Page>();
+  private loginPages = new Map<BrowserSite, Page>();
   constructor(
     private root: string,
     private changed: () => void,
@@ -44,7 +105,7 @@ export class PlatformBrowser {
       ? this.options.headless()
       : (this.options.headless ?? true);
   }
-  context(platform: Platform, headless?: boolean) {
+  context(platform: BrowserSite, headless?: boolean) {
     const operation = this.contextQueue
       .catch(() => {})
       .then(async () => {
@@ -66,7 +127,7 @@ export class PlatformBrowser {
     this.contextQueue = operation;
     return operation;
   }
-  private async openContext(platform: Platform, headless: boolean) {
+  private async openContext(platform: BrowserSite, headless: boolean) {
     const key: Platform = "web";
     let existing = this.contexts.get(key);
     if (!existing) {
@@ -148,7 +209,7 @@ export class PlatformBrowser {
       return false;
     }
   }
-  async status(platform: "x" | "xiaohongshu") {
+  async status(platform: LoginSite) {
     // Query existing profiles without launching a browser just to paint settings.
     let cookies: any[] = [];
     const running = this.contexts.get("web");
@@ -175,23 +236,12 @@ export class PlatformBrowser {
         cookies = JSON.parse(metadata).cookies;
       } catch {}
     }
-    const names = platform === "x" ? ["auth_token", "ct0"] : ["web_session"];
     return {
-      signedIn: names.every((name) =>
-        cookies.some(
-          (c) =>
-            c.name === name &&
-            (!c.domain ||
-              c.domain.endsWith(
-                platform === "x" ? "x.com" : "xiaohongshu.com",
-              )) &&
-            (c.expires === -1 || c.expires > Date.now() / 1000),
-        ),
-      ),
+      signedIn: signedIn(platform, cookies, !running),
       installed: !!chromeExecutable(),
     };
   }
-  private async saveStatus(_platform: Platform, context: BrowserContext) {
+  private async saveStatus(_platform: BrowserSite, context: BrowserContext) {
     const cookies = await context.cookies();
     await writeFile(
       join(this.root, "shared", "branchout-session-status.json"),
@@ -205,20 +255,8 @@ export class PlatformBrowser {
       { mode: 0o600 },
     );
     if (this.xhs?.installed()) await this.xhs.importBrowserCookies(cookies);
-    for (const platform of ["x", "xiaohongshu"] as const) {
-      const names = platform === "x" ? ["auth_token", "ct0"] : ["web_session"];
-      const status = JSON.stringify({
-        signedIn: names.every((name) =>
-          cookies.some(
-            (c) =>
-              c.name === name &&
-              c.domain.endsWith(
-                platform === "x" ? "x.com" : "xiaohongshu.com",
-              ) &&
-              (c.expires === -1 || c.expires > Date.now() / 1000),
-          ),
-        ),
-      });
+    for (const platform of loginSites) {
+      const status = JSON.stringify({ signedIn: signedIn(platform, cookies) });
       if (this.statusCache.get(platform) !== status) {
         this.statusCache.set(platform, status);
         this.changed();
@@ -226,10 +264,10 @@ export class PlatformBrowser {
     }
   }
 
-  login(platform: "x" | "xiaohongshu") {
+  login(platform: LoginSite) {
     return this.serialize(() => this.openLogin(platform));
   }
-  private async openLogin(platform: "x" | "xiaohongshu") {
+  private async openLogin(platform: LoginSite) {
     const context = await this.context(platform, false);
     const existing = this.loginPages.get(platform);
     if (existing && !existing.isClosed()) {
@@ -238,12 +276,7 @@ export class PlatformBrowser {
     }
     const page = await context.newPage();
     this.loginPages.set(platform, page);
-    await page.goto(
-      platform === "x"
-        ? "https://x.com/i/flow/login"
-        : "https://www.xiaohongshu.com/explore",
-      { waitUntil: "domcontentloaded" },
-    );
+    await page.goto(loginUrls[platform], { waitUntil: "domcontentloaded" });
     await page.bringToFront();
     page.on("close", () => {
       if (this.loginPages.get(platform) === page)
@@ -251,13 +284,13 @@ export class PlatformBrowser {
       void this.saveStatus(platform, context).catch(() => {});
     });
   }
-  logout(platform: "x" | "xiaohongshu") {
+  logout(platform: LoginSite) {
     return this.serialize(() => this.clearLogin(platform));
   }
-  private async clearLogin(platform: "x" | "xiaohongshu") {
+  private async clearLogin(platform: LoginSite) {
     const context = await this.context(platform);
     await context.clearCookies({
-      domain: platform === "x" ? /(^|\.)x\.com$/ : /(^|\.)xiaohongshu\.com$/,
+      domain: sessionDomains[platform],
     });
     await this.chrome.clearPreviousSession(join(this.root, platform));
     const login = this.loginPages.get(platform);
@@ -396,7 +429,7 @@ export class PlatformBrowser {
       if (
         (op.action === "fill" ||
           (op.action === "press" && op.value === "Enter")) &&
-        !/\/i\/grok|\/grok|\/ai_chat/.test(new URL(page.url()).pathname)
+        !isPlatformAiEntry(page.url())
       )
         throw new Error("Text submission is restricted to platform AI search");
       if (op.action === "fill") {
@@ -426,7 +459,10 @@ export class PlatformBrowser {
       if (op.action === "capture") {
         if (
           purpose === "collect" &&
-          (platform === "x" || platform === "xiaohongshu") &&
+          (platform === "x" ||
+            platform === "xiaohongshu" ||
+            platform === "reddit" ||
+            platform === "youtube") &&
           (await target.evaluate((element) =>
             ["BODY", "HTML"].includes(element.tagName),
           ))
@@ -543,7 +579,17 @@ export class PlatformBrowser {
                 "\n\n"
               );
             }
-            const inner = [...node.childNodes].map(walk).join("");
+            const assigned =
+              node instanceof HTMLSlotElement
+                ? node.assignedNodes({ flatten: true })
+                : [];
+            const inner = [
+              ...(assigned.length
+                ? assigned
+                : (node.shadowRoot?.childNodes ?? node.childNodes)),
+            ]
+              .map(walk)
+              .join("");
             if (tag === "A") {
               const a = node as HTMLAnchorElement;
               if (!/^https?:/.test(a.href)) return inner;
@@ -577,21 +623,25 @@ export class PlatformBrowser {
           };
         });
         return {
-          capture: await target.innerText(),
+          capture: await target.evaluate(capturedText),
           url: frame.url(),
           ...structured,
         };
       }
     }
     const snapshot = await frame.evaluate(() => {
+      const roots: (Document | ShadowRoot)[] = [document];
+      for (let index = 0; index < roots.length; index++)
+        for (const node of roots[index].querySelectorAll("*"))
+          if (node.shadowRoot) roots.push(node.shadowRoot);
+      const query = (selector: string) =>
+        roots.flatMap((root) => [...root.querySelectorAll(selector)]);
       const controls = Array.from(
-        document.querySelectorAll(
+        query(
           'body,main,article,section,[role="main"],[role="article"],button,a,img,input,textarea,[contenteditable="true"],[role="button"]',
         ),
       );
-      const pointerControls = Array.from(
-        document.querySelectorAll("div,span,[onclick],[tabindex]"),
-      )
+      const pointerControls = Array.from(query("div,span,[onclick],[tabindex]"))
         .filter((element) => {
           const label =
             element.getAttribute("aria-label") || element.textContent || "";
@@ -603,9 +653,7 @@ export class PlatformBrowser {
           );
         })
         .slice(0, 150);
-      const reading = Array.from(
-        document.querySelectorAll("div,p,table,blockquote"),
-      )
+      const reading = Array.from(query("div,p,table,blockquote"))
         .filter((element) => {
           const body = (element as HTMLElement).innerText?.trim() ?? "";
           return (
@@ -638,10 +686,23 @@ export class PlatformBrowser {
           element.setAttribute("data-postrove-ref", ref);
         }
         const rect = element.getBoundingClientRect();
-        const hit = document.elementFromPoint(
+        let hit = document.elementFromPoint(
           rect.left + rect.width / 2,
           rect.top + rect.height / 2,
         );
+        while (hit?.shadowRoot) {
+          const child = hit.shadowRoot.elementFromPoint(
+            rect.left + rect.width / 2,
+            rect.top + rect.height / 2,
+          );
+          if (!child || child === hit) break;
+          hit = child;
+        }
+        const root = element.getRootNode();
+        const active =
+          root instanceof ShadowRoot
+            ? root.activeElement
+            : document.activeElement;
         return {
           ref,
           tag: element.tagName,
@@ -663,7 +724,7 @@ export class PlatformBrowser {
             element instanceof HTMLTextAreaElement
               ? element.readOnly
               : undefined,
-          focused: element === document.activeElement,
+          focused: element === active,
           title: element.getAttribute("title"),
           disabled:
             element.matches(":disabled") ||
@@ -682,9 +743,19 @@ export class PlatformBrowser {
         String(nextRef),
       );
       return {
-        text: document.body.innerText.slice(0, 45000),
+        text: [
+          document.body.innerText,
+          ...roots.slice(1).map((root) =>
+            [...root.children]
+              .filter((node) => !["STYLE", "SCRIPT"].includes(node.tagName))
+              .map((node) => (node as HTMLElement).innerText)
+              .join("\n"),
+          ),
+        ]
+          .join("\n")
+          .slice(0, 45000),
         elements: mapped,
-        links: Array.from(document.querySelectorAll("a[href]")).map((a) => ({
+        links: Array.from(query("a[href]")).map((a) => ({
           url: (a as HTMLAnchorElement).href,
           title: (a.textContent || "").trim(),
         })),

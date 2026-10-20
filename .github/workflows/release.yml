@@ -57,6 +57,7 @@ jobs:
             || { echo 'Production inputs changed; prepare fresh signed packages.'; exit 1; }
 
   package:
+    name: macOS arm64 package
     needs: validate
     if: github.event_name == 'push' || inputs.package_run_id == ''
     runs-on: macos-15
@@ -131,10 +132,8 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
       - name: Prepare signed upgrade packages
-        if: github.event_name == 'workflow_dispatch'
         run: npm run prepare:upgrade
       - uses: actions/upload-artifact@v7
-        if: github.event_name == 'workflow_dispatch'
         with:
           name: signed-upgrade-packages
           path: |
@@ -146,7 +145,7 @@ jobs:
 
       - uses: actions/upload-artifact@v7
         with:
-          name: postrove-${{ github.run_id }}
+          name: postrove-mac-arm64-${{ github.run_id }}
           path: |
             release/*.dmg
             release/*.zip
@@ -158,7 +157,7 @@ jobs:
           if-no-files-found: error
           retention-days: 7
       - uses: actions/upload-artifact@v7
-        if: github.event_name == 'workflow_dispatch' && always()
+        if: always()
         with:
           name: signed-upgrade-build-evidence
           path: .tmp/signed-upgrade/evidence/
@@ -173,9 +172,48 @@ jobs:
           fi
           find "${RUNNER_TEMP}" -maxdepth 1 -name 'postrove-release.*' -delete
 
+  windows:
+    name: Windows x64 package
+    needs: validate
+    runs-on: windows-2025
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run prepare:runtime
+      - run: npm run package:windows
+      - run: npm run test:package
+      - run: npm run test:windows-installation
+      - run: npm run test:windows-upgrade
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: windows-release-evidence
+          path: |
+            .tmp/package-verification/
+            .tmp/windows-installation/
+            .tmp/windows-upgrade/evidence/
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v7
+        with:
+          name: postrove-win-x64-${{ github.run_id }}
+          path: |
+            release/*.exe
+            release/*.blockmap
+            release/latest.yml
+            release/build-manifest.json
+            release/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 7
+
   signed-upgrade:
     needs: [validate, package]
-    if: always() && github.event_name == 'workflow_dispatch' && needs.validate.result == 'success' && (needs.package.result == 'success' || inputs.package_run_id != '')
+    if: always() && needs.validate.result == 'success' && (needs.package.result == 'success' || inputs.package_run_id != '')
     runs-on: macos-15
     timeout-minutes: 10
     steps:
@@ -235,7 +273,7 @@ jobs:
       - uses: actions/download-artifact@v8
         if: steps.baseline.outputs.verify == 'true'
         with:
-          name: postrove-${{ inputs.package_run_id || github.run_id }}
+          name: postrove-mac-arm64-${{ inputs.package_run_id || github.run_id }}
           path: .tmp/released-upgrade/candidate/
           github-token: ${{ github.token }}
           run-id: ${{ inputs.package_run_id || github.run_id }}
@@ -254,17 +292,26 @@ jobs:
           retention-days: 14
 
   draft-release:
-    needs: [package, released-upgrade]
+    needs: [package, windows, signed-upgrade, released-upgrade]
     if: github.event_name == 'push'
     runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
       - uses: actions/download-artifact@v8
         with:
-          name: postrove-${{ github.run_id }}
-          path: artifacts
+          name: postrove-mac-arm64-${{ github.run_id }}
+          path: packages/mac-arm64
+      - uses: actions/download-artifact@v8
+        with:
+          name: postrove-win-x64-${{ github.run_id }}
+          path: packages/win-x64
+      - name: Verify and combine both platform packages
+        run: node scripts/app-build/merge-release.mjs packages artifacts
       - name: Verify artifact checksums
         working-directory: artifacts
         run: sha256sum --check SHA256SUMS.txt

@@ -1,5 +1,4 @@
 import type { ReadingMaterial } from "../shared/reading-contracts";
-import type { TaskSnapshot } from "../shared/task-contracts";
 import type { ModelReply } from "../shared/model-contracts";
 import { bridge } from "./bridge";
 import { t, tf } from "./i18n";
@@ -10,7 +9,7 @@ export interface UiForwardingReport {
   materialId: string;
   taskId: string;
   title: string;
-  platform: "github" | "x" | "xiaohongshu" | "web";
+  platform: import("../shared/source-contracts").SourceContent["platform"];
   sourceUrl: string;
   sourceIdentity: string;
   fetchedAt: string;
@@ -20,30 +19,11 @@ export interface UiForwardingReport {
   stageLabel: string;
   taskMessage?: string;
 }
-export interface UiTaskActivity {
-  body?: string;
-  sequence: number;
-  occurredAt: string;
-  summary: string;
-  completed?: number;
-  total?: number;
-}
 export interface UiTask {
   taskId: string;
-  kind: TaskSnapshot["kind"];
-  label: string;
-  targetLabel: string;
   status: "queued" | "running" | "completed" | "failed" | "cancelled";
   phase: string;
-  processed?: number;
-  total?: number;
-  updatedAt: string;
-  activities: UiTaskActivity[];
-  resultId?: string;
-  resultType?: "content" | "search";
-  partialResultId?: string;
   error?: string;
-  resultDeleted?: boolean;
 }
 export interface UiContentWorkspace {
   reports: UiForwardingReport[];
@@ -66,16 +46,12 @@ export interface UiSettings {
 
 export interface ProductUiBridge {
   uiContent(): Promise<ModelReply<UiContentWorkspace>>;
-  uiAddLink(url: string): Promise<ModelReply<string>>;
-  uiCancelTask(taskId: string): Promise<ModelReply<void>>;
   uiSettings(): Promise<ModelReply<UiSettings>>;
   uiSaveTelegramToken(token: string): Promise<ModelReply<void>>;
   uiClearTelegramBotToken(): Promise<ModelReply<void>>;
   uiVerifyTelegramBot(): Promise<ModelReply<void>>;
   uiAuthorizeTelegramChat(chatId: string): Promise<ModelReply<void>>;
   uiRevokeTelegramChat(chatId: string): Promise<ModelReply<void>>;
-  uiOpenSource(materialId: string): Promise<ModelReply<void>>;
-  uiChanged(listener: () => void): () => void;
 }
 const failed = <T>(message: string): ModelReply<T> => ({ ok: false, message });
 
@@ -86,14 +62,9 @@ export function productUiBridge(): ProductUiBridge {
   ) => (operation ? operation() : failed<T>(tf("{0} 服务尚未连接。", name)));
   return {
     uiContent: async () => {
-      const [taskReply, forwardingReply] = await Promise.all([
-        bridge.unifiedTaskSnapshots(),
-        bridge.forwardingTasks(),
-      ]);
-      if (!taskReply.ok) return taskReply;
+      const forwardingReply = await bridge.forwardingTasks();
       if (!forwardingReply.ok) return forwardingReply;
       const summaries = forwardingReply.value;
-      const summaryById = new Map(summaries.map((s) => [s.taskId, s]));
       const reports: UiForwardingReport[] = [];
       const partialReports: UiForwardingReport[] = [];
       for (const summary of summaries) {
@@ -137,73 +108,13 @@ export function productUiBridge(): ProductUiBridge {
         if (detail.task.report) reports.push(report);
         else partialReports.push(report);
       }
-      const byTask = new Map(
-        [...reports, ...partialReports].map((r) => [r.taskId, r]),
-      );
-      const tasks = await Promise.all(
-        taskReply.value.map(async (task): Promise<UiTask> => {
-          const summary = summaryById.get(task.taskId);
-          const report = byTask.get(task.taskId);
-          const activityReply = await bridge.taskActivities(task.taskId);
-          return {
-            taskId: task.taskId,
-            kind: task.kind,
-            label:
-              task.label || (report ? tf("解析 {0}", report.title) : t("搜索")),
-            resultDeleted: task.resultDeleted,
-            targetLabel:
-              task.label ||
-              (report
-                ? `${report.platform.toUpperCase()} · ${report.sourceIdentity}`
-                : t("搜索")),
-            status: task.state === "awaiting_user" ? "running" : task.state,
-            phase:
-              summary?.phase ??
-              (task.state === "completed"
-                ? t("已完成")
-                : task.state === "failed"
-                  ? t("搜索失败")
-                  : task.state === "cancelled"
-                    ? t("已取消")
-                    : task.phase),
-            processed: task.progress.completed,
-            total: task.progress.total,
-            updatedAt: task.updatedAt,
-            activities: activityReply.ok
-              ? activityReply.value.map((a) => ({
-                  sequence: a.sequence,
-                  occurredAt: a.happenedAt,
-                  summary: a.summary,
-                  body: a.body,
-                  completed: a.progress?.completed,
-                  total: a.progress?.total,
-                }))
-              : [],
-            resultId: task.result?.id,
-            resultType: task.result
-              ? task.kind === "forwarding"
-                ? "content"
-                : "search"
-              : undefined,
-            partialResultId:
-              summary?.hasSource || summary?.hasMaterials
-                ? summary.materialId
-                : undefined,
-            error: summary?.message ?? task.failure?.message,
-          };
-        }),
-      );
+      const tasks: UiTask[] = summaries.map((summary) => ({
+        taskId: summary.taskId,
+        status: summary.state,
+        phase: summary.phase,
+        error: summary.message,
+      }));
       return { ok: true, value: { tasks, reports, partialReports } };
-    },
-    uiAddLink: (url) => bridge.addLink(url),
-    uiCancelTask: async (taskId) => {
-      const reply = await bridge.unifiedTaskSnapshots();
-      if (!reply.ok) return reply;
-      const task = reply.value.find((t) => t.taskId === taskId);
-      if (!task) return failed("Task unavailable");
-      return task.kind === "focus_search"
-        ? bridge.cancelFocusSearch(taskId)
-        : bridge.cancelForwarding(taskId);
     },
     uiSettings: async () => {
       if (!bridge.telegramStatus)
@@ -287,7 +198,5 @@ export function productUiBridge(): ProductUiBridge {
           : undefined,
         t("撤销 Telegram 聊天"),
       ),
-    uiOpenSource: (materialId) => bridge.openSource(materialId),
-    uiChanged: (listener) => bridge.onChanged(listener),
   };
 }

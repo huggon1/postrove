@@ -39,7 +39,7 @@ test("Postrove opens a fresh profile with its own product identity", async ({}, 
       profile: join(root, "Postrove/profiles/default"),
       menu: "Postrove",
     });
-    await expect(page.locator(".app-sidebar .brand")).toContainText("Postrove");
+    await expect(page.locator(".topbar .brand")).toContainText("postrove");
     await page.screenshot({ path: info.outputPath("postrove-fresh.png") });
     await info.attach("fresh-identity", {
       body: JSON.stringify(identity),
@@ -148,9 +148,12 @@ test("Postrove retains an installed profile, encrypted connection, images and br
         encryption: "Branchout",
       });
       await page.getByRole("button", { name: "Settings", exact: true }).click();
-      await expect(page.getByLabel("Language", { exact: true })).toHaveValue(
-        "en",
-      );
+      await page
+        .getByRole("button", { name: "Preferences", exact: true })
+        .click();
+      await expect(
+        page.getByLabel("Interface language", { exact: true }),
+      ).toHaveValue("en");
       for (const scheme of ["branchout-image", "postrove-image"]) {
         const result = await page.evaluate(async (url) => {
           const image = new Image();

@@ -39,8 +39,8 @@ jobs:
             test-results/
             playwright-report/
           retention-days: 7
-  windows-trial:
-    name: Windows x64 installation trial
+  windows:
+    name: Windows x64
     runs-on: windows-2025
     timeout-minutes: 45
     steps:
@@ -52,32 +52,18 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: npm run prepare:runtime
-      - name: Build unsigned per-user installer
-        run: npm run package:windows
-      - name: Verify packaged executable
-        run: npm run test:package
-      - name: Verify install, restart, reinstall and uninstall
-        run: npm run test:windows-installation
-      - uses: actions/upload-artifact@v7
-        with:
-          name: postrove-windows-x64-trial-${{ github.sha }}
-          path: |
-            release/*.exe
-            release/*.blockmap
-            release/build-manifest.json
-            release/SHA256SUMS.txt
-          if-no-files-found: error
-          retention-days: 14
-      - name: Verify Windows application behavior
-        run: npm run test:e2e
+      - run: npm run package:windows
+      - run: npm run test:package
+      - run: npm run test:windows-installation
+      - run: npm run test:e2e
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: windows-trial-evidence
+          name: windows-evidence
           path: |
             test-results/
             playwright-report/
             .tmp/package-verification/
             .tmp/windows-installation/
           if-no-files-found: warn
-          retention-days: 14
+          retention-days: 7

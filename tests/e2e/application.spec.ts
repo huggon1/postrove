@@ -1,11 +1,7 @@
+import { launchChineseApplication } from "../support/application";
 import { prepareProfile } from "../../src/main/runtime/profile";
 import { createServer, type Server } from "node:http";
-import {
-  test,
-  expect,
-  _electron as electron,
-  type ElectronApplication,
-} from "@playwright/test";
+import { test, expect, type ElectronApplication } from "@playwright/test";
 import { mkdtemp, mkdir, writeFile, readFile, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
@@ -14,7 +10,7 @@ let server: Server, endpoint: string;
 let requests: string[];
 let root: string, profile: string, application: ElectronApplication;
 async function launch(mode = "test") {
-  application = await electron.launch({
+  application = await launchChineseApplication({
     args: ["."],
     env: {
       ...process.env,
@@ -32,7 +28,9 @@ async function launch(mode = "test") {
   });
   const page = await application.firstWindow();
   page.on("pageerror", (error) => console.error(error.message));
-  await expect(page.getByRole("navigation")).toBeVisible();
+  await expect(
+    page.getByRole("navigation", { name: /主导航|Main navigation/ }),
+  ).toBeVisible();
   return page;
 }
 test.beforeEach(async () => {
@@ -132,6 +130,7 @@ test.afterEach(async ({}, info) => {
 test("browser visibility defaults to background and persists independently of language", async ({}, info) => {
   let page = await launch();
   await page.getByRole("button", { name: "设置", exact: true }).click();
+  await page.getByRole("button", { name: "偏好设置", exact: true }).click();
   const mode = page.getByLabel("任务浏览器", { exact: true });
   await expect(mode).toHaveValue("headless");
   await mode.selectOption("visible");
@@ -148,13 +147,14 @@ test("browser visibility defaults to background and persists independently of la
         ).taskBrowserVisible,
     )
     .toBe(true);
-  await page.getByLabel("Language", { exact: true }).selectOption("en");
+  await page.getByLabel("界面语言", { exact: true }).selectOption("en");
   await expect(page.getByLabel("Task browser", { exact: true })).toHaveValue(
     "visible",
   );
   await application.close();
   page = await launch();
   await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByRole("button", { name: "Preferences", exact: true }).click();
   await expect(page.getByLabel("Task browser", { exact: true })).toHaveValue(
     "visible",
   );
@@ -193,7 +193,7 @@ app.whenReady().then(() => app.emit("activate"));
 await import(${JSON.stringify(pathToFileURL(resolve("dist/main/main.cjs")).href)});
 `,
   );
-  application = await electron.launch({
+  application = await launchChineseApplication({
     args: [wrapper],
     env: {
       ...process.env,
@@ -206,16 +206,11 @@ await import(${JSON.stringify(pathToFileURL(resolve("dist/main/main.cjs")).href)
     },
   });
   const page = await application.firstWindow();
-  await page
-    .getByRole("navigation")
-    .getByRole("button", { name: "设置", exact: true })
-    .click();
-  await expect(
-    page.getByRole("combobox", { name: "模型", exact: true }),
-  ).toHaveValue("fixture", { timeout: 5000 });
-  await expect(page.getByText("无法读取模型连接", { exact: true })).toHaveCount(
-    0,
-  );
+  await page.getByRole("button", { name: "设置", exact: true }).click();
+  await page.getByRole("button", { name: "后台模型", exact: true }).click();
+  await expect(page.locator(".model-connection-card")).toContainText("fixture");
+  const view = await page.evaluate(() => window.postrove.modelView());
+  expect(view.ok && view.value.current?.modelId).toBe("fixture");
   const artifact = info.outputPath("saved-model-after-startup.png");
   await page.screenshot({ path: artifact });
   await info.attach("saved-model-after-startup", {
@@ -231,13 +226,14 @@ await import(${JSON.stringify(pathToFileURL(resolve("dist/main/main.cjs")).href)
 test("parsed materials retain their language and partial state across new submissions", async ({}, info) => {
   const page = await launch();
   await page
-    .getByRole("navigation")
-    .getByRole("button", { name: "解析结果", exact: true })
+    .getByRole("navigation", { name: "主导航" })
+    .getByRole("button", { name: "阅读", exact: true })
     .click();
+  await page.getByRole("button", { name: "添加链接", exact: true }).click();
   await page
-    .getByPlaceholder("https://…")
+    .getByRole("textbox", { name: "链接", exact: true })
     .fill("https://github.com/fixture/fail");
-  await page.getByRole("button", { name: "加入解析", exact: true }).click();
+  await page.getByRole("button", { name: "加入阅读", exact: true }).click();
   const state = async () =>
     JSON.parse(await readFile(join(profile, "forwarding.json"), "utf8"));
   await expect.poll(async () => (await state()).tasks[0]?.state).toBe("failed");
@@ -245,15 +241,11 @@ test("parsed materials retain their language and partial state across new submis
   expect(initial.source).toBeTruthy();
   expect(initial.outputLanguage).toBe("zh-CN");
   expect(initial.materials[0].state).toBe("failed");
-  await page
-    .getByRole("navigation")
-    .getByRole("button", { name: "设置", exact: true })
-    .click();
-  await page.getByLabel("Language", { exact: true }).selectOption("en");
+  await page.getByRole("button", { name: "设置", exact: true }).click();
+  await page.getByRole("button", { name: "偏好设置", exact: true }).click();
+  await page.getByLabel("界面语言", { exact: true }).selectOption("en");
   await expect(
-    page
-      .getByRole("navigation")
-      .getByRole("button", { name: "Settings", exact: true }),
+    page.getByRole("button", { name: "Settings", exact: true }),
   ).toBeVisible();
   const added = await page.evaluate(() =>
     window.postrove.addLink("https://github.com/fixture/english"),
@@ -280,7 +272,7 @@ test("parsed materials retain their language and partial state across new submis
   );
   await page
     .getByRole("navigation")
-    .getByRole("button", { name: "Parsed content", exact: true })
+    .getByRole("button", { name: "Reading", exact: true })
     .click();
   await page.screenshot({ path: info.outputPath("parsed-content.png") });
   await info.attach("forwarding-state", {
@@ -290,15 +282,16 @@ test("parsed materials retain their language and partial state across new submis
 });
 test("profile copying protects an active source and preserves independent follows", async ({}, info) => {
   let page = await launch();
-  const saved = await page.evaluate(() =>
-    window.postrove.saveFollow({
+  const saved = await page.evaluate(async () => {
+    await window.postrove.saveAdvisorSettings({ enabled: ["x-grok-en"] });
+    return window.postrove.saveFollow({
       name: "Saved fixture follow",
       question: "Durable drafts",
       platforms: ["x"],
       period: "week",
       schedule: { cadence: "daily", time: "23:59" },
-    }),
-  );
+    });
+  });
   expect(saved.ok).toBe(true);
   const source = profile,
     destination = join(root, "copied-profile");
@@ -339,7 +332,7 @@ test("profile copying protects an active source and preserves independent follow
   page = await launch();
   await page
     .getByRole("navigation")
-    .getByRole("button", { name: "关注", exact: true })
+    .getByRole("button", { name: "定时发送", exact: true })
     .click();
   await expect(
     page.getByText("Saved fixture follow", { exact: true }).first(),
@@ -390,13 +383,13 @@ test("review with copied Telegram credentials shows receiving paused", async ({}
   await prepareProfile(profile, source, true);
   const page = await launch("review");
   await page
-    .getByRole("navigation")
     .getByRole("button", {
       name: "设置",
       exact: true,
     })
     .click();
-  await expect(page.locator(".telegram-settings .status-tag")).toHaveText(
+  await page.getByRole("button", { name: "收件连接", exact: true }).click();
+  await expect(page.locator(".telegram-settings .connection-pill")).toHaveText(
     "已配置",
   );
   const reply = await page.evaluate(() =>

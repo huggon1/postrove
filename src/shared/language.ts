@@ -1,6 +1,9 @@
 import { z } from "zod";
 export const languageSchema = z.enum(["zh-CN", "en"]);
 export type Language = z.infer<typeof languageSchema>;
+export function initialLanguage(systemLanguages: readonly string[]): Language {
+  return /^zh(?:[-_]|$)/i.test(systemLanguages[0] ?? "") ? "zh-CN" : "en";
+}
 export const localizedText = (
   language: string | undefined,
   zh: string,

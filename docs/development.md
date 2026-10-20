@@ -9,7 +9,7 @@ npm ci
 npm run dev
 ```
 
-`dev` builds `dist/` and launches Electron. Quit and rerun after source changes. The default launch uses regular application data. This refactor clears prior-generation test business records at startup and preserves connections and platform sessions through the [reset contract](data-contracts.md#telegram-queue-and-business-reset).
+`dev` builds `dist/` and launches Electron. Quit and rerun after source changes. The default launch uses regular application data. The topic upgrade preserves business records, connections, platform sessions, and results through the [retention contract](data-contracts.md#telegram-queue-and-upgrade-retention).
 
 ## Try changes with separate data
 
@@ -19,9 +19,11 @@ POSTROVE_TEST_DATA="$PWD/tmp/dev-profile" npm run dev
 
 The selected directory retains its records across launches. A separate path defaults to review mode, with bot receiving paused during preparation. Saving bot credentials starts the selected receiver for that instance.
 
-## Work with X or Xiaohongshu content
+In Windows PowerShell, set the same profile with `$env:POSTROVE_TEST_DATA = "$PWD/tmp/dev-profile"` before running `npm run dev`.
 
-Install Google Chrome and sign in through Settings. Shared Chrome retains sessions under the selected profile. `npm run setup:xhs` prepares the optional Xiaohongshu note reader; browser capture provides fallback.
+## Work with platform content
+
+Install Google Chrome and configure the platform connection in Members. Shared Chrome retains site sessions under the selected profile. Reddit supports guest use. `npm run setup:xhs` prepares the optional Xiaohongshu note reader. `npm run setup:youtube` downloads and verifies pinned yt-dlp and Deno for original YouTube captions; browser capture supplies fallback. `npm run prepare:runtime` prepares both packaged readers.
 
 ## Check types or build output
 
@@ -34,26 +36,11 @@ npm run prepare:runtime
 npm run package:app
 ```
 
-Packaging clears generated `release/` output, rebuilds the app and icon, and writes ARM64 DMG, ZIP, update manifests, blockmaps, and checksums. The cleanup also retires the obsolete bird-search runtime.
+Run `npm run package:app` on macOS Apple silicon or `npm run package:windows` on Windows x64. Packaging clears generated `release/` output and rebuilds the app and icon. macOS produces DMG, ZIP, and `latest-mac.yml`; Windows produces a per-user NSIS EXE and `latest.yml`. Both commands write blockmaps, SHA-256 checksums, and a build manifest after checking the update feed's package digest. The cleanup also retires the obsolete bird-search runtime.
 
-## Create a Windows installation trial
+## Application artwork
 
-Use a native Windows x64 host with Node.js 24 or later, npm, Git, and Google Chrome. Run from the repository root:
-
-```powershell
-npm ci
-npm run check:full
-npm run prepare:runtime
-npm run package:windows
-npm run test:package
-npm run test:windows-installation
-```
-
-The package command generates `release/Postrove-<version>-win-x64.exe`, blockmaps, `build-manifest.json`, and `SHA256SUMS.txt`. The unsigned NSIS installer targets the current user and includes the Windows Xiaohongshu reader. The application carries its runtime. Installed users prepare Chrome and their model and platform connections through Settings.
-
-The Windows job in [Checks](../.github/workflows/checks.yml) builds and verifies the trial on Windows Server 2025. Its `postrove-windows-x64-trial-<revision>` artifact holds the installer and checksums for fourteen days. Download and extract the artifact, then open the installer. Windows can show a publisher or reputation prompt for this unsigned trial. Windows Smart App Control and managed-device policies can block unsigned executables, as described in [Microsoft's distribution guidance](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/smartscreen-reputation). The [trial acceptance](../tests/windows-trial-failures.md) defines automated and live evidence.
-
-Application updates remain disabled in the trial. A replacement installer retains the workspace. The installation check uses a separate profile and paths containing Chinese characters and spaces. Its screenshots and JSON results enter `.tmp/windows-installation/`. Real Windows 11 client use establishes the installation experience, live platform access, and display behavior.
+[`assets/postrove-icon.svg`](../assets/postrove-icon.svg) supplies the README, window, Dock, favicon, and package icon. [`assets/postrove-mark.svg`](../assets/postrove-mark.svg) supplies the compact workspace mark. `npm run build` copies both SVGs and renders `dist/assets/postrove.png`; `npm run build:icon` renders `build/postrove.ico` and, on macOS, `build/postrove.icns` from the same artwork.
 
 ## Prepare a review profile
 
@@ -64,33 +51,29 @@ npm run review -- --profile /absolute/path/to/new-review-data --from /absolute/p
 
 Copy preparation requires an inactive source and preserves current-generation records. `--include-auth` includes supported credentials, including the native Pi connection directory and its model catalogs. Review startup keeps bot receiving paused until the selected connection is configured or verified in that instance. The launcher displays build and profile identity.
 
-## Verify the search-first workspace
+## Verify the topic workspace
 
-Use a review profile with the intended model and platform sessions. Submit a question, read both platform sections and source links, save a follow, add a candidate to parsing, stop active work, and export its Pi logs. Check partial-platform results and English output. Record inputs, screenshots, saved state, and observed failures in a local acceptance directory. [Product behavior](product-spec.md) defines expected outcomes.
+Use a review profile with the intended model and platform sessions. Enable language experts, send a topic, read independent replies and member receipts, save a scheduled message, collect sources into Reading, stop an active member, and export its Pi logs. Check partial-platform results and English output. Record inputs, screenshots, saved state, and observed failures in a local acceptance directory. [Product behavior](product-spec.md) defines expected outcomes.
 
-## Capture README screenshots
+## README screenshots
 
-```sh
-npm run screenshots:readme
-```
-
-The [capture script](../scripts/development/capture-readme.ts) opens the real Electron application with fresh temporary profiles and schema-validated fictional records. It captures Search results, Parsed content, and Focus in English and Simplified Chinese, then removes the profiles. The article illustration is drawn locally. Authored platform replies and source addresses serve as display examples; live platform retrieval has its own acceptance above.
-
-The six PNG files enter `assets/screenshots/`. The local `tmp/readme-capture/evidence.json` records build identity, screenshot hashes, language checks, image loading, layout bounds, and profile isolation. The root README captions identify the demonstration data. Regenerate these files after changes to the featured pages or sample content.
+The [screenshot guide](../assets/screenshots/README.md) owns the current scenes and sample-data scope. Capture both interface languages from the running topic workspace with separate profiles and fictional records.
 
 ## Verify reading with live sources
 
-Submit a public source link in Parsed content. Inspect source coverage, translated body, introduction, and direct references. The [reading helper](../scripts/development/verify-reading.ts) submits through Electron IPC and exports saved material:
+Submit a public source link in Reading. Inspect source coverage, translated body, introduction, and direct references. The [reading helper](../scripts/development/verify-reading.ts) submits through Electron IPC and exports saved material:
 
 ```sh
 npm run build
 npx tsx scripts/development/verify-reading.ts --profile /absolute/path/to/review-data --output /absolute/path/to/reading-evidence
 ```
 
-The helper's `--help` lists sample selection. `--retry-existing` exercises the retained internal recovery API; user-facing flows use new submission and Stop.
+The helper's `--help` lists sample selection. `--retry-existing` exercises the retained internal recovery API; user-facing flows expose retry and Stop in reading status.
 
 ## Release preparation
 
-After local packaging, `npm run test:package` launches the packaged executable with separate data, checks startup and restart, and saves evidence under `.tmp/package-verification/`. Options `--app` and `--output` select other package and evidence paths.
+After local packaging, `npm run test:package` launches the native packaged executable with separate data, checks startup, enabled updates, and retained language and schedules after restart. It saves evidence under `.tmp/package-verification/`. Options `--app`, `--profile`, and `--output` select the installation, retained test data, and evidence paths.
 
-The [release guide](releasing.md) owns approval, signing, assets, and GitHub publication. Its manual verification workflow uses `npm run prepare:upgrade` to build a signed pair and `npm run test:upgrade` to verify native replacement and restart. Evidence enters `.tmp/signed-upgrade/evidence/` and workflow artifacts.
+On Windows, `npm run test:windows-installation` exercises installation, reinstallation, and uninstallation in a Unicode path. `npm run test:windows-upgrade` builds two versions, installs the baseline, and uses the production updater to download, replace, and restart the application. Evidence enters `.tmp/windows-installation/` and `.tmp/windows-upgrade/evidence/`.
+
+The [release guide](releasing.md) owns approval, signing, assets, and GitHub publication. On macOS, its workflow uses `npm run prepare:upgrade` to build a signed pair and `npm run test:upgrade` to verify native replacement and restart on a separate runner. Evidence enters `.tmp/signed-upgrade/evidence/` and workflow artifacts.

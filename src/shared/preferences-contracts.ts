@@ -2,7 +2,8 @@ import { z } from "zod";
 import { languageSchema } from "./language";
 
 export const preferencesSchema = z.object({
-  language: languageSchema.default("zh-CN"),
+  language: languageSchema.default("en"),
+  readingLanguage: z.union([languageSchema, z.literal("app")]).default("app"),
   taskBrowserVisible: z.boolean().default(false),
 });
 export type ApplicationPreferences = z.infer<typeof preferencesSchema>;

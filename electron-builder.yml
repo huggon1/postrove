@@ -36,7 +36,6 @@ win:
   artifactName: Postrove-${version}-win-${arch}.${ext}
   icon: build/postrove.ico
   requestedExecutionLevel: asInvoker
-  publish: null
   target:
     - target: nsis
       arch: [x64]

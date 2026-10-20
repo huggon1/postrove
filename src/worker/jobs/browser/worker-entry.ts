@@ -89,6 +89,7 @@ port.on("message", ({ data }) => {
           citationsPending = value.citationsPending;
         return value;
       },
+      data.youtubeReading === true,
     );
     session = await createPiCodingSession({
       config: data.config,

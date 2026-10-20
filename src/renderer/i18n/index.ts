@@ -2,7 +2,7 @@ import { ipcErrorMessages, type IpcErrorCode } from "../../shared/ipc-errors";
 import { useSyncExternalStore } from "react";
 import catalog from "./en.json";
 import type { Language } from "../../shared/language";
-let language: Language = "zh-CN";
+let language: Language = "en";
 const listeners = new Set<() => void>();
 export function selectLanguage(next: Language) {
   language = next;
@@ -21,16 +21,8 @@ export function useLanguage() {
   );
 }
 const dynamicLabels: Array<[RegExp, string]> = [
-  [/^正在搜索 (X|小红书) 的一张关注卡$/, "Searching $1 for one focus card"],
-  [/^开始判断 (\d+) 张冻结关注卡$/, "Evaluating $1 frozen focus cards"],
-  [/^已判断 (\d+)\/(\d+) 张关注卡$/, "Evaluated $1/$2 focus cards"],
-  [
-    /^转发报告已保存，关联 (\d+) 张关注卡$/,
-    "Content report saved with $1 related focus cards",
-  ],
   [/^开始第 ([1-3]) 次模型请求$/, "Starting model request $1"],
   [/^请求暂时失败，([12]) 秒后重试$/, "Request failed; retrying in $1 seconds"],
-  [/^归纳第 (\d+) 层关注角度$/, "Summarizing interest level $1"],
 ];
 export function t(text: string): string {
   if (language === "zh-CN") return text;

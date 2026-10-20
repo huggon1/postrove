@@ -1,1197 +1,554 @@
-import { TaskPanel } from "./components/TaskPanel";
-import { RecordActions } from "./components/RecordActions";
-import type { RecordRef, RecordDeletion } from "../shared/deletion-contracts";
+import { useEffect, useState } from "react";
+import {
+  ArrowRight,
+  BookmarkSimple,
+  ChatCircle,
+  Check,
+  Clock,
+  GearSix,
+  LinkSimple,
+  Plus,
+  Users,
+  X,
+} from "@phosphor-icons/react";
+import { advisorById, type AdvisorId } from "../shared/advisor-contracts";
+import { sourceProfiles } from "../shared/source-profiles";
+import type { Follow } from "../shared/focus-search-contracts";
+import type { RecordDeletion, RecordRef } from "../shared/deletion-contracts";
+import { bridge } from "./bridge";
+import { t, tf, useLanguage } from "./i18n";
 import {
   useApplicationUpdates,
-  UpdateSettings,
   UpdateExperience,
+  UpdateSettings,
 } from "./components/ApplicationUpdates";
+import { useWorkspace } from "./workspace/use-workspace";
 import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
-import {
-  MagnifyingGlass,
-  BookOpen,
-  BookmarkSimple,
-  GearSix,
-  List,
-  CaretRight,
-} from "@phosphor-icons/react";
-import { Brand, Dialog, Markdown } from "./components/Primitives";
-import { MaterialReader } from "./components/MaterialReader";
-import { SettingsPage } from "./components/SettingsPage";
-import {
-  productUiBridge,
-  type UiContentWorkspace,
-  type UiSettings,
-  type UiTask,
-} from "./product-ui";
-import { bridge } from "./bridge";
-import { t, tf, dateTime, selectLanguage, useLanguage } from "./i18n";
-import type {
-  FocusSearchReport,
-  Follow,
-  SaveFollow,
-  SearchPlatform,
-  SearchPeriod,
-} from "../shared/focus-search-contracts";
-import type { ModelReply } from "../shared/model-contracts";
-import "./refactor.css";
+  Avatar,
+  IconButton,
+  Modal,
+  ModalHeader,
+  Time,
+  advisorName,
+  isRunning,
+} from "./workspace/ui";
+import { Members } from "./workspace/Members";
+import { Composer, TopicCard, TopicThread } from "./workspace/Topics";
+import { CollectLink, ReadingLibrary, ReadingView } from "./workspace/Reading";
+import { ScheduleEditor, ScheduleList } from "./workspace/Schedules";
+import { Settings, type SettingsSection } from "./workspace/Settings";
+import "./workspace/workspace.css";
+import "./workspace/settings.css";
+import "./workspace/production.css";
 
-type Page = "search" | "parsed" | "reports" | "follows" | "settings";
-const labels: Record<Page, string> = {
-  search: "搜索",
-  parsed: "解析结果",
-  reports: "搜索结果",
-  follows: "关注",
-  settings: "设置",
-};
-const platforms = [
-  { id: "x", name: "X / Grok" },
-  { id: "xiaohongshu", name: "小红书 / 点点" },
-] as const;
-const periods: { id: SearchPeriod; name: string }[] = [
-  { id: "day", name: "近一天" },
-  { id: "week", name: "近一周" },
-  { id: "month", name: "近一月" },
-  { id: "all", name: "不限" },
-];
-const statusNames: Record<string, string> = {
-  queued: "排队",
-  running: "进行中",
-  completed: "完成",
-  partial: "部分完成",
-  failed: "失败",
-  stopped: "已停止",
-  cancelled: "已停止",
-  pending: "等待中",
-};
-const status = (value: string) => t(statusNames[value] ?? value);
-const title = (report: FocusSearchReport) => report.question;
-const live = (task?: UiTask) =>
-  !!task && ["queued", "running"].includes(task.status);
-
+type Page = "topics" | "reading" | "schedules" | "settings";
 export function App() {
-  const language = useLanguage();
+  useLanguage();
+  const workspace = useWorkspace();
   const updates = useApplicationUpdates();
-  const ui = useMemo(() => productUiBridge(), []);
-  const [page, setPage] = useState<Page>("search");
-  const [drawer, setDrawer] = useState(false);
-  const navToggle = useRef<HTMLButtonElement>(null);
-  const navPanel = useRef<HTMLElement>(null);
-  const pageContent = useRef<HTMLDivElement>(null);
-  const resultIndex = useRef<HTMLElement>(null);
-  const [listFocusRequest, setListFocusRequest] = useState(0);
-  const [contentOpen, setContentOpen] = useState(true);
-  const [content, setContent] = useState<UiContentWorkspace>();
-  const [settings, setSettings] = useState<UiSettings>();
-  const [reports, setReports] = useState<FocusSearchReport[]>([]);
-  const [follows, setFollows] = useState<Follow[]>([]);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
+  const [page, setPage] = useState<Page>("topics"),
+    [settingsSection, setSettingsSection] =
+      useState<SettingsSection>("connections");
+  const [memberOpen, setMemberOpen] = useState(false),
+    [memberConnection, setMemberConnection] = useState<string>();
+  const [recipients, setRecipients] = useState<AdvisorId[]>(),
+    [filter, setFilter] = useState("all");
+  const [topicId, setTopicId] = useState(""),
+    [receipts, setReceipts] = useState(false),
+    [readerId, setReaderId] = useState("");
+  const [link, setLink] = useState<{ url?: string }>(),
+    [schedule, setSchedule] = useState<{ value?: Follow }>();
   const [undo, setUndo] = useState<RecordDeletion[]>([]);
-  useEffect(() => {
-    const load = () =>
-      void bridge.recordDeletions().then((reply) => {
-        if (reply.ok) setUndo(reply.value);
-      });
-    load();
-    const unsubscribe = bridge.onChanged(load);
-    const timer = setInterval(
-      () =>
-        setUndo((items) =>
-          items.filter((item) => Date.parse(item.expiresAt) > Date.now()),
-        ),
-      250,
-    );
-    return () => {
-      unsubscribe();
-      clearInterval(timer);
-    };
-  }, []);
-  const [question, setQuestion] = useState("");
-  const [selectedPlatforms, setSelectedPlatforms] = useState<SearchPlatform[]>([
-    "x",
-    "xiaohongshu",
-  ]);
-  const [period, setPeriod] = useState<SearchPeriod>("week");
-  const [followDraft, setFollowDraft] = useState<{
-    input: SaveFollow;
-    followId?: string;
-  }>();
-  const [source, setSource] = useState("all");
-  const [selectedReport, setSelectedReport] = useState("");
-  const [selectedContent, setSelectedContent] = useState("");
-  const [tasksOpen, setTasksOpen] = useState(false);
-  const [readerOpen, setReaderOpen] = useState(false);
-  const [url, setUrl] = useState("");
-  const [contentQuery, setContentQuery] = useState("");
-  const refresh = useCallback(async () => {
-    const values = await Promise.allSettled([
-      ui.uiContent(),
-      ui.uiSettings(),
-      bridge.focusSearchReports(),
-      bridge.follows(),
-    ]);
-    const errors: string[] = [];
-    values.forEach((value, i) => {
-      if (value.status === "rejected") {
-        errors.push(t("状态读取失败"));
-        return;
-      }
-      if (!value.value.ok) {
-        errors.push(value.value.message);
-        return;
-      }
-      if (i === 0) setContent(value.value.value as UiContentWorkspace);
-      if (i === 1) setSettings(value.value.value as UiSettings);
-      if (i === 2) setReports(value.value.value as FocusSearchReport[]);
-      if (i === 3) setFollows(value.value.value as Follow[]);
-    });
-    if (errors.length) setError(errors.join(" · "));
-  }, [ui]);
-  useEffect(() => {
-    void bridge.preferences().then((v) => selectLanguage(v.language));
-  }, []);
-  useEffect(() => {
-    void refresh();
-    return bridge.onChanged(() => void refresh());
-  }, [refresh, language]);
-  useEffect(() => {
-    if (!notice) return;
-    const timer = setTimeout(() => setNotice(""), 4500);
-    return () => clearTimeout(timer);
-  }, [notice]);
-  useEffect(() => {
-    if (!drawer) return;
-    const buttons = () =>
-      Array.from(
-        navPanel.current?.querySelectorAll<HTMLButtonElement>(
-          "button:not([disabled])",
-        ) ?? [],
-      );
-    buttons()[0]?.focus();
-    const close = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setDrawer(false);
-        navToggle.current?.focus();
-      }
-      if (event.key === "Tab") {
-        const items = buttons();
-        const first = items[0];
-        const last = items.at(-1);
-        if (event.shiftKey && document.activeElement === first) {
-          event.preventDefault();
-          last?.focus();
-        } else if (!event.shiftKey && document.activeElement === last) {
-          event.preventDefault();
-          first?.focus();
-        }
-      }
-    };
-    window.addEventListener("keydown", close);
-    return () => window.removeEventListener("keydown", close);
-  }, [drawer]);
-  async function run<T>(
-    operation: () => Promise<ModelReply<T>>,
-    message?: string,
-  ) {
-    setBusy(true);
-    setError("");
+  const [pendingDelete, setPendingDelete] = useState<RecordRef>();
+  const [seen, setSeen] = useState<Record<string, string>>(() => {
     try {
-      const reply = await operation();
-      if (!reply.ok) {
-        setError(reply.message);
-        return false;
-      }
-      await refresh();
-      if (message) setNotice(t(message));
-      return true;
-    } catch (error) {
-      setError(error instanceof Error ? error.message : t("操作未完成"));
-      return false;
-    } finally {
-      setBusy(false);
+      return JSON.parse(localStorage.getItem("postrove.read-topics") || "{}");
+    } catch {
+      return {};
     }
-  }
-  const navigate = (next: Page) => {
-    setPage(next);
-    if (next === "parsed" || next === "reports") setContentOpen(true);
-    setDrawer(false);
-    setReaderOpen(false);
-    setError("");
-    requestAnimationFrame(() => pageContent.current?.focus());
-  };
-  const returnToList = () => {
-    setReaderOpen(false);
-    setListFocusRequest((request) => request + 1);
-  };
-  useLayoutEffect(() => {
-    if (listFocusRequest) focusResultList();
-  }, [listFocusRequest]);
-  function focusResultList() {
-    const index = resultIndex.current;
-    const target =
-      index?.querySelector<HTMLElement>('.result-row[aria-current="true"]') ??
-      index?.querySelector<HTMLElement>("input, button");
-    if (target?.getClientRects().length) target.focus();
-    else pageContent.current?.focus();
-  }
-  const tasks = (content?.tasks ?? []).map((task) => {
-    const report = reports.find((r) => r.taskId === task.taskId);
-    return report
-      ? {
-          ...task,
-          targetLabel: title(report),
-        }
-      : task;
   });
-  const displayedReports = [...reports]
-    .filter((r) => source === "all" || (r.origin ?? "manual") === source)
+  const active = workspace.reports.find(
+    (report) => report.reportId === topicId || report.taskId === topicId,
+  );
+  const reader = [
+    ...workspace.content.reports,
+    ...(workspace.content.partialReports ?? []),
+  ].find((report) => report.taskId === readerId);
+  const enabled = workspace.members?.enabled;
+  useEffect(() => {
+    workspace.setError("");
+  }, [topicId, readerId, !!link, !!schedule, memberOpen, workspace.setError]);
+  useEffect(() => {
+    if (enabled)
+      setRecipients((old) =>
+        old ? old.filter((id) => enabled.includes(id)) : enabled,
+      );
+  }, [enabled?.join(",")]);
+  useEffect(() => {
+    if (!active) return;
+    setSeen((old) => ({
+      ...old,
+      [active.reportId]: active.finishedAt || active.createdAt,
+    }));
+  }, [active?.reportId, active?.finishedAt]);
+  useEffect(() => {
+    localStorage.setItem("postrove.read-topics", JSON.stringify(seen));
+  }, [seen]);
+  useEffect(() => {
+    if (!undo.length) return;
+    const timer = setTimeout(
+      () =>
+        setUndo((old) =>
+          old.filter((entry) => Date.parse(entry.expiresAt) > Date.now()),
+        ),
+      Math.max(
+        0,
+        Math.min(...undo.map((entry) => Date.parse(entry.expiresAt))) -
+          Date.now(),
+      ),
+    );
+    return () => clearTimeout(timer);
+  }, [undo]);
+  useEffect(() => {
+    void bridge
+      .recordDeletions()
+      .then((reply) => {
+        if (reply.ok) setUndo(reply.value);
+      })
+      .catch(() => {});
+  }, []);
+  const unread = (report: (typeof workspace.reports)[number]) =>
+    !!report.finishedAt && seen[report.reportId] !== report.finishedAt;
+  const reports = workspace.reports
+    .filter((report) =>
+      filter === "unread"
+        ? unread(report)
+        : filter === "scheduled"
+          ? report.origin === "follow"
+          : true,
+    )
+    .slice()
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  const report =
-    displayedReports.find((r) => r.reportId === selectedReport) ??
-    displayedReports[0];
-  const readingReports = [
-    ...(content?.reports ?? []),
-    ...(content?.partialReports ?? []),
-  ]
-    .filter(
-      (r, i, all) => all.findIndex((v) => v.materialId === r.materialId) === i,
-    )
-    .filter((r) =>
-      `${r.title} ${r.sourceUrl}`
-        .toLowerCase()
-        .includes(contentQuery.toLowerCase()),
-    )
-    .sort((a, b) => b.fetchedAt.localeCompare(a.fetchedAt));
-  const reading =
-    readingReports.find((r) => r.materialId === selectedContent) ??
-    readingReports[0];
-  const nav = (key: Page, icon?: ReactNode) => (
-    <button
-      key={key}
-      className="nav-item"
-      aria-label={t(labels[key])}
-      aria-current={page === key ? "page" : undefined}
-      onClick={() => navigate(key)}
-    >
-      {icon}
-      <span>{t(labels[key])}</span>
-    </button>
-  );
-  const stop = (id: string) =>
-    run(() => ui.uiCancelTask(id), "已停止，并保留已有结果");
-  async function deleteRecord(record: RecordRef) {
-    const ids =
-      record.kind === "search"
-        ? displayedReports.map((r) => r.reportId)
-        : record.kind === "parsed"
-          ? readingReports.map((r) => r.materialId)
-          : tasks.map((r) => r.taskId);
-    const index = ids.indexOf(record.id);
-    const next = ids[index + 1] ?? ids[index - 1] ?? "";
-    const ok = await run(() => bridge.deleteRecord(record));
-    if (ok) {
-      if (record.kind === "search" && report?.reportId === record.id)
-        setSelectedReport(next);
-      if (record.kind === "parsed" && reading?.materialId === record.id)
-        setSelectedContent(next);
-
-      if (record.kind === "task") {
-        requestAnimationFrame(() =>
-          document
-            .querySelector<HTMLElement>(
-              '.task-panel:popover-open .source-tabs button[aria-pressed="true"]',
-            )
-            ?.focus(),
-        );
-      } else {
-        if (!next) setReaderOpen(false);
-        setListFocusRequest((request) => request + 1);
-      }
+  const openMembers = (connectionId?: string) => {
+    setMemberConnection(connectionId);
+    setMemberOpen(true);
+  };
+  const openTopic = (id: string, receipt = false) => {
+    setTopicId(id);
+    setReceipts(receipt);
+  };
+  async function remove(ref: RecordRef) {
+    const active =
+      ref.kind === "search"
+        ? isRunning(
+            workspace.reports.find((report) => report.reportId === ref.id)
+              ?.status,
+          )
+        : isRunning(
+            workspace.content.tasks.find(
+              (task) =>
+                task.taskId ===
+                [
+                  ...workspace.content.reports,
+                  ...(workspace.content.partialReports ?? []),
+                ].find((item) => item.materialId === ref.id)?.taskId,
+            )?.status,
+          );
+    if (active) {
+      setPendingDelete(ref);
+      return;
     }
-    return ok;
+    await performRemove(ref);
   }
-  const recordActions = (record: RecordRef, name: string, active = false) => (
-    <RecordActions
-      record={record}
-      title={name}
-      active={active}
-      disabled={busy}
-      onDelete={deleteRecord}
-    />
+  async function performRemove(ref: RecordRef) {
+    const result = await workspace.run(() => bridge.deleteRecord(ref));
+    if (result) {
+      setUndo((old) => [...old, result]);
+      setPendingDelete(undefined);
+      if (ref.kind === "search") setTopicId("");
+      if (ref.kind === "parsed") setReaderId("");
+    }
+  }
+  const next = workspace.follows
+    .filter((follow) => !follow.paused)
+    .sort((a, b) => a.nextRunAt.localeCompare(b.nextRunAt))[0];
+  const heading = t(
+    {
+      topics: "话题",
+      reading: "阅读",
+      schedules: "定时发送",
+      settings: "设置",
+    }[page],
   );
-  const back = (
-    <button className="button button-quiet" onClick={returnToList}>
-      {t("返回列表")}
-    </button>
-  );
-
   return (
-    <div className={`refactor-shell ${drawer ? "drawer-open" : ""}`}>
-      {drawer && (
-        <button
-          className="nav-scrim"
-          aria-label={t("关闭导航")}
-          onClick={() => setDrawer(false)}
-        />
-      )}
-      <aside ref={navPanel} className="app-sidebar">
-        <Brand />
-        <nav aria-label={t("主导航")}>
-          {nav("search", <MagnifyingGlass size={18} />)}
+    <>
+      <header className="topbar">
+        <div className="topbar-inner">
           <button
-            className="nav-item"
-            aria-expanded={contentOpen}
-            aria-current={
-              !contentOpen && (page === "parsed" || page === "reports")
-                ? "page"
-                : undefined
-            }
-            onClick={() => setContentOpen(!contentOpen)}
+            className="brand"
+            aria-label={t("Postrove 话题首页")}
+            onClick={() => setPage("topics")}
           >
-            <BookOpen size={18} />
-            <span>
-              {t(
-                !contentOpen && (page === "parsed" || page === "reports")
-                  ? labels[page]
-                  : "内容",
-              )}
+            <span className="brand-symbol" aria-hidden="true">
+              <img src="../assets/postrove-mark.svg" alt="" />
             </span>
-            <CaretRight
-              className={`nav-chevron ${contentOpen ? "open" : ""}`}
-              size={14}
-            />
-          </button>
-          {contentOpen && (
-            <div className="content-nav">
-              {nav("parsed")}
-              {nav("reports")}
-            </div>
-          )}
-          {nav("follows", <BookmarkSimple size={18} />)}
-          {nav("settings", <GearSix size={18} />)}
-        </nav>
-        {updates.view?.release && (
-          <button
-            className="nav-item sidebar-update"
-            onClick={() => navigate("settings")}
-          >
-            <span className="update-dot" />
             <span>
-              {t(
-                updates.view.state === "waiting" ? "等待安装更新" : "应用更新",
-              )}
+              postrove<span className="brand-dot">.</span>
             </span>
           </button>
-        )}
-      </aside>
-      <main className="refactor-main" aria-labelledby="workspace-title">
-        <header className="workspace-header">
-          <button
-            className="icon-button nav-toggle"
-            ref={navToggle}
-            aria-label={t("打开导航")}
-            aria-expanded={drawer}
-            onClick={() => setDrawer(!drawer)}
-          >
-            <List size={20} />
-          </button>
-          <h1 id="workspace-title" className="workspace-title">
-            {t(labels[page])}
-          </h1>
-          <TaskPanel
-            tasks={tasks}
-            open={tasksOpen}
-            onOpen={setTasksOpen}
-            busy={busy}
-            onDelete={deleteRecord}
-            onClearEnded={() => void run(() => bridge.clearEndedTasks())}
-            onExport={(id) => void run(() => bridge.exportTaskPiLogs(id))}
-            onResult={(task) => {
-              if (task.resultType === "search") {
-                setSelectedReport(task.resultId ?? "");
-                navigate("reports");
-              } else {
-                setSelectedContent(task.resultId ?? "");
-                navigate("parsed");
-              }
-              setReaderOpen(true);
-              setTasksOpen(false);
-            }}
-          />
-        </header>
-        <div
-          className="workspace-body"
-          key={page}
-          ref={pageContent}
-          tabIndex={-1}
-        >
-          {!!undo.length && (
-            <div className="undo-stack" aria-label={t("删除操作")}>
-              {undo.map((operation) => (
-                <div
-                  className="undo-notice"
-                  role="status"
-                  key={operation.operationId}
-                >
-                  <span>
-                    {tf("已删除 {0} 条记录", operation.records.length)}
-                  </span>
-                  <button
-                    className="text-button"
-                    onClick={() =>
-                      void run(() => bridge.undoDeletion(operation.operationId))
-                    }
-                  >
-                    {t("撤销")}
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-          {error && (
-            <div className="global-alert" role="alert">
-              <span>{error}</span>
-              <button aria-label={t("关闭提示")} onClick={() => setError("")}>
-                ×
+          <nav className="main-nav" aria-label={t("主导航")}>
+            {(
+              [
+                { id: "topics", label: "话题", icon: ChatCircle },
+                { id: "reading", label: "阅读", icon: BookmarkSimple },
+                { id: "schedules", label: "定时发送", icon: Clock },
+              ] as const
+            ).map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                className={page === id ? "active" : ""}
+                aria-current={page === id ? "page" : undefined}
+                onClick={() => setPage(id)}
+              >
+                <Icon weight={page === id ? "fill" : "regular"} />
+                {t(label)}
               </button>
-            </div>
-          )}
-          {page === "search" && (
-            <section className="search-home">
-              <form
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  void run(
-                    () =>
-                      bridge.startFocusSearch({
-                        question: question.trim(),
-                        platforms: selectedPlatforms,
-                        period,
-                      }),
-                    "已添加搜索任务",
-                  );
-                }}
-              >
-                <div className="search-composer">
-                  <label className="sr-only" htmlFor="search-question">
-                    {t("问题")}
-                  </label>
-                  <textarea
-                    id="search-question"
-                    placeholder={t("想找什么讨论？")}
-                    value={question}
-                    onChange={(e) => setQuestion(e.target.value)}
-                    required
-                    maxLength={12000}
-                  />
-                  <div className="search-conditions">
-                    <fieldset>
-                      <legend className="sr-only">{t("平台")}</legend>
-                      {platforms.map((p) => (
-                        <label className="condition-chip" key={p.id}>
-                          <input
-                            type="checkbox"
-                            checked={selectedPlatforms.includes(p.id)}
-                            onChange={(e) =>
-                              setSelectedPlatforms((values) =>
-                                e.target.checked
-                                  ? [...values, p.id]
-                                  : values.filter((v) => v !== p.id),
-                              )
-                            }
-                          />
-                          {t(p.name)}
-                        </label>
-                      ))}
-                    </fieldset>
-                    <fieldset className="period-segments">
-                      <legend className="sr-only">{t("内容时间范围")}</legend>
-                      {periods.map((p) => (
-                        <label
-                          className={period === p.id ? "chosen" : ""}
-                          key={p.id}
-                        >
-                          <input
-                            className="sr-only"
-                            type="radio"
-                            name="period"
-                            checked={period === p.id}
-                            onChange={() => setPeriod(p.id)}
-                          />
-                          {t(p.name)}
-                        </label>
-                      ))}
-                    </fieldset>
-                  </div>
-                </div>
-                <div className="search-actions">
-                  <button
-                    className="button button-primary"
-                    disabled={
-                      busy || !question.trim() || !selectedPlatforms.length
-                    }
-                  >
-                    {t("搜索")}
-                  </button>
-                  <button
-                    type="button"
-                    className="button"
-                    disabled={
-                      busy || !question.trim() || !selectedPlatforms.length
-                    }
-                    onClick={() =>
-                      setFollowDraft({
-                        input: {
-                          question,
-                          platforms: selectedPlatforms,
-                          period,
-                          schedule: { cadence: "daily", time: "08:30" },
-                        },
-                      })
-                    }
-                  >
-                    {t("保存为关注")}
-                  </button>
-                </div>
-              </form>
-            </section>
-          )}
-          {page === "reports" && (
-            <div
-              className={`refactor-workspace ${readerOpen ? "reading" : ""}`}
+            ))}
+          </nav>
+          <div className="top-actions">
+            <IconButton label={t("管理成员")} onClick={() => openMembers()}>
+              <Users />
+            </IconButton>
+            <IconButton
+              label={t("设置")}
+              className={page === "settings" ? "active" : ""}
+              onClick={() => setPage("settings")}
             >
-              <aside
-                className="result-index"
-                ref={resultIndex}
-                aria-label={t("搜索结果")}
-              >
-                <div
-                  className="source-tabs"
-                  role="group"
-                  aria-label={t("来源")}
-                >
-                  {[
-                    ["all", "全部"],
-                    ["manual", "手动搜索"],
-                    ["follow", "关注运行"],
-                  ].map(([id, name]) => (
-                    <button
-                      key={id}
-                      aria-pressed={source === id}
-                      onClick={() => {
-                        setSource(id);
-                        setReaderOpen(false);
-                      }}
-                    >
-                      {t(name)}
-                    </button>
-                  ))}
-                </div>
-                {displayedReports.map((r) => (
-                  <div className="result-item" key={r.reportId}>
-                    <button
-                      className="result-row"
-
-                      aria-current={
-                        report?.reportId === r.reportId ? "true" : undefined
-                      }
-                      onClick={() => {
-                        setSelectedReport(r.reportId);
-                        setReaderOpen(true);
-                      }}
-                    >
-                      <strong>{title(r)}</strong>
-                      <small>
-                        {t(r.origin === "follow" ? "关注" : "手动搜索")} ·{" "}
-                        {status(r.status ?? "completed")} ·{" "}
-                        {dateTime(r.createdAt)}
-                      </small>
-                    </button>
-                    {recordActions(
-                      { kind: "search", id: r.reportId },
-                      title(r),
-                      ["queued", "running"].includes(r.status ?? ""),
-                    )}
-                  </div>
-                ))}
-                {!displayedReports.length && (
-                  <p className="empty-copy">{t("搜索结果会保存在这里。")}</p>
-                )}
-              </aside>
-              <section className="result-reader">
-                {report ? (
-                  <>
-                    <div className="reader-tools">
-                      {back}
-                      {recordActions(
-                        { kind: "search", id: report.reportId },
-                        title(report),
-                        ["queued", "running"].includes(report.status ?? ""),
-                      )}
-                    </div>
-                    <h2 className="reader-title">{title(report)}</h2>
-                    <p className="muted">
-                      {t(report.origin === "follow" ? "关注运行" : "手动搜索")}{" "}
-                      ·{" "}
-                      {report.platforms
-                        .map((p) => t(platforms.find((x) => x.id === p)?.name ?? p))
-                        .join(language === "en" ? ", " : "、")}{" "}
-                      · {status(report.status ?? "completed")}
-                    </p>
-                    {["queued", "running"].includes(report.status ?? "") && (
-                      <button
-                        className="button"
-                        disabled={busy}
-                        onClick={() => void stop(report.taskId)}
-                      >
-                        {t("停止")}
-                      </button>
-                    )}
-                    {report.sections.map((section) => (
-                      <section
-                        className="platform-section"
-                        key={section.sectionId}
-                      >
-                        <header>
-                          <h3>
-                            {t(
-                              platforms.find((p) => p.id === section.platform)
-                                ?.name ?? section.platform,
-                            )}
-                          </h3>
-                          <span className="muted">{status(section.state)}</span>
-                        </header>
-                        {section.error && (
-                          <p className="error-text">{t(section.error)}</p>
-                        )}
-                        {section.rawReply && (
-                          <Markdown>{section.rawReply}</Markdown>
-                        )}
-                        {section.rawReply &&
-                          ["pending", "running"].includes(
-                            section.citationExtraction?.state ?? "",
-                          ) && <p className="muted">{t("正在提取引用帖子")}</p>}
-                        {section.rawReply &&
-                          section.citationExtraction?.state === "failed" && (
-                            <div className="error-text">
-                              <p>{t("引用提取未完成")}</p>
-                              {section.citationExtraction.error && (
-                                <p>{t(section.citationExtraction.error)}</p>
-                              )}
-                            </div>
-                          )}
-                        {section.rawReply &&
-                          section.citationExtraction?.state === "empty" && (
-                            <p className="muted">
-                              {t("平台回答未提供引用帖子")}
-                            </p>
-                          )}
-                        {section.warnings?.map((warning, index) => (
-                          <p className="muted" key={index}>
-                            {t(warning)}
-                          </p>
-                        ))}
-                        {section.candidates.map((candidate) => (
-                          <div
-                            className="source-row"
-                            key={candidate.candidateId}
-                          >
-                            <div>
-                              <strong>{candidate.title}</strong>
-                              <button
-                                className="source-link"
-                                onClick={() =>
-                                  void run(() =>
-                                    bridge.openSearchCandidate({
-                                      reportId: report.reportId,
-                                      candidateIds: [candidate.candidateId],
-                                    }),
-                                  )
-                                }
-                              >
-                                {candidate.url.split("?")[0]}
-                              </button>
-                            </div>
-                            <button
-                              className="button"
-                              disabled={
-                                busy ||
-                                report.submissions.some(
-                                  (s) =>
-                                    s.postKey === candidate.postKey &&
-                                    s.submitted,
-                                )
-                              }
-                              onClick={() =>
-                                void run(async () => {
-                                  const reply =
-                                    await bridge.addSearchCandidates({
-                                      reportId: report.reportId,
-                                      candidateIds: [candidate.candidateId],
-                                    });
-                                  if (reply.ok && reply.value[0]?.error)
-                                    return {
-                                      ok: false,
-                                      message: reply.value[0].error,
-                                    };
-                                  return reply;
-                                }, "已加入解析")
-                              }
-                            >
-                              {t(
-                                report.submissions.some(
-                                  (s) =>
-                                    s.postKey === candidate.postKey &&
-                                    s.submitted,
-                                )
-                                  ? "已加入解析"
-                                  : "加入解析",
-                              )}
-                            </button>
-                          </div>
-                        ))}
-                      </section>
-                    ))}
-                  </>
-                ) : (
-                  <p className="empty-copy">{t("选择一条搜索结果。")}</p>
-                )}
-              </section>
-            </div>
-          )}
-          {page === "parsed" && (
-            <div
-              className={`refactor-workspace parsed-workspace ${readerOpen ? "reading" : ""}`}
-            >
-              <aside
-                className="result-index"
-                ref={resultIndex}
-                aria-label={t("解析结果")}
-              >
-                <form
-                  className="add-source"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    void run(() => ui.uiAddLink(url), "已添加解析任务").then(
-                      (ok) => {
-                        if (ok) setUrl("");
-                      },
-                    );
-                  }}
-                >
-                  <input
-                    type="url"
-                    aria-label={t("原文链接")}
-                    placeholder="https://…"
-                    value={url}
-                    onChange={(e) => setUrl(e.target.value)}
-                    required
-                  />
-                  <button className="button" disabled={busy || !url.trim()}>
-                    {t("加入解析")}
-                  </button>
-                </form>
-                <input
-                  className="content-query"
-                  aria-label={t("搜索内容")}
-                  placeholder={t("搜索标题或来源")}
-                  value={contentQuery}
-                  onChange={(e) => setContentQuery(e.target.value)}
-                />
-                {readingReports.map((r) => (
-                  <div className="result-item" key={r.materialId}>
-                    <button
-                      className="result-row"
-                      aria-current={
-                        reading?.materialId === r.materialId
-                          ? "true"
-                          : undefined
-                      }
-                      onClick={() => {
-                        setSelectedContent(r.materialId);
-                        setReaderOpen(true);
-                      }}
-                    >
-                      <strong>{r.title || r.sourceIdentity}</strong>
-                      <small>
-                        {r.platform} · {t(r.stageLabel || "完成")} ·{" "}
-                        {dateTime(r.fetchedAt)}
-                      </small>
-                    </button>
-                    {recordActions(
-                      { kind: "parsed", id: r.materialId },
-                      r.title || r.sourceIdentity,
-                      live(tasks.find((t) => t.taskId === r.taskId)),
-                    )}
-                  </div>
-                ))}
-                {!readingReports.length && (
-                  <p className="empty-copy">
-                    {t("添加原文链接，或从搜索结果选择加入解析。")}
-                  </p>
-                )}
-              </aside>
-              <section className="parsed-reader">
-                {reading ? (
-                  <>
-                    <div className="reader-tools">
-                      {!tasks.some((t) => t.taskId === reading.taskId) && (
-                        <small>{t("任务记录已清除")}</small>
-                      )}
-                      {recordActions(
-                        { kind: "parsed", id: reading.materialId },
-                        reading.title,
-                        live(tasks.find((t) => t.taskId === reading.taskId)),
-                      )}
-                    </div>
-                    {live(
-                      tasks.find((task) => task.taskId === reading.taskId),
-                    ) && (
-                      <button
-                        className="button stop-reading"
-                        disabled={busy}
-                        onClick={() => void stop(reading.taskId)}
-                      >
-                        {t("停止")}
-                      </button>
-                    )}
-                    {reading.materials?.length ? (
-                      <MaterialReader
-                        key={reading.materialId}
-                        report={reading}
-                        onBack={returnToList}
-                      />
-                    ) : (
-                      <div className="result-reader">
-                        {back}
-                        <h2 className="reader-title">{reading.title}</h2>
-                        <p>{reading.taskMessage || reading.stageLabel}</p>
-                        <Markdown>{reading.summary}</Markdown>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <p className="empty-copy">{t("选择一条解析结果。")}</p>
-                )}
-              </section>
-            </div>
-          )}
-          {page === "follows" && (
-            <section className="follow-page">
-              {follows.map((f) => (
-                <article className="follow-row" key={f.followId}>
-                  <h2>{f.name || f.question}</h2>
-                  {f.name && f.name !== f.question && <p>{f.question}</p>}
-                  <p className="muted">
-                    {f.platforms
-                      .map((p) => t(platforms.find((x) => x.id === p)?.name ?? p))
-                      .join(language === "en" ? ", " : "、")}{" "}
-                    ·{" "}
-                    {t(periods.find((p) => p.id === f.period)?.name ?? "不限")}{" "}
-                    · {t(f.schedule.cadence === "daily" ? "每天" : "每周")}{" "}
-                    {f.schedule.cadence === "weekly"
-                      ? t(
-                          [
-                            "周日",
-                            "周一",
-                            "周二",
-                            "周三",
-                            "周四",
-                            "周五",
-                            "周六",
-                          ][f.schedule.weekday ?? 1],
-                        )
-                      : ""}{" "}
-                    {f.schedule.time} · {t(f.paused ? "已暂停" : "已启用")}
-                  </p>
-                  {!f.paused && f.nextRunAt && (
-                    <p className="muted">
-                      {t("下次运行")} {dateTime(f.nextRunAt)}
-                    </p>
-                  )}
-                  <div className="row-actions">
-                    <button
-                      className="button"
-                      onClick={() =>
-                        setFollowDraft({
-                          input: {
-                            name: f.name,
-                            question: f.question,
-                            platforms: f.platforms,
-                            period: f.period,
-                            schedule: f.schedule,
-                          },
-                          followId: f.followId,
-                        })
-                      }
-                    >
-                      {t("编辑")}
-                    </button>
-                    <button
-                      className="button"
-                      disabled={busy}
-                      onClick={() =>
-                        void run(() =>
-                          bridge.setFollowPaused(f.followId, !f.paused),
-                        )
-                      }
-                    >
-                      {t(f.paused ? "恢复" : "暂停")}
-                    </button>
-                    <button
-                      className="button button-quiet"
-                      disabled={busy}
-                      onClick={() =>
-                        void run(
-                          () => bridge.deleteFollow(f.followId),
-                          "已删除关注，历史结果已保留",
-                        )
-                      }
-                    >
-                      {t("删除")}
-                    </button>
-                  </div>
-                </article>
-              ))}
-              {!follows.length && (
-                <p className="empty-copy">
-                  {t("在搜索页输入问题，然后保存为关注。")}
-                </p>
+              <GearSix />
+            </IconButton>
+          </div>
+        </div>
+      </header>
+      <main className={`page ${page !== "topics" ? "one-column" : ""}`}>
+        <section className="main-column">
+          <div className="page-heading">
+            <div>
+              <h1>{heading}</h1>
+              {page !== "settings" && (
+                <span className="heading-count">
+                  {page === "topics"
+                    ? workspace.reports.length
+                    : page === "schedules"
+                      ? workspace.follows.length
+                      : workspace.content.reports.length +
+                        (workspace.content.partialReports?.length ?? 0)}
+                </span>
               )}
-            </section>
+            </div>
+            {page === "topics" ? (
+              <div className="filter-tabs">
+                {[
+                  { id: "all", label: "全部" },
+                  { id: "unread", label: "未读" },
+                  { id: "scheduled", label: "定时" },
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    className={filter === item.id ? "on" : ""}
+                    aria-pressed={filter === item.id}
+                    onClick={() => setFilter(item.id)}
+                  >
+                    {t(item.label)}
+                  </button>
+                ))}
+              </div>
+            ) : page === "reading" ? (
+              <button className="primary" onClick={() => setLink({})}>
+                <Plus />
+                {t("添加链接")}
+              </button>
+            ) : page === "schedules" ? (
+              <button className="primary" onClick={() => setSchedule({})}>
+                <Plus />
+                {t("新建定时消息")}
+              </button>
+            ) : null}
+          </div>
+          {workspace.error && !link && !schedule && (
+            <div className="workspace-error" role="alert">
+              <span>{workspace.error}</span>
+              <button
+                className="text-button"
+                onClick={() => void workspace.refresh()}
+              >
+                {t("重试")}
+              </button>
+              <IconButton
+                label={t("关闭")}
+                onClick={() => workspace.setError("")}
+              >
+                <X />
+              </IconButton>
+            </div>
+          )}
+          {page === "topics" && (
+            <>
+              <Composer
+                workspace={workspace}
+                selected={recipients ?? []}
+                onSelected={setRecipients}
+                onMembers={() => openMembers()}
+                onLink={(url) => setLink({ url })}
+                onSent={(id) => openTopic(id)}
+              />
+              <div className="topic-feed" aria-label={t("话题列表")}>
+                {reports.map((report) => (
+                  <TopicCard
+                    key={report.reportId}
+                    report={report}
+                    unread={unread(report)}
+                    onOpen={(receipts) => openTopic(report.reportId, receipts)}
+                  />
+                ))}
+                {workspace.loading && (
+                  <div className="loading-state" role="status">
+                    {t("载入中…")}
+                  </div>
+                )}
+                {!workspace.loading && !reports.length && (
+                  <div className="empty-state">
+                    <ChatCircle />
+                    <h2>
+                      {t(
+                        filter === "unread"
+                          ? "未读话题都看完了"
+                          : filter === "scheduled"
+                            ? "还没有定时话题"
+                            : "发起第一个话题",
+                      )}
+                    </h2>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+          {page === "reading" && (
+            <ReadingLibrary
+              workspace={workspace}
+              onOpen={setReaderId}
+              onDelete={(id) => void remove({ kind: "parsed", id })}
+            />
+          )}
+          {page === "schedules" && (
+            <ScheduleList
+              workspace={workspace}
+              onEdit={(value) => setSchedule({ value })}
+            />
           )}
           {page === "settings" && (
-            <SettingsPage
-              onOpenContent={() => navigate("parsed")}
+            <Settings
+              workspace={workspace}
+              section={settingsSection}
+              onSection={setSettingsSection}
+              onMember={openMembers}
+              onReading={() => setPage("reading")}
               updateSection={
                 <UpdateSettings
                   updates={updates}
-                  onTasks={() => setTasksOpen(true)}
-                  onLater={() => navigate("search")}
+                  onTasks={() => {
+                    const job = updates.view?.jobs[0];
+                    if (job?.kind === "search") openTopic(job.id, true);
+                    else if (job) setReaderId(job.id);
+                  }}
+                  onLater={() => setPage("topics")}
                 />
-              }
-              settings={settings}
-              busy={busy}
-              onSaveTelegramToken={(token) =>
-                run(() => ui.uiSaveTelegramToken(token))
-              }
-              onClearTelegramBotToken={() =>
-                run(() => ui.uiClearTelegramBotToken())
-              }
-              onVerifyTelegramBot={() => run(() => ui.uiVerifyTelegramBot())}
-              onAuthorizeTelegramChat={(id) =>
-                run(() => ui.uiAuthorizeTelegramChat(id))
-              }
-              onRevokeTelegramChat={(id) =>
-                run(() => ui.uiRevokeTelegramChat(id))
               }
             />
           )}
-        </div>
+        </section>
+        {page === "topics" && (
+          <aside className="side-column">
+            <section className="members-aside">
+              <div className="section-title">
+                <h2>{t("我的成员")}</h2>
+                <IconButton label={t("添加成员")} onClick={() => openMembers()}>
+                  <Plus />
+                </IconButton>
+              </div>
+              {enabled?.map((id) => (
+                <button
+                  className="aside-person"
+                  key={id}
+                  onClick={() => openMembers(advisorById(id).connectionId)}
+                >
+                  <Avatar id={id} />
+                  <span>
+                    <strong>{advisorName(id)}</strong>
+                    <small>
+                      {t(sourceProfiles[advisorById(id).platform].name)}
+                    </small>
+                  </span>
+                  <span className="member-presence" />
+                </button>
+              ))}
+              {enabled && !enabled.length && (
+                <button className="aside-add" onClick={() => openMembers()}>
+                  <Plus />
+                  {t("添加成员")}
+                </button>
+              )}
+            </section>
+            <section className="schedule-aside">
+              <div className="section-title">
+                <h2>{t("下次发送")}</h2>
+                <IconButton
+                  label={t("新建定时消息")}
+                  onClick={() => setSchedule({})}
+                >
+                  <Plus />
+                </IconButton>
+              </div>
+              {next ? (
+                <button
+                  className="next-schedule"
+                  onClick={() => setSchedule({ value: next })}
+                >
+                  <span>
+                    <Clock />
+                    <Time value={next.nextRunAt} />
+                  </span>
+                  <strong>{next.question}</strong>
+                  <ArrowRight />
+                </button>
+              ) : (
+                <button className="aside-add" onClick={() => setSchedule({})}>
+                  <Clock />
+                  {t("定时发送一条消息")}
+                </button>
+              )}
+            </section>
+            <button className="collect-shortcut" onClick={() => setLink({})}>
+              <span>
+                <LinkSimple />
+              </span>
+              <strong>{t("添加链接")}</strong>
+              <ArrowRight />
+            </button>
+          </aside>
+        )}
       </main>
-      <UpdateExperience updates={updates} onOpen={() => navigate("settings")} />
-      {notice && (
-        <div className="refactor-toast" role="status">
-          {notice}
-        </div>
+      {active && (
+        <TopicThread
+          workspace={workspace}
+          report={active}
+          initialReceipts={receipts}
+          onClose={() => setTopicId("")}
+          onRead={setReaderId}
+          onDelete={() => void remove({ kind: "search", id: active.reportId })}
+        />
       )}
-      {followDraft && (
-        <FollowEditor
-          draft={followDraft}
-          busy={busy}
-          onClose={() => setFollowDraft(undefined)}
-          onSave={async (input) => {
-            const ok = await run(
-              () =>
-                followDraft.followId
-                  ? bridge.updateFollow({
-                      ...input,
-                      followId: followDraft.followId,
-                    })
-                  : bridge.saveFollow(input),
-              "已保存关注",
-            );
-            if (ok) setFollowDraft(undefined);
-            return ok;
+      {reader && (
+        <ReadingView
+          workspace={workspace}
+          report={reader}
+          onClose={() => setReaderId("")}
+        />
+      )}
+      {memberOpen && (
+        <Members
+          workspace={workspace}
+          initial={memberConnection}
+          onClose={() => setMemberOpen(false)}
+        />
+      )}
+      {link && (
+        <CollectLink
+          workspace={workspace}
+          initial={link.url}
+          onClose={() => setLink(undefined)}
+          onAdded={() => {
+            setLink(undefined);
+            setPage("reading");
+          }}
+          onConnections={() => {
+            setLink(undefined);
+            setSettingsSection("connections");
+            setPage("settings");
           }}
         />
       )}
-    </div>
-  );
-}
-
-function FollowEditor({
-  draft,
-  busy,
-  onClose,
-  onSave,
-}: {
-  draft: { input: SaveFollow; followId?: string };
-  busy: boolean;
-  onClose: () => void;
-  onSave: (input: SaveFollow) => Promise<boolean>;
-}) {
-  const [input, setInput] = useState(draft.input);
-  const [failure, setFailure] = useState(false);
-  const next = new Date();
-  const [hours, minutes] = input.schedule.time.split(":").map(Number);
-  next.setHours(hours, minutes, 0, 0);
-  if (input.schedule.cadence === "weekly") {
-    next.setDate(
-      next.getDate() +
-        (((input.schedule.weekday ?? 1) - next.getDay() + 7) % 7),
-    );
-    if (next.getTime() <= Date.now()) next.setDate(next.getDate() + 7);
-  } else if (next.getTime() <= Date.now()) next.setDate(next.getDate() + 1);
-  return (
-    <Dialog
-      title={t(draft.followId ? "编辑关注" : "保存为关注")}
-      onClose={onClose}
-    >
-      <form
-        className="follow-editor"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void onSave(input).then((ok) => setFailure(!ok));
-        }}
-      >
-        <label>
-          {t("问题")}
-          <textarea
-            value={input.question}
-            required
-            onChange={(e) => setInput({ ...input, question: e.target.value })}
+      {schedule && (
+        <ScheduleEditor
+          workspace={workspace}
+          value={schedule.value}
+          onMembers={() => {
+            setMemberConnection(undefined);
+            setMemberOpen(true);
+          }}
+          onClose={() => setSchedule(undefined)}
+        />
+      )}
+      {pendingDelete && (
+        <Modal
+          label={t("停止并删除")}
+          className="compact-modal"
+          onClose={() => setPendingDelete(undefined)}
+        >
+          <ModalHeader
+            title={t("停止并删除")}
+            onClose={() => setPendingDelete(undefined)}
           />
-        </label>
-        <fieldset>
-          <legend>{t("平台")}</legend>
-          {platforms.map((p) => (
-            <label key={p.id}>
-              <input
-                type="checkbox"
-                checked={input.platforms.includes(p.id)}
-                onChange={(e) =>
-                  setInput({
-                    ...input,
-                    platforms: e.target.checked
-                      ? [...input.platforms, p.id]
-                      : input.platforms.filter((v) => v !== p.id),
-                  })
-                }
-              />
-              {t(p.name)}
-            </label>
-          ))}
-        </fieldset>
-        <label>
-          {t("内容时间范围")}
-          <select
-            value={input.period}
-            onChange={(e) =>
-              setInput({ ...input, period: e.target.value as SearchPeriod })
-            }
-          >
-            {periods.map((p) => (
-              <option key={p.id} value={p.id}>
-                {t(p.name)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <fieldset>
-          <legend>{t("重复")}</legend>
-          {(["daily", "weekly"] as const).map((c) => (
-            <label key={c}>
-              <input
-                type="radio"
-                name="cadence"
-                checked={input.schedule.cadence === c}
-                onChange={() =>
-                  setInput({
-                    ...input,
-                    schedule: {
-                      ...input.schedule,
-                      cadence: c,
-                      ...(c === "weekly"
-                        ? { weekday: input.schedule.weekday ?? 1 }
-                        : {}),
-                    },
-                  })
-                }
-              />
-              {t(c === "daily" ? "每天" : "每周")}
-            </label>
-          ))}
-        </fieldset>
-        <label>
-          {t("时刻")}
-          <input
-            type="time"
-            required
-            value={input.schedule.time}
-            onChange={(e) =>
-              setInput({
-                ...input,
-                schedule: { ...input.schedule, time: e.target.value },
-              })
-            }
-          />
-        </label>
-        {input.schedule.cadence === "weekly" && (
-          <label>
-            {t("星期")}
-            <select
-              value={input.schedule.weekday ?? 1}
-              onChange={(e) =>
-                setInput({
-                  ...input,
-                  schedule: {
-                    ...input.schedule,
-                    weekday: Number(e.target.value),
-                  },
-                })
-              }
+          <div className="compact-body">
+            <div className="config-actions">
+              <button
+                className="secondary"
+                onClick={() => setPendingDelete(undefined)}
+              >
+                {t("保留记录")}
+              </button>
+              <button
+                className="primary"
+                disabled={workspace.busy}
+                onClick={() => void performRemove(pendingDelete)}
+              >
+                {t("停止并删除")}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+      <div className="toast-stack">
+        {undo.map((entry) => (
+          <div className="toast" role="status" key={entry.operationId}>
+            <Check />
+            {t("已删除")}
+            <button
+              className="text-button"
+              onClick={async () => {
+                if (
+                  await workspace.booleanAction(() =>
+                    bridge.undoDeletion(entry.operationId),
+                  )
+                )
+                  setUndo((old) =>
+                    old.filter(
+                      (item) => item.operationId !== entry.operationId,
+                    ),
+                  );
+              }}
             >
-              {["周日", "周一", "周二", "周三", "周四", "周五", "周六"].map(
-                (d, i) => (
-                  <option key={d} value={i}>
-                    {t(d)}
-                  </option>
-                ),
-              )}
-            </select>
-          </label>
-        )}
-        <p className="muted">
-          {t("下次运行")}{" "}
-          {Number.isFinite(next.getTime()) ? dateTime(next.toISOString()) : "—"}{" "}
-          · {Intl.DateTimeFormat().resolvedOptions().timeZone}
-        </p>
-        {failure && (
-          <p role="alert">{t("保存失败，输入已保留。请检查条件后重试。")}</p>
-        )}
-        <div className="row-actions">
-          <button type="button" className="button" onClick={onClose}>
-            {t("取消")}
-          </button>
-          <button
-            className="button button-primary"
-            disabled={busy || !input.question.trim() || !input.platforms.length}
-          >
-            {t("保存关注")}
-          </button>
-        </div>
-      </form>
-    </Dialog>
+              {t("撤销")}
+            </button>
+          </div>
+        ))}
+      </div>
+      <UpdateExperience
+        updates={updates}
+        onOpen={() => {
+          setSettingsSection("about");
+          setPage("settings");
+        }}
+      />
+    </>
   );
 }

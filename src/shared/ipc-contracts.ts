@@ -1,3 +1,4 @@
+import type { PlatformConnectionId } from "./advisor-contracts";
 import type {
   BotChannel,
   BotCredentialsByChannel,
@@ -15,6 +16,7 @@ import type {
   SearchAddition,
 } from "./focus-search-contracts";
 import type { Language } from "./language";
+import type { AdvisorSettings } from "./advisor-contracts";
 import type { ApplicationPreferences } from "./preferences-contracts";
 import type { TaskActivity, TaskSnapshot } from "./task-contracts";
 import type {
@@ -40,6 +42,7 @@ export const searchChannels = {
   start: "search:start",
   retry: "search:retry",
   cancel: "search:cancel",
+  cancelSection: "search:cancel-section",
   add: "search:add",
   open: "search:open",
 } as const;
@@ -82,6 +85,11 @@ export const modelChannels = {
   check: "model:check",
   cancelCheck: "model:cancelCheck",
 } as const;
+export const platformConnectionChannels = {
+  status: "platform-connection:status",
+  login: "platform-connection:login",
+  logout: "platform-connection:logout",
+} as const;
 export const xChannels = {
   status: "x:status",
   login: "x:login",
@@ -99,6 +107,21 @@ export const channels = {
 } as const;
 
 export interface DesktopBridge {
+  advisorSettings(): Promise<ModelReply<AdvisorSettings>>;
+  saveAdvisorSettings(
+    input: Pick<AdvisorSettings, "enabled">,
+  ): Promise<ModelReply<AdvisorSettings>>;
+  cancelAdvisorRun(
+    taskId: string,
+    sectionId: string,
+  ): Promise<ModelReply<void>>;
+  revealResult(
+    kind: "search" | "reading",
+    taskId: string,
+  ): Promise<ModelReply<string>>;
+  saveReadingLanguage(
+    language: ApplicationPreferences["readingLanguage"],
+  ): Promise<ApplicationPreferences>;
   botStatus(channel: BotChannel): Promise<ModelReply<BotStatus>>;
   saveBotCredentials<C extends keyof BotCredentialsByChannel>(
     channel: C,
@@ -181,6 +204,11 @@ export interface DesktopBridge {
   refreshModels(): Promise<ModelReply<void>>;
   checkModel(): Promise<ModelReply<void>>;
   cancelModelCheck(): Promise<ModelReply<void>>;
+  platformStatus(
+    id: PlatformConnectionId,
+  ): Promise<ModelReply<{ signedIn: boolean; installed: boolean }>>;
+  loginPlatform(id: PlatformConnectionId): Promise<ModelReply<void>>;
+  logoutPlatform(id: PlatformConnectionId): Promise<ModelReply<void>>;
   xStatus(): Promise<ModelReply<{ signedIn: boolean }>>;
   loginX(): Promise<ModelReply<void>>;
   logoutX(): Promise<ModelReply<void>>;

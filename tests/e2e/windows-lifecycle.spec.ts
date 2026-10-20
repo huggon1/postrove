@@ -1,17 +1,16 @@
-import { test, expect, _electron as electron } from "@playwright/test";
+import { launchChineseApplication } from "../support/application";
+import { test, expect } from "@playwright/test";
 import { mkdtemp, mkdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-// Failure cases: closing leaves an invisible process, minimizing exits, cleanup
-// leaves the profile owned, restart loses saved records, or trial UI offers updates.
-test("Windows close exits cleanly and restart retains an independent profile", async ({}, info) => {
-  test.skip(process.platform !== "win32", "Windows window lifecycle");
+test("Windows close exits cleanly and restart retains the workspace profile", async ({}, info) => {
+  test.skip(process.platform !== "win32", "Native Windows window lifecycle");
   const root = await mkdtemp(join(tmpdir(), "postrove-windows-"));
-  const profile = join(root, "试用 数据");
+  const profile = join(root, "应用 数据");
   await mkdir(profile);
   const launch = () =>
-    electron.launch({
+    launchChineseApplication({
       args: ["."],
       env: {
         ...process.env,
@@ -23,21 +22,22 @@ test("Windows close exits cleanly and restart retains an independent profile", a
   try {
     let page = await application.firstWindow();
     await expect(page.getByRole("navigation")).toBeVisible();
-    await page.getByRole("button", { name: "设置", exact: true }).click();
-    await expect(
-      page.getByRole("region", { name: "应用更新", exact: true }),
-    ).toHaveCount(0);
     const saved = await page.evaluate(async () => {
-      await window.postrove.saveLanguage("en");
-      return window.postrove.saveFollow({
-        name: "Windows retained follow",
-        question: "Durable reading",
-        platforms: ["x"],
-        period: "week",
+      await window.postrove.saveAdvisorSettings({ enabled: ["reddit-ai-en"] });
+      const result = await window.postrove.saveFollow({
+        name: "Windows retained schedule",
+        question: "A reading habit",
+        advisorIds: ["reddit-ai-en"],
+        platforms: ["reddit"],
+        period: "all",
         schedule: { cadence: "daily", time: "23:59" },
       });
+      if (result.ok)
+        await window.postrove.setFollowPaused(result.value.followId, true);
+      await window.postrove.saveLanguage("en");
+      return result.ok;
     });
-    expect(saved.ok).toBe(true);
+    expect(saved).toBe(true);
     await application.evaluate(({ BrowserWindow }) =>
       BrowserWindow.getAllWindows()[0].minimize(),
     );
@@ -45,7 +45,7 @@ test("Windows close exits cleanly and restart retains an independent profile", a
     await application.evaluate(({ BrowserWindow }) =>
       BrowserWindow.getAllWindows()[0].restore(),
     );
-    await page.screenshot({ path: info.outputPath("windows-settings.png") });
+    await page.screenshot({ path: info.outputPath("windows-workspace.png") });
     const child = application.process();
     await application.evaluate(({ BrowserWindow }) =>
       BrowserWindow.getAllWindows()[0].close(),
@@ -53,22 +53,23 @@ test("Windows close exits cleanly and restart retains an independent profile", a
     await expect.poll(() => child.exitCode, { timeout: 45000 }).toBe(0);
     await expect(
       readFile(join(profile, ".branchout-owner.json")),
-    ).rejects.toThrow();
+    ).rejects.toMatchObject({ code: "ENOENT" });
     application = await launch();
     page = await application.firstWindow();
-    await page.getByRole("button", { name: "Focus", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Scheduled sends", exact: true })
+      .click();
     await expect(
-      page.getByText("Windows retained follow", { exact: true }).first(),
+      page.getByText("Windows retained schedule", { exact: true }).first(),
     ).toBeVisible();
-    await page.screenshot({ path: info.outputPath("windows-restarted.png") });
-    await info.attach("windows-close-result", {
-      body: JSON.stringify({
-        exitCode: child.exitCode,
-        savedFollow: saved.ok,
-        minimizedProcessRetained: true,
-      }),
-      contentType: "application/json",
+    await page.getByRole("button", { name: "Settings", exact: true }).click();
+    await page.getByRole("button", { name: "About", exact: true }).click();
+    const updates = page.getByRole("region", {
+      name: "Application updates",
+      exact: true,
     });
+    await expect(updates).toContainText("installed");
+    await page.screenshot({ path: info.outputPath("windows-restarted.png") });
   } finally {
     if (application.process().exitCode === null) await application.close();
     await rm(root, { recursive: true, force: true });

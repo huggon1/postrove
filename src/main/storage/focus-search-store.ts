@@ -1,4 +1,5 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { advisorById, legacyAdvisor } from "../../shared/advisor-contracts";
 import { dirname } from "node:path";
 import {
   searchStateSchema,
@@ -13,6 +14,18 @@ export class FocusSearchStore {
       this.state = searchStateSchema.parse(
         JSON.parse(await readFile(this.file, "utf8")),
       );
+      for (const report of this.state.reports)
+        for (const section of report.sections) {
+          section.advisorId ??= legacyAdvisor(
+            section.platform,
+            section.promptLanguage,
+          );
+          section.connectionId ??= advisorById(section.advisorId).connectionId;
+        }
+      for (const follow of this.state.follows)
+        follow.advisorIds ??= follow.platforms.map((platform) =>
+          legacyAdvisor(platform),
+        );
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT")
         throw new Error(

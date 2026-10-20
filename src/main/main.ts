@@ -10,7 +10,7 @@ import { join, resolve } from "node:path";
 import { mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { channels } from "../shared/ipc-contracts";
 import { initializeServices } from "./services";
-import { createWindow } from "./window";
+import { applicationIcon, createWindow } from "./window";
 import {
   cachedImageSchemes,
   installedStorage,
@@ -110,6 +110,7 @@ if (!locked) {
   void app
     .whenReady()
     .then(async () => {
+      app.dock?.setIcon(applicationIcon);
       services = await initializeServices(
         changed,
         (name) => {
@@ -119,7 +120,7 @@ if (!locked) {
         (language) => installMenu(language, open),
       );
       const driver =
-        app.isPackaged && process.platform === "darwin"
+        app.isPackaged && ["darwin", "win32"].includes(process.platform)
           ? createElectronUpdateDriver()
           : undefined;
       updates = new ApplicationUpdates({

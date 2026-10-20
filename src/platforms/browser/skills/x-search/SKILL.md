@@ -7,9 +7,9 @@ description: Search X posts through Grok, then inspect its citation disclosures 
 
 ## Answer
 
-1. Open `https://x.com/i/grok` and start a fresh conversation.
+1. For a new task, open `https://x.com/i/grok` and start a fresh conversation. A recovery task uses its saved conversation and observes its existing reply.
 2. For an optional account-linking modal, use its observed `Not now` control. Wait briefly, inspect a fresh snapshot, and confirm the question input is available. If dismissal stalls, repeat with fresh controls up to twice. Account linking or terms confirmation that blocks the input returns `action_required` for the user to handle in Settings.
-3. Submit the adapted English question once. Ask Grok to use X posts as sources. After an interrupted action, inspect the existing conversation for an answer or active generation before submitting.
+3. Submit the supplied question exactly once in its prepared language. After an interrupted action, inspect the existing conversation for an answer or active generation before submitting.
 4. Confirm generation has stopped, or compare assistant body captures at least 2 seconds apart until they stabilize within the task budget. Capture the complete assistant-only container and return the question and final reply capture ID. The application saves this answer before asking for citations.
 
 ## Citations

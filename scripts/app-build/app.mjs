@@ -25,6 +25,7 @@ await sharp("assets/postrove-icon.svg", { density: 576 })
   .png()
   .toFile("dist/assets/postrove.png");
 await copyFile("assets/postrove-mark.svg", "dist/assets/postrove-mark.svg");
+await copyFile("assets/postrove-icon.svg", "dist/assets/postrove-icon.svg");
 await build({
   define,
   entryPoints: ["src/main/main.ts", "src/main/preload.ts"],
@@ -49,6 +50,7 @@ await build({
   define,
   entryPoints: [
     "src/worker/model-worker.ts",
+    "src/worker/content-worker.ts",
     "src/worker/jobs/browser/worker-entry.ts",
     "src/worker/jobs/forwarding/worker-entry.ts",
   ],

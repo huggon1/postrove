@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { transcriptEvidenceSchema } from "./transcript-contracts";
+import { youtubeVideo, redditPost } from "./source-profiles";
 export const repositoryUrlSchema = z
   .string()
   .max(2048)
@@ -148,7 +150,14 @@ export const webUrlSchema = z
   }, "请输入 HTTPS 网页链接");
 export const forwardingInputSchema = webUrlSchema;
 export const sourceUrlSchema = webUrlSchema;
-export const platformSchema = z.enum(["github", "x", "xiaohongshu", "web"]);
+export const platformSchema = z.enum([
+  "github",
+  "x",
+  "xiaohongshu",
+  "youtube",
+  "reddit",
+  "web",
+]);
 export const imageHosts = [
   "raw.githubusercontent.com",
   "camo.githubusercontent.com",
@@ -176,6 +185,7 @@ export const sourceSchema = z
     platform: platformSchema,
     title: z.string().max(500).optional(),
     sourceIdentity: z.string().max(300),
+    sourceKey: z.string().max(300).optional(),
     fetchedAt: z.string().datetime(),
     contentBlocks: z.array(blockSchema).min(1).max(10000),
     images: z
@@ -195,8 +205,31 @@ export const sourceSchema = z
       .max(100),
     completeness: z.enum(["complete", "partial", "unknown"]),
     completenessNote: z.string().max(1500),
+    evidence: transcriptEvidenceSchema.optional(),
   })
   .strict()
+  .superRefine((source, ctx) => {
+    const canonical =
+      source.platform === "youtube"
+        ? youtubeVideo(source.sourceUrl)
+        : source.platform === "reddit"
+          ? redditPost(source.sourceUrl)
+          : undefined;
+    if (source.sourceKey && (!canonical || source.sourceKey !== canonical.key))
+      ctx.addIssue({
+        code: "custom",
+        message: "Source key does not match its original URL",
+      });
+    if (
+      source.evidence &&
+      (source.platform !== "youtube" ||
+        source.evidence.videoId !== youtubeVideo(source.sourceUrl)?.id)
+    )
+      ctx.addIssue({
+        code: "custom",
+        message: "Transcript evidence belongs to a different source",
+      });
+  })
   .refine((source) =>
     source.contentBlocks.every(
       (block) =>

@@ -1,8 +1,23 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024"><rect x="24" y="24" width="976" height="976" rx="220" fill="#ffffff"/><g transform="translate(178 160) scale(5.2)">
-  <path d="M56 75C49 55 39 42 45 25C49 15 60 11 79 10C75 28 67 48 56 75Z" fill="#b39838"/>
-  <path d="M56 75C65 54 86 38 116 40C108 64 89 78 56 75Z" fill="#383832"/>
-  <path d="M12 113C34 100 42 84 59 78C77 72 89 85 115 81C105 105 88 116 65 104C48 95 32 109 12 113Z" fill="#242421"/>
-  <path d="M56 75C52 56 48 37 52 26C56 20 65 16 79 10C71 37 64 56 56 75Z" fill="#f2d76b"/>
-  <path d="M56 75C69 58 88 48 116 40C106 55 83 68 56 75Z" fill="#66665c"/>
-  <path d="M32 101C48 89 52 81 65 78C77 77 88 85 115 81C96 96 78 98 65 90C54 84 45 91 32 101Z" fill="#53534a"/>
-</g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 128 128" role="img" aria-label="Postrove">
+  <defs>
+    <linearGradient id="deep" x1="15" y1="9" x2="113" y2="129" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#314CD0"/>
+      <stop offset=".53" stop-color="#4264EB"/>
+      <stop offset="1" stop-color="#7896FF"/>
+    </linearGradient>
+    <linearGradient id="white" x1="37" y1="24" x2="91" y2="98" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#E8F1FF"/>
+    </linearGradient>
+    <linearGradient id="ice" x1="31" y1="27" x2="97" y2="101" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#E2F7FF"/>
+      <stop offset="1" stop-color="#8BC6FF"/>
+    </linearGradient>
+  </defs>
+  <rect x="3" y="3" width="122" height="122" rx="28" fill="url(#deep)"/>
+  <rect x="3.5" y="3.5" width="121" height="121" rx="27.5" fill="none" stroke="#CFDFFF" stroke-opacity=".25"/>
+  <path d="M38 29H68C88 29 100 40 100 57C100 75 87 86 68 86H56L38 102V29Z" fill="#162A9C" opacity=".2" transform="translate(0 4)"/>
+  <path d="M38 29H68C88 29 100 40 100 57C100 75 87 86 68 86H56V69H67C77 69 82 65 82 57C82 50 77 46 67 46H56V86L38 102V29Z" fill="url(#white)"/>
+  <path d="M38 102L56 86H68C80 86 89 82 95 74L76 90L57 104C52 108 43 107 38 102Z" fill="url(#ice)"/>
+  <path d="M56 46H67C73 46 77 48 80 52L91 41C85 33 78 29 68 29H38L56 46Z" fill="#FFF" opacity=".7"/>
+</svg>

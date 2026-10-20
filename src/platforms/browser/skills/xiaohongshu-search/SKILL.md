@@ -7,8 +7,8 @@ description: Search Xiaohongshu through 点点 AI, then inspect its source cards
 
 ## Answer
 
-1. Open `https://www.xiaohongshu.com/ai_chat` and start a fresh conversation.
-2. The welcome page can contain overlapping textareas. Click the textarea with `receivesPointerEvents=true`. Fill its focused editable reference, confirm the value, and press Enter on it. After a rerender or failed click, inspect a fresh snapshot for the active textarea.
+1. For a new task, open `https://www.xiaohongshu.com/ai_chat` and start a fresh conversation. A recovery task uses its saved conversation and observes its existing reply.
+2. The welcome page can contain overlapping textareas. Click the textarea with `receivesPointerEvents=true`. Fill its focused editable reference with the exact supplied question, confirm the value, and press Enter on it once. After a rerender or failed click, inspect a fresh snapshot for the active textarea.
 3. Confirm generation has stopped, or capture the assistant body twice at least 2 seconds apart and repeat while the body changes within the task budget. Capture the complete assistant-only container and return the question and final reply capture ID. The application saves this answer before asking for citations.
 
 ## Citations

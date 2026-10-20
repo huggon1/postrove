@@ -1,3 +1,8 @@
+import { capturedText } from "../../platforms/browser/dom";
+import type { YoutubeTranscriptReader } from "./youtube-transcript";
+import type { TranscriptEvidence } from "../../shared/transcript-contracts";
+import { youtubeVideo } from "../../shared/source-profiles";
+import type { ContentRequest } from "../../shared/content-contracts";
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { utilityProcess } from "electron";
@@ -28,10 +33,13 @@ export interface BrowserCapture {
   disclosureControls?: string[];
   documentGeneration?: number;
   sourceKind?: "reply_inline" | "source_panel";
+  evidence?: TranscriptEvidence;
 }
-export type SearchProgress = Pick<
-  SearchSection,
-  "rawReply" | "platformPrompt" | "citationExtraction"
+export type SearchProgress = Partial<
+  Pick<
+    SearchSection,
+    "rawReply" | "platformPrompt" | "citationExtraction" | "checkpoint"
+  >
 >;
 export class BrowserAgent {
   constructor(
@@ -43,6 +51,13 @@ export class BrowserAgent {
       signal: AbortSignal,
     ) => Promise<unknown>,
     private enhancementAvailable: () => boolean = () => !!this.enhancedRead,
+    private processContent?: (
+      input: ContentRequest,
+      signal: AbortSignal,
+      config: ModelExecutionConfig,
+      taskId: string,
+    ) => Promise<string>,
+    private transcripts?: YoutubeTranscriptReader,
   ) {}
   async run(
     platform: Platform,
@@ -52,10 +67,17 @@ export class BrowserAgent {
     signal: AbortSignal,
     purpose: "search" | "collect" = "search",
     onSearchProgress?: (progress: SearchProgress) => Promise<void>,
+    recovery?: { prompt: string; conversationUrl?: string },
+    routeId?: string,
+    readingAttemptId = taskId,
   ) {
+    const youtubeReading =
+      purpose === "collect" &&
+      !!this.transcripts &&
+      (await this.transcripts.available());
     await mkdir(this.traceRoot, { recursive: true, mode: 0o700 });
     return this.browser.exclusive(platform, signal, async (page) => {
-      const skills = await platformSkillCatalog(purpose, platform);
+      const skills = await platformSkillCatalog(purpose, routeId ?? platform);
       const observed = new Map<string, string>();
       const captures: string[] = [];
       const captureRecords = new Map<string, string>();
@@ -237,7 +259,7 @@ export class BrowserAgent {
                   root = root.parentElement
                 ) {
                   const cards = root.querySelector(
-                    'section,a[href*="/status/"],a[href*="/explore/"],a[href*="/discovery/item/"],a[href*="/search_result/"]',
+                    'section,a[href*="/status/"],a[href*="/explore/"],a[href*="/discovery/item/"],a[href*="/search_result/"],a[href*="youtube.com/watch"],a[href*="youtu.be/"],a[href*="reddit.com/r/"]',
                   );
                   if (cards) {
                     candidates.push(root);
@@ -306,15 +328,14 @@ export class BrowserAgent {
           !!reply &&
           !!root &&
           root
-            .evaluate(
-              (node, text) =>
-                node.isConnected && (node as HTMLElement).innerText === text,
-              reply.text,
-            )
+            .evaluate(capturedText)
+            .then((text) => text === reply.text)
             .catch(() => false)
         );
       };
-      const fills: string[] = [];
+      const fills: string[] = recovery ? [recovery.prompt] : [];
+      let submitted = !!recovery;
+      let savedConversationUrl = recovery?.conversationUrl;
       const capturedImages = new Map<string, { url: string; alt: string }[]>();
       const popups = new Set<Page>();
       const trackPopup = (popup: Page) => popups.add(popup);
@@ -399,6 +420,10 @@ export class BrowserAgent {
               submittedPlatformPrompt = data.output.platformPrompt;
               await onSearchProgress?.({
                 rawReply: capture.text,
+                checkpoint: {
+                  state: "answered",
+                  conversationUrl: capture.pageUrl,
+                },
                 platformPrompt: data.output.platformPrompt,
                 citationExtraction: { state: "running" },
               });
@@ -442,15 +467,60 @@ export class BrowserAgent {
                 )
               )
                 return { accessState: "action_required" };
+              if (data.operation.action === "structure_content") {
+                const capture = captureData.get(data.operation.captureId);
+                if (!capture || !this.processContent)
+                  throw new Error(
+                    "Structure requires a capture from this task",
+                  );
+                return JSON.parse(
+                  await this.processContent(
+                    {
+                      operation: "structure_content",
+                      text: capture.markdown || capture.text,
+                    },
+                    signal,
+                    config,
+                    taskId,
+                  ),
+                );
+              }
               if (data.operation.action === "load_skill")
                 return {
                   skill: data.operation.value,
                   content: await loadPlatformSkill(
                     data.operation.value,
                     purpose,
-                    platform,
+                    routeId ?? platform,
                   ),
                 };
+              if (data.operation.action === "read_youtube_transcript") {
+                if (
+                  purpose !== "collect" ||
+                  !this.transcripts ||
+                  !observed.has(data.operation.value) ||
+                  !youtubeVideo(data.operation.value)
+                )
+                  throw new Error(
+                    "Transcript reading requires an observed video URL",
+                  );
+                const result = await this.transcripts.read(
+                  data.operation.value,
+                  readingAttemptId,
+                  signal,
+                );
+                if (result.outcome !== "content") return result;
+                const source = result.source;
+                return {
+                  capture: source.markdown,
+                  markdown: source.markdown,
+                  url: source.sourceUrl,
+                  sourcePageUrl: source.sourceUrl,
+                  images: [],
+                  links: result.references,
+                  evidence: source.evidence,
+                };
+              }
               if (data.operation.action === "enhanced_read") {
                 if (
                   !this.enhancedRead ||
@@ -662,12 +732,64 @@ export class BrowserAgent {
                 data.operation.action === "navigate" &&
                 data.operation.value === page.url() &&
                 page.url() === captureData.get(replyCaptureId)?.pageUrl;
+              if (
+                purpose === "search" &&
+                recovery &&
+                data.operation.action === "fill"
+              )
+                throw new Error(
+                  "Recovery observes the submitted conversation; return browser_interaction_failed if it is unavailable",
+                );
+              if (
+                purpose === "search" &&
+                !submitted &&
+                fills.length &&
+                ["press", "click"].includes(data.operation.action)
+              ) {
+                submitted = true;
+                await onSearchProgress?.({
+                  platformPrompt: fills[fills.length - 1],
+                  checkpoint: {
+                    state: "submitted",
+                    conversationUrl: page.url(),
+                    submittedAt: new Date().toISOString(),
+                  },
+                });
+              }
+              const sourcePopup =
+                pendingSourceClick && data.operation.action === "click"
+                  ? page
+                      .waitForEvent("popup", { timeout: 1500 })
+                      .catch(() => undefined)
+                  : undefined;
               const value = await this.browser.operation(
                 platform,
                 page,
                 sameAnswerPage ? { action: "snapshot" } : data.operation,
                 purpose,
               );
+              if (
+                sourcePopup &&
+                pendingSourceClick?.pageUrl === page.url() &&
+                !popups.size
+              )
+                await sourcePopup;
+              if (
+                purpose === "search" &&
+                submitted &&
+                !replyCaptureId &&
+                page.url().startsWith("https://") &&
+                page.url() !== savedConversationUrl
+              ) {
+                savedConversationUrl = page.url();
+                await onSearchProgress?.({
+                  checkpoint: {
+                    state: "submitted",
+                    conversationUrl: page.url(),
+                    submittedAt: new Date().toISOString(),
+                  },
+                });
+              }
               if (purpose === "search" && data.operation.action === "capture") {
                 const match = String(data.operation.ref).match(
                   /^f(\d+):(b\d+)$/,
@@ -706,11 +828,7 @@ export class BrowserAgent {
                     if (signal.aborted) stop();
                   });
                   const stable = await body
-                    .evaluate((node) =>
-                      node.isConnected
-                        ? (node as HTMLElement).innerText
-                        : undefined,
-                    )
+                    .evaluate(capturedText)
                     .catch(() => undefined);
                   await body.dispose();
                   if (!("capture" in value) || stable !== value.capture)
@@ -761,7 +879,7 @@ export class BrowserAgent {
                           ref &&
                           control &&
                           label.length <= 350 &&
-                          /ai总结\s*\d+\s*篇笔记生成|参考来源|^(?:Sources?|Citations?|Posts?|X posts?)\b|^\d+\s+(?:sources?|citations?|posts?)\b|^(?:来源|引用|帖子)/i.test(
+                          /ai总结\s*\d+\s*篇笔记生成|参考来源|^(?:Sources?|Citations?|Posts?|X posts?|Videos?|YouTube videos?|Related posts?)\b|^\d+\s+(?:sources?|citations?|posts?)\b|^(?:来源|引用|帖子|视频)/i.test(
                             label,
                           )
                         )
@@ -797,6 +915,12 @@ export class BrowserAgent {
                 }
                 value = { ...value, ...(await observeNote(page)) };
                 const current = new URL(page.url());
+                if (
+                  current.hostname === "accounts.google.com" ||
+                  (current.hostname.endsWith("reddit.com") &&
+                    /^\/(?:login|register)(?:\/|$)/.test(current.pathname))
+                )
+                  value = { ...value, accessState: "login_required" };
                 if (
                   platform === "x" &&
                   [
@@ -915,6 +1039,7 @@ export class BrowserAgent {
                   captureId = `capture-${captures.length}`;
                   captureRecords.set(captureId, value.capture);
                   captureData.set(captureId, {
+                    ...(value.evidence ? { evidence: value.evidence } : {}),
                     pageUrl: value.sourcePageUrl ?? page.url(),
                     documentGeneration:
                       value.documentGeneration ?? documentGeneration,
@@ -1081,6 +1206,7 @@ export class BrowserAgent {
           purpose,
           skills,
           enhancedReading: purpose !== "search" && this.enhancementAvailable(),
+          youtubeReading,
         });
       }).finally(async () => {
         page.off("popup", trackPopup);

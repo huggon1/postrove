@@ -7,9 +7,9 @@ import {
 } from "@phosphor-icons/react";
 import { bridge } from "../bridge";
 import { t, tf, dateTime } from "../i18n";
-import { Dialog, Markdown } from "./Primitives";
+import { Markdown } from "./Primitives";
+import { ConfirmDialog } from "../workspace/forms";
 import type { ApplicationUpdateView } from "../../shared/update-contracts";
-import { buildIdentity } from "../../shared/build-identity";
 
 export function useApplicationUpdates() {
   const [view, setView] = useState<ApplicationUpdateView>();
@@ -69,15 +69,11 @@ export function UpdateSettings({
 }) {
   const [notesOpen, setNotesOpen] = useState(false);
   const view = updates.view;
-  if (
-    !view ||
-    (view.state === "disabled" && buildIdentity.platform.startsWith("win32"))
-  )
-    return null;
+  if (!view) return null;
   const { state, release, progress, failure } = view;
   const messages: Record<ApplicationUpdateView["state"], string> = {
     disabled: "安装版支持应用更新。",
-    idle: "检查是否有新版本。",
+    idle: "",
     checking: "正在检查更新…",
     latest: "已是最新版本",
     available: "有新版本可用",
@@ -113,10 +109,12 @@ export function UpdateSettings({
           <p className="muted">Postrove {view.version}</p>
         </div>
       </div>
-      <p role="status">
-        {t(messages[state])}
-        {release && <> · {release.version}</>}
-      </p>
+      {messages[state] && (
+        <p role="status">
+          {t(messages[state])}
+          {release && <> · {release.version}</>}
+        </p>
+      )}
       {view.checkedAt &&
         !["downloading", "waiting", "installing"].includes(state) && (
           <p className="muted">
@@ -126,7 +124,7 @@ export function UpdateSettings({
       {release?.notes && (
         <div className="update-notes">
           <button
-            className="button button-quiet update-disclosure"
+            className="secondary update-disclosure"
             aria-expanded={notesOpen}
             onClick={() => setNotesOpen(!notesOpen)}
           >
@@ -165,7 +163,7 @@ export function UpdateSettings({
       <div className="row-actions">
         {["idle", "latest", "checking", "disabled"].includes(state) && (
           <button
-            className="button"
+            className="secondary"
             disabled={state === "checking" || state === "disabled"}
             onClick={() => void updates.action(bridge.checkForUpdates)}
           >
@@ -175,7 +173,7 @@ export function UpdateSettings({
         )}
         {state === "available" && (
           <button
-            className="button button-primary"
+            className="primary"
             onClick={() => void updates.action(bridge.downloadUpdate)}
           >
             <ArrowDown size={16} />
@@ -184,7 +182,7 @@ export function UpdateSettings({
         )}
         {state === "downloading" && (
           <button
-            className="button"
+            className="secondary"
             onClick={() => void updates.action(bridge.cancelUpdateDownload)}
           >
             {t("取消下载")}
@@ -193,23 +191,23 @@ export function UpdateSettings({
         {state === "downloaded" && (
           <>
             <button
-              className="button button-primary"
+              className="primary"
               onClick={() => void updates.requestInstall()}
             >
               {t("安装并重启")}
             </button>
-            <button className="button button-quiet" onClick={onLater}>
+            <button className="secondary" onClick={onLater}>
               {t("稍后")}
             </button>
           </>
         )}
         {state === "waiting" && (
           <>
-            <button className="button" onClick={onTasks}>
+            <button className="secondary" onClick={onTasks}>
               {t("查看任务")}
             </button>
             <button
-              className="button button-quiet"
+              className="secondary"
               onClick={() => void updates.action(bridge.cancelUpdateWait)}
             >
               {t("取消等待")}
@@ -217,7 +215,7 @@ export function UpdateSettings({
           </>
         )}
         {state === "failed" && (
-          <button className="button" onClick={() => void retry()}>
+          <button className="secondary" onClick={() => void retry()}>
             {t("重试")}
           </button>
         )}
@@ -235,7 +233,7 @@ function JobList({ view }: { view: ApplicationUpdateView }) {
     <ul className="update-jobs">
       {view.jobs.map((job) => (
         <li key={job.id}>
-          <span>{t(job.kind === "search" ? "搜索" : "解析")}</span>
+          <span>{t(job.kind === "search" ? "话题" : "阅读")}</span>
           <strong>{job.label}</strong>
         </li>
       ))}
@@ -267,7 +265,7 @@ export function UpdateExperience({
         <div className="update-toast" role="status">
           <span>{tf("Postrove {0} 已发布", view.release?.version)}</span>
           <button
-            className="button button-quiet"
+            className="secondary"
             onClick={() => {
               setDismissed(view.release!.version);
               onOpen();
@@ -276,7 +274,7 @@ export function UpdateExperience({
             {t("查看更新")}
           </button>
           <button
-            className="button button-quiet"
+            className="secondary"
             onClick={() => setDismissed(view.release!.version)}
           >
             {t("稍后")}
@@ -296,27 +294,16 @@ export function UpdateExperience({
         </div>
       )}
       {updates.confirmation && (
-        <Dialog
+        <ConfirmDialog
           title={tf("{0} 个任务正在运行", view.jobs.length)}
+          cancelLabel={t("返回")}
+          confirmLabel={t("任务完成后安装")}
           onClose={() => updates.setConfirmation(false)}
+          onConfirm={() => updates.requestInstall(true)}
         >
           <p>{t("当前任务完成后再安装更新。等待期间，新任务会暂缓开始。")}</p>
           <JobList view={view} />
-          <div className="dialog-actions">
-            <button
-              className="button"
-              onClick={() => updates.setConfirmation(false)}
-            >
-              {t("返回")}
-            </button>
-            <button
-              className="button button-primary"
-              onClick={() => void updates.requestInstall(true)}
-            >
-              {t("任务完成后安装")}
-            </button>
-          </div>
-        </Dialog>
+        </ConfirmDialog>
       )}
     </>
   );

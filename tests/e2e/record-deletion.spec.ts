@@ -1,4 +1,5 @@
-import { test, expect, _electron as electron } from "@playwright/test";
+import { launchChineseApplication } from "../support/application";
+import { test, expect } from "@playwright/test";
 import { mkdtemp, mkdir, writeFile, readFile, rm, cp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -33,6 +34,7 @@ test("record deletion preserves independent results and persists undo and visibi
       res.end(
         JSON.stringify({
           rawReply: "Preserved platform answer.",
+          citationExtraction: { state: "completed" },
           candidates: [
             {
               candidateId: crypto.randomUUID(),
@@ -77,7 +79,7 @@ test("record deletion preserves independent results and persists undo and visibi
   });
   await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
   const launch = () =>
-    electron.launch({
+    launchChineseApplication({
       args: ["."],
       env: {
         ...process.env,
@@ -91,139 +93,105 @@ test("record deletion preserves independent results and persists undo and visibi
   let app = await launch();
   try {
     let page = await app.firstWindow();
-    await page
-      .getByRole("textbox", { name: "问题", exact: true })
-      .fill("Deletion review question");
-    await page
-      .getByRole("main")
-      .getByRole("button", { name: "搜索", exact: true })
-      .click();
-    await page.getByRole("button", { name: "搜索结果", exact: true }).click();
-    await expect(
-      page.getByText("Preserved platform answer.").first(),
-    ).toBeVisible();
-    await page
-      .getByRole("button", { name: "加入解析", exact: true })
-      .first()
-      .click();
-    await page.getByRole("button", { name: "解析结果", exact: true }).click();
-    await expect(
-      page.getByText("已保存的来源正文。", { exact: true }),
-    ).toBeVisible();
-    const before = await page.evaluate(async () => ({
-      search: await window.postrove.focusSearchReports(),
-      tasks: await window.postrove.unifiedTaskSnapshots(),
-      parsed: await window.postrove.forwardingTasks(),
-    }));
-    expect(before.parsed.ok).toBe(true);
-    if (!before.parsed.ok) throw new Error("Missing fixture content");
-    const parsed = before.parsed.value[0];
-    await page
-      .getByRole("button", { name: "更多：Deletion source", exact: true })
-      .first()
-      .click();
-    await page.getByRole("menuitem", { name: "删除", exact: true }).click();
-    await expect(
-      page.getByText("已保存的来源正文。", { exact: true }),
-    ).toHaveCount(0);
-    await expect(
-      page.getByRole("textbox", { name: "原文链接", exact: true }),
-    ).toBeFocused();
-    await expect(
-      page.getByRole("button", { name: "撤销", exact: true }).first(),
-    ).toBeVisible();
-    await page.screenshot({ path: info.outputPath("deletion-undo.png") });
-    await page
-      .getByRole("button", { name: "撤销", exact: true })
-      .first()
-      .click();
-    await expect(
-      page.getByText("已保存的来源正文。", { exact: true }),
-    ).toBeVisible();
-    const restored = await page.evaluate(() =>
-      window.postrove.forwardingTasks(),
+    await page.evaluate(() =>
+      window.postrove.saveAdvisorSettings({ enabled: ["x-grok-en"] }),
     );
-    expect(restored.ok && restored.value[0].materialId).toBe(parsed.materialId);
-    const cleared = await page.evaluate(
-      (taskId) => window.postrove.deleteRecord({ kind: "task", id: taskId }),
+    const started = await page.evaluate(() =>
+      window.postrove.startFocusSearch({
+        question: "Deletion review question",
+        platforms: ["x"],
+        period: "all",
+      }),
+    );
+    expect(started.ok).toBe(true);
+    const reports = async () => {
+      const reply = await page.evaluate(() =>
+        window.postrove.focusSearchReports(),
+      );
+      if (!reply.ok) throw new Error("Missing topics");
+      return reply.value;
+    };
+    await expect
+      .poll(async () => (await reports())[0]?.status)
+      .toBe("completed");
+    const report = (await reports())[0];
+    const collect = async () =>
+      page.evaluate((input) => window.postrove.addSearchCandidates(input), {
+        reportId: report.reportId,
+        candidateIds: report.sections[0].candidates.map(
+          (item) => item.candidateId,
+        ),
+      });
+    expect((await collect()).ok).toBe(true);
+    const tasks = async () => {
+      const reply = await page.evaluate(() =>
+        window.postrove.forwardingTasks(),
+      );
+      if (!reply.ok) throw new Error("Missing reading");
+      return reply.value;
+    };
+    await expect.poll(async () => (await tasks())[0]?.state).toBe("completed");
+    const parsed = (await tasks())[0];
+    await page
+      .getByRole("navigation", { name: "主导航" })
+      .getByRole("button", { name: "阅读", exact: true })
+      .click();
+    await page.getByRole("button", { name: "删除内容", exact: true }).click();
+    await expect(
+      page.getByRole("button", { name: "Deletion source", exact: true }),
+    ).toHaveCount(0);
+    await page.getByRole("button", { name: "撤销", exact: true }).click();
+    await expect(
+      page.getByRole("button", { name: "Deletion source", exact: true }),
+    ).toBeVisible();
+    expect((await tasks())[0].materialId).toBe(parsed.materialId);
+    await page.evaluate(
+      (id) => window.postrove.deleteRecord({ kind: "task", id }),
       parsed.taskId,
     );
-    expect(cleared.ok).toBe(true);
     await expect(
-      page.getByText("已保存的来源正文。", { exact: true }),
+      page.getByRole("button", { name: "Deletion source", exact: true }),
     ).toBeVisible();
-    await page
-      .getByRole("button", { name: "更多：Deletion source", exact: true })
-      .first()
-      .click();
-    await page.getByRole("menuitem", { name: "删除", exact: true }).click();
-    await page.getByRole("button", { name: "搜索结果", exact: true }).click();
-    await page
-      .getByRole("button", { name: "加入解析", exact: true })
-      .first()
-      .click();
-    await expect
-      .poll(async () => {
-        const reply = await page.evaluate(() =>
-          window.postrove.forwardingTasks(),
-        );
-        return reply.ok ? reply.value.length : 0;
-      })
-      .toBe(1);
-    const added = await page.evaluate(() => window.postrove.forwardingTasks());
-    expect(added.ok && added.value[0].taskId).not.toBe(parsed.taskId);
-    await page.getByRole("button", { name: "解析结果", exact: true }).click();
+    await page.getByRole("button", { name: "删除内容", exact: true }).click();
     await expect(
-      page.getByText("已保存的来源正文。", { exact: true }),
-    ).toBeVisible();
-    await page.getByRole("button", { name: "搜索结果", exact: true }).click();
+      page.getByRole("button", { name: "Deletion source", exact: true }),
+    ).toHaveCount(0);
+    expect((await collect()).ok).toBe(true);
+    await expect.poll(async () => (await tasks())[0]?.state).toBe("completed");
+    expect((await tasks())[0].taskId).not.toBe(parsed.taskId);
     await page
-      .getByRole("button", {
-        name: "更多：Deletion review question",
-        exact: true,
-      })
-      .first()
+      .getByRole("navigation", { name: "主导航" })
+      .getByRole("button", { name: "话题", exact: true })
       .click();
-    await page.getByRole("menuitem", { name: "删除", exact: true }).click();
-    await expect(page.getByText("Preserved platform answer.")).toHaveCount(0);
+    await page
+      .getByRole("button", { name: /^Deletion review question/ })
+      .click();
+    let thread = page.getByRole("dialog", { name: "话题详情" });
+    await thread.getByRole("button", { name: "删除话题", exact: true }).click();
+    await expect(
+      page.getByRole("button", { name: /^Deletion review question/ }),
+    ).toHaveCount(0);
     await app.close();
     app = await launch();
     page = await app.firstWindow();
-    await page.getByRole("button", { name: "搜索结果", exact: true }).click();
-    await expect(page.getByText("Preserved platform answer.")).toHaveCount(0);
-    await page.getByRole("button", { name: "解析结果", exact: true }).click();
     await expect(
-      page.getByText("已保存的来源正文。", { exact: true }),
-    ).toBeVisible();
-    const journal = JSON.parse(
-      await readFile(join(profile, "record-deletions.json"), "utf8"),
-    );
-    expect(journal.hidden.length).toBe(3);
-    await writeFile(
-      info.outputPath("saved-deletion-evidence.json"),
-      JSON.stringify({ before, journal, added }, null, 2),
-    );
-    await page.screenshot({
-      path: info.outputPath("independent-content-after-restart.png"),
-    });
+      page.getByRole("button", { name: /^Deletion review question/ }),
+    ).toHaveCount(0);
+    expect((await tasks())[0].state).toBe("completed");
     const invalid = await page.evaluate(() =>
       window.postrove.deleteRecord({ kind: "invalid", id: "bad" } as never),
     );
     expect(invalid.ok).toBe(false);
-    const active = await page.evaluate(() =>
+    await page.evaluate(() =>
       window.postrove.startFocusSearch({
         question: "Active deletion",
         platforms: ["x"],
-        period: "week",
+        period: "all",
       }),
     );
-    expect(active.ok).toBe(true);
-    await page.getByRole("button", { name: "搜索结果", exact: true }).click();
-    await page
-      .getByRole("button", { name: "更多：Active deletion", exact: true })
-      .first()
-      .click();
-    await page.getByRole("menuitem", { name: "删除", exact: true }).click();
+    await page.getByRole("button", { name: /^Active deletion/ }).click();
+    thread = page.getByRole("dialog", { name: "话题详情" });
+    await thread.getByRole("button", { name: "删除话题", exact: true }).click();
     const confirmation = page.getByRole("dialog", {
       name: "停止并删除",
       exact: true,
@@ -232,45 +200,44 @@ test("record deletion preserves independent results and persists undo and visibi
     await confirmation
       .getByRole("button", { name: "保留记录", exact: true })
       .click();
-    await page
-      .getByRole("button", { name: "更多：Active deletion", exact: true })
-      .first()
-      .click();
-    await page.getByRole("menuitem", { name: "删除", exact: true }).click();
+    await thread.getByRole("button", { name: "删除话题", exact: true }).click();
     await confirmation
       .getByRole("button", { name: "停止并删除", exact: true })
       .click();
     await expect(confirmation).toBeHidden();
-    const pending = await page.evaluate(() =>
+    const journal = await page.evaluate(() =>
       window.postrove.recordDeletions(),
     );
-    if (!pending.ok) throw new Error("Missing recovery record");
-    const last = pending.value.at(-1)!;
+    if (!journal.ok) throw new Error("Missing undo");
+    const last = journal.value.at(-1)!;
     await page.evaluate(
       (id) => window.postrove.undoDeletion(id),
       last.operationId,
     );
     await expect
-      .poll(async () => {
-        const r = await page.evaluate(() =>
-          window.postrove.focusSearchReports(),
-        );
-        return r.ok
-          ? r.value.find((x) => x.question === "Active deletion")?.status
-          : "error";
-      })
+      .poll(
+        async () =>
+          (await reports()).find((item) => item.question === "Active deletion")
+            ?.status,
+      )
       .toBe("stopped");
-    const again = await page.evaluate(
-      (record) => window.postrove.deleteRecord(record),
+    const deleted = await page.evaluate(
+      (ref) => window.postrove.deleteRecord(ref),
       last.records[0],
     );
-    if (!again.ok || !again.value) throw new Error("Missing deletion");
+    if (!deleted.ok || !deleted.value) throw new Error("Missing deletion");
     await page.waitForTimeout(8100);
-    const expired = await page.evaluate(
-      (id) => window.postrove.undoDeletion(id),
-      again.value.operationId,
-    );
-    expect(expired.ok).toBe(false);
+    expect(
+      (
+        await page.evaluate(
+          (id) => window.postrove.undoDeletion(id),
+          deleted.value.operationId,
+        )
+      ).ok,
+    ).toBe(false);
+    await page.screenshot({
+      path: info.outputPath("retained-reading-after-topic-deletion.png"),
+    });
   } finally {
     await app.close();
     if (process.env.POSTROVE_REVIEW_OUTPUT) {

@@ -10,3 +10,5 @@
 | `pi-coding-session.ts` | Persisted sessions and explicit resource boundaries |
 | `pi-runtime.ts` | Lightweight Agent calls and transcript export |
 | `model-worker.ts` | Connection checks |
+
+`content-worker.ts` runs isolated text capabilities with empty tools. `content/capabilities.ts` provides the shared prompts and fidelity validation used by Main and reading jobs.

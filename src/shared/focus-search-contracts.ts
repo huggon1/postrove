@@ -1,7 +1,18 @@
 import { z } from "zod";
+import {
+  advisorIdSchema,
+  advisorById,
+  advisorRouteFor,
+} from "./advisor-contracts";
 import { xPostUrlSchema, xhsNoteUrlSchema } from "./source-contracts";
+import { redditPost, youtubeVideo } from "./source-profiles";
 
-export const searchPlatformSchema = z.enum(["xiaohongshu", "x"]);
+export const searchPlatformSchema = z.enum([
+  "xiaohongshu",
+  "x",
+  "youtube",
+  "reddit",
+]);
 export const searchPeriodSchema = z.enum(["day", "week", "month", "all"]);
 export const startFocusSearchSchema = z
   .object({
@@ -10,7 +21,12 @@ export const startFocusSearchSchema = z
       .array(searchPlatformSchema)
       .min(1)
       .refine((ids) => new Set(ids).size === ids.length),
-    period: searchPeriodSchema,
+    period: searchPeriodSchema.default("all"),
+    advisorIds: z
+      .array(advisorIdSchema)
+      .min(1)
+      .refine((ids) => new Set(ids).size === ids.length)
+      .optional(),
   })
   .strict();
 export const searchCandidateSchema = z
@@ -27,6 +43,27 @@ export const searchSectionSchema = z
   .object({
     sectionId: z.string().uuid(),
     platform: searchPlatformSchema,
+    advisorId: advisorIdSchema.optional(),
+    connectionId: z.string().optional(),
+    routeId: z.string().optional(),
+    sourceProfileRevision: z.number().int().positive().optional(),
+    runId: z.string().uuid().optional(),
+    skillRevision: z.string().optional(),
+    promptRevision: z.string().optional(),
+    readingReply: z.string().optional(),
+    cancelled: z.boolean().optional(),
+    processingIssue: z.string().max(1000).optional(),
+    failureStage: z
+      .enum(["preparation", "bridge", "platform", "sources", "processing"])
+      .optional(),
+    checkpoint: z
+      .object({
+        state: z.enum(["prepared", "submitted", "answered"]),
+        conversationUrl: z.string().url().optional(),
+        submittedAt: z.string().datetime().optional(),
+      })
+      .strict()
+      .optional(),
     promptLanguage: z.enum(["zh-CN", "en"]),
     prompt: z.string(),
     platformPrompt: z.string().optional(),
@@ -46,6 +83,18 @@ export const searchSectionSchema = z
   })
   .strip()
   .superRefine((section, ctx) => {
+    if (section.advisorId) {
+      const advisor = advisorById(section.advisorId);
+      if (
+        (section.connectionId &&
+          section.connectionId !== advisor.connectionId) ||
+        (section.routeId && section.routeId !== advisorRouteFor(advisor).id)
+      )
+        ctx.addIssue({
+          code: "custom",
+          message: "Advisor route or connection mismatch",
+        });
+    }
     for (const candidate of section.candidates) {
       const parsed = canonicalPost(section.platform, candidate.url);
       if (!parsed || parsed.key !== candidate.postKey)
@@ -89,7 +138,7 @@ export const focusSearchReportSchema = z
       sectionIds = new Set<string>(),
       candidates = new Set<string>();
     for (const section of report.sections) {
-      const pair = section.platform;
+      const pair = section.advisorId ?? section.platform;
       if (
         !report.platforms.includes(section.platform) ||
         pairs.has(pair) ||
@@ -100,7 +149,11 @@ export const focusSearchReportSchema = z
           message: "Each section must reference one selected platform",
         });
       if (
-        section.promptLanguage !== (section.platform === "x" ? "en" : "zh-CN")
+        section.advisorId
+          ? advisorById(section.advisorId).platform !== section.platform ||
+            advisorById(section.advisorId).language !== section.promptLanguage
+          : section.promptLanguage !==
+            (["x", "reddit"].includes(section.platform) ? "en" : "zh-CN")
       )
         ctx.addIssue({
           code: "custom",
@@ -117,6 +170,18 @@ export const focusSearchReportSchema = z
         });
       pairs.add(pair);
       sectionIds.add(section.sectionId);
+      if (section.advisorId) {
+        const advisor = advisorById(section.advisorId);
+        if (
+          (section.connectionId &&
+            section.connectionId !== advisor.connectionId) ||
+          (section.routeId && section.routeId !== advisorRouteFor(advisor).id)
+        )
+          ctx.addIssue({
+            code: "custom",
+            message: "Advisor route or connection mismatch",
+          });
+      }
       for (const candidate of section.candidates) {
         if (candidates.has(candidate.candidateId))
           ctx.addIssue({
@@ -128,7 +193,8 @@ export const focusSearchReportSchema = z
     }
     if (
       new Set(report.platforms).size !== report.platforms.length ||
-      pairs.size !== report.platforms.length
+      new Set(report.sections.map((section) => section.platform)).size !==
+        report.platforms.length
     )
       ctx.addIssue({
         code: "custom",
@@ -170,7 +236,12 @@ export const saveFollowSchema = z
       .array(searchPlatformSchema)
       .min(1)
       .refine((ids) => new Set(ids).size === ids.length),
-    period: searchPeriodSchema,
+    period: searchPeriodSchema.default("all"),
+    advisorIds: z
+      .array(advisorIdSchema)
+      .min(1)
+      .refine((ids) => new Set(ids).size === ids.length)
+      .optional(),
     schedule: followScheduleSchema,
   })
   .strict();
@@ -225,6 +296,11 @@ export const searchSelectionSchema = z
   })
   .strict();
 export function canonicalPost(platform: SearchPlatform, raw: string) {
+  if (platform === "youtube") {
+    const video = youtubeVideo(raw);
+    return video && { key: video.key, url: video.locator };
+  }
+  if (platform === "reddit") return redditPost(raw);
   try {
     const url = new URL(raw);
     if (platform === "x" && xPostUrlSchema.safeParse(raw).success) {

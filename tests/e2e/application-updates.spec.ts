@@ -1,12 +1,13 @@
-import { test, expect, _electron as electron } from "@playwright/test";
+import { launchChineseApplication } from "../support/application";
+import { test, expect } from "@playwright/test";
 import { mkdtemp, rm, writeFile, readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
-test("development shows the platform's packaged-update boundary", async ({}, info) => {
+test("development shows the version and packaged-update boundary", async ({}, info) => {
   const profile = await mkdtemp(join(tmpdir(), "postrove-update-e2e-"));
-  const application = await electron.launch({
+  const application = await launchChineseApplication({
     args: ["."],
     env: {
       ...process.env,
@@ -17,19 +18,12 @@ test("development shows the platform's packaged-update boundary", async ({}, inf
   try {
     const page = await application.firstWindow();
     await page.getByRole("button", { name: "设置", exact: true }).click();
+    await page.getByRole("button", { name: "关于", exact: true }).click();
     const updates = page.getByRole("region", { name: "应用更新", exact: true });
-    if (process.platform === "win32") {
-      await expect(updates).toHaveCount(0);
-      const reply = await page.evaluate(() =>
-        window.postrove.applicationUpdates(),
-      );
-      expect(reply.ok && reply.value.state).toBe("disabled");
-    } else {
-      await expect(updates).toBeVisible({ timeout: 5000 });
-      const { version } = JSON.parse(await readFile("package.json", "utf8"));
-      await expect(updates).toContainText(version);
-      await expect(updates).toContainText("安装版");
-    }
+    await expect(updates).toBeVisible({ timeout: 5000 });
+    const { version } = JSON.parse(await readFile("package.json", "utf8"));
+    await expect(updates).toContainText(version);
+    await expect(updates).toContainText("安装版");
     await page.screenshot({ path: info.outputPath("development-updates.png") });
   } finally {
     await application.close();
@@ -55,7 +49,7 @@ test("update shutdown resumes queued searches on the next launch", async ({}, in
   await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
   const endpoint = `http://127.0.0.1:${(server.address() as any).port}`;
   const launch = () =>
-    electron.launch({
+    launchChineseApplication({
       args: [resolve("dist/main/update-test.cjs")],
       env: {
         ...process.env,
@@ -70,13 +64,14 @@ test("update shutdown resumes queued searches on the next launch", async ({}, in
     await application.evaluate(() =>
       (globalThis as any).fixtureServices.executionGate.pause(),
     );
-    await page.evaluate(() =>
-      window.postrove.startFocusSearch({
+    await page.evaluate(async () => {
+      await window.postrove.saveAdvisorSettings({ enabled: ["x-grok-en"] });
+      return window.postrove.startFocusSearch({
         question: "Resume saved search",
         platforms: ["x"],
         period: "all",
-      }),
-    );
+      });
+    });
     await application.evaluate(async () => {
       (globalThis as any).fixtureUpdates.close();
       await (globalThis as any).fixtureServices.shutdown();
@@ -94,7 +89,7 @@ test("update shutdown resumes queued searches on the next launch", async ({}, in
           JSON.parse(await readFile(join(profile, "focus-search.json"), "utf8"))
             .reports[0].status,
       )
-      .toBe("completed");
+      .toBe("partial");
     const tasks = JSON.parse(
       await readFile(join(profile, "tasks.json"), "utf8"),
     );
@@ -177,7 +172,7 @@ test("updates preserve work through cancellation, signature failure, and install
       apiKey: "fictional",
     }),
   );
-  const application = await electron.launch({
+  const application = await launchChineseApplication({
     args: [resolve("dist/main/update-test.cjs")],
     env: {
       ...process.env,
@@ -191,6 +186,7 @@ test("updates preserve work through cancellation, signature failure, and install
     const page = await application.firstWindow();
     await page.setViewportSize({ width: 1024, height: 760 });
     await page.getByRole("button", { name: "设置", exact: true }).click();
+    await page.getByRole("button", { name: "关于", exact: true }).click();
     const updates = page.getByRole("region", { name: "应用更新", exact: true });
     await updates
       .getByRole("button", { name: "检查更新", exact: true })
@@ -205,10 +201,11 @@ test("updates preserve work through cancellation, signature failure, and install
       page.getByText("Postrove 0.1.1 已发布", { exact: true }),
     ).toHaveCount(0);
     await page
-      .getByRole("button", { name: "搜索", exact: true })
+      .getByRole("button", { name: "话题", exact: true })
       .first()
       .click();
-    await page.getByRole("button", { name: "应用更新", exact: true }).click();
+    await page.getByRole("button", { name: "设置", exact: true }).click();
+    await page.getByRole("button", { name: "关于", exact: true }).click();
     await expect(updates).toBeVisible();
     await updates
       .getByRole("button", { name: "更新说明", exact: true })
@@ -247,13 +244,14 @@ test("updates preserve work through cancellation, signature failure, and install
     ).toBe(false);
     stageFails = false;
     const startSearch = () =>
-      page.evaluate(() =>
-        window.postrove.startFocusSearch({
+      page.evaluate(async () => {
+        await window.postrove.saveAdvisorSettings({ enabled: ["x-grok-en"] });
+        return window.postrove.startFocusSearch({
           question: "Hold running search",
           platforms: ["x"],
           period: "week",
-        }),
-      );
+        });
+      });
     const first = await startSearch();
     expect(first.ok).toBe(true);
     await expect
@@ -346,7 +344,9 @@ test("updates preserve work through cancellation, signature failure, and install
     await page.screenshot({
       path: info.outputPath("installation-requested.png"),
     });
-    await page.getByLabel("Language", { exact: true }).selectOption("en");
+    await page.getByRole("button", { name: "偏好设置", exact: true }).click();
+    await page.getByLabel("界面语言", { exact: true }).selectOption("en");
+    await page.getByRole("button", { name: "About", exact: true }).click();
     await expect(
       page.getByRole("region", { name: "Application updates", exact: true }),
     ).toBeVisible();
