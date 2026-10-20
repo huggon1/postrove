@@ -8,17 +8,12 @@ import { createWorkerEnvironment } from "./worker-environment";
 type ContentLease = {
   config: ModelExecutionConfig;
   release(): Promise<void>;
-  refreshCredential?(): Promise<string>;
 };
 export class ContentService {
   private active = 0;
   private waiting = new Set<() => void>();
   constructor(
-    private acquire: () => Promise<{
-      config: ModelExecutionConfig;
-      release(): Promise<void>;
-      refreshCredential?(): Promise<string>;
-    }>,
+    private acquire: () => Promise<ContentLease>,
     private traceRoot?: string,
   ) {}
   async execute(
@@ -52,8 +47,6 @@ export class ContentService {
     try {
       lease = bound ?? (await this.acquire());
       signal.throwIfAborted();
-      if (lease.refreshCredential)
-        lease.config.credential = await lease.refreshCredential();
       return await new Promise<string>((resolve, reject) => {
         const worker = utilityProcess.fork(
           join(__dirname, "../worker/content-worker.mjs"),

@@ -55,6 +55,10 @@ Copy preparation requires an inactive source and preserves current-generation re
 
 Use a review profile with the intended model and platform sessions. Enable language experts, send a topic, read independent replies and member receipts, save a scheduled message, collect sources into Reading, stop an active member, and export its Pi logs. Check partial-platform results and English output. Record inputs, screenshots, saved state, and observed failures in a local acceptance directory. [Product behavior](product-spec.md) defines expected outcomes.
 
+## README screenshots
+
+The [screenshot guide](../assets/screenshots/README.md) owns the current scenes and sample-data scope. Capture both interface languages from the running topic workspace with separate profiles and fictional records.
+
 ## Verify reading with live sources
 
 Submit a public source link in Reading. Inspect source coverage, translated body, introduction, and direct references. The [reading helper](../scripts/development/verify-reading.ts) submits through Electron IPC and exports saved material:

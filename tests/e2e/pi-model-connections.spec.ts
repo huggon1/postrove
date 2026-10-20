@@ -5,7 +5,7 @@
 // - Reauthorization drops saved model/options or leaves the replaced credential behind.
 // - Unsupported reasoning is silently raised, or selected options miss either Agent path.
 // - Advanced Pi API options silently disappear through the simple request path.
-// - A failed/cancelled native login replaces a working legacy Codex connection.
+// - Old Codex settings become active before native authorization is saved.
 // - Refresh races, Stop, or restart lose a rotated credential.
 // - Quitting during a catalog refresh interrupts native credential persistence.
 // - Migrated generic API settings lose their endpoint, key, model, or task behavior.
@@ -27,8 +27,7 @@ import {
   rm,
   stat,
 } from "node:fs/promises";
-import { delimiter, join, resolve } from "node:path";
-import { writeCodexFixture } from "../codex-cli-fixture";
+import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import {
@@ -506,15 +505,13 @@ test("native Pi UI, reasoning, API options, leases, and restart share one model 
   }
 });
 
-test("legacy Codex survives cancelled and failed native auth, then migrates atomically", async ({}, info) => {
+test("old Codex settings stay inactive while native Pi auth saves and restarts", async ({}, info) => {
   test.setTimeout(120_000);
   const root = await mkdtemp(join(tmpdir(), "postrove-pi-codex-"));
   const profile = join(root, "profile"),
-    bin = join(root, "bin"),
     authId = "12345678-1234-4234-8234-123456789012";
   const home = join(profile, "model-auth", authId);
   await mkdir(home, { recursive: true });
-  await mkdir(bin);
   const old = { method: "codex_subscription", modelId: "gpt-6-luna", authId };
   await writeFile(join(profile, "model-connection.json"), JSON.stringify(old));
   await writeFile(
@@ -524,13 +521,10 @@ test("legacy Codex survives cancelled and failed native auth, then migrates atom
       tokens: { access_token: "fictional-old-token" },
     }),
   );
-  await writeCodexFixture(bin, [
-    { model: "gpt-6-luna", displayName: "Fixture" },
-  ]);
   let app: ElectronApplication | undefined;
   try {
     let launched = await launch(profile, {
-      PATH: `${bin}${delimiter}${process.env.PATH}`,
+      PATH: pathWithoutCodex,
     });
     app = launched.app;
     let page = launched.page;
@@ -539,7 +533,7 @@ test("legacy Codex survives cancelled and failed native auth, then migrates atom
         path: info.outputPath(name + ".png"),
         animations: "disabled",
       });
-    expect((await modelView(page)).current.method).toBe("codex_subscription");
+    expect((await modelView(page)).current).toBeNull();
     await app.evaluate(() => {
       const actualFetch = globalThis.fetch;
       (globalThis as any).__piFixtureSuccess = false;
@@ -583,7 +577,14 @@ test("legacy Codex survives cancelled and failed native auth, then migrates atom
         throw new Error("Unexpected fixture OAuth request");
       };
     });
-    await page.getByRole("button", { name: "迁移连接", exact: true }).click();
+    await expect(
+      page.getByRole("button", { name: "迁移连接", exact: true }),
+    ).toHaveCount(0);
+    await page.getByRole("button", { name: "新建连接", exact: true }).click();
+    await page
+      .getByRole("combobox", { name: "供应商", exact: true })
+      .selectOption("openai-codex");
+    await page.getByRole("button", { name: "继续", exact: true }).click();
     const begin = async (method: "browser" | "device_code") => {
       const view = await modelView(page);
       const auth = view.providers
@@ -604,7 +605,7 @@ test("legacy Codex survives cancelled and failed native auth, then migrates atom
       page.getByRole("button", { name: "打开认证页面", exact: true }),
     ).toBeVisible();
     await capture("model-browser-oauth");
-    expect((await modelView(page)).current.method).toBe("codex_subscription");
+    expect((await modelView(page)).current).toBeNull();
     await page.getByRole("button", { name: "取消登录", exact: true }).click();
     await expect
       .poll(async () => (await modelView(page)).auth)
@@ -622,7 +623,7 @@ test("legacy Codex survives cancelled and failed native auth, then migrates atom
       }),
     ).toBeVisible();
     await capture("model-device-oauth-error");
-    expect((await modelView(page)).current.method).toBe("codex_subscription");
+    expect((await modelView(page)).current).toBeNull();
     expect(await stat(join(home, "auth.json"))).toBeTruthy();
     await app.evaluate(() => {
       (globalThis as any).__piFixtureSuccess = true;
@@ -631,7 +632,7 @@ test("legacy Codex survives cancelled and failed native auth, then migrates atom
     await expect(page.getByText("认证已配置", { exact: false })).toBeVisible();
     await page.getByRole("button", { name: "继续", exact: true }).click();
     // Successful authorization is staged until the user saves the chosen model.
-    expect((await modelView(page)).current.method).toBe("codex_subscription");
+    expect((await modelView(page)).current).toBeNull();
     const view = await modelView(page);
     const target =
       view.models.find((m: any) => m.id === old.modelId) ?? view.models[0];
@@ -640,7 +641,7 @@ test("legacy Codex survives cancelled and failed native auth, then migrates atom
       .selectOption(target.id);
     await page.getByRole("button", { name: "保存连接", exact: true }).click();
     await expect
-      .poll(async () => (await modelView(page)).current.method)
+      .poll(async () => (await modelView(page)).current?.method)
       .toBe("pi");
     const data = await saved(profile),
       native = data.connections.find((c: any) => c.id === data.activeId);
@@ -660,19 +661,12 @@ test("legacy Codex survives cancelled and failed native auth, then migrates atom
     expect(JSON.stringify(await modelView(page))).not.toContain(
       "fictional-native-refresh",
     );
-    await expect
-      .poll(async () =>
-        stat(home).then(
-          () => true,
-          () => false,
-        ),
-      )
-      .toBe(false);
-    await info.attach("codex-migration", {
+    expect(await stat(join(home, "auth.json"))).toBeTruthy();
+    await info.attach("native-codex-connection", {
       body: JSON.stringify(
         {
-          before: old.method,
-          after: native,
+          legacyActive: false,
+          native,
           nativeCredentialFields: Object.keys(credentials["openai-codex"]),
         },
         null,

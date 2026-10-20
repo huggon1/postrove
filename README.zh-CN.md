@@ -51,14 +51,14 @@ _截图使用虚构的问题、回答、来源和阅读材料，展示当前源�
 
 读取规则明确要采集的内容。Agent 按实际页面加载对应 Skill。其他页面使用通用网页规则，由 Agent 识别正文并选择读取方式。
 
-| 页面                  | 需要登录       | 读取范围                                             | Skill / 读取工具                                                                                                                     | 状态   |
-| --------------------- | -------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------ |
-| X 帖子                | 是，登录 X     | 正文、按顺序排列的图片、引用帖子及作者提供的材料链接 | [x-reading](src/platforms/browser/skills/x-reading/SKILL.md)                                                                         | 已接入 |
-| 小红书笔记            | 是，登录小红书 | 笔记标题、正文和按顺序排列的图片轮播                 | [xiaohongshu-reading](src/platforms/browser/skills/xiaohongshu-reading/SKILL.md)；可用时调用 `read_xiaohongshu`                      | 已接入 |
-| GitHub 公开仓库       | 否             | 默认 README，包含代码、表格、图片和链接              | [github-reading](src/platforms/browser/skills/github-reading/SKILL.md)                                                               | 已接入 |
-| YouTube 公开视频      | 否             | 视频信息、公开字幕、时间点链接及作者提供的材料                       | [youtube-reading](src/platforms/browser/skills/youtube-reading/SKILL.md)；可用时调用 `read_youtube_transcript`，结合浏览器采集 | 已接入 |
-| Reddit 公开帖子或评论 | 否             | 帖子正文，或选中评论及其父帖和必要的上级评论         | [reddit-reading](src/platforms/browser/skills/reddit-reading/SKILL.md)                                                               | 已接入 |
-| 其他网页              | 按网站要求     | 可访问的正文、图片、嵌入页面及直接引用材料           | [web-reading](src/platforms/browser/skills/web-reading/SKILL.md)                                                                     | 已接入 |
+| 页面                  | 需要登录       | 读取范围                                             | Skill / 读取工具                                                                                                               | 状态   |
+| --------------------- | -------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ------ |
+| X 帖子                | 是，登录 X     | 正文、按顺序排列的图片、引用帖子及作者提供的材料链接 | [x-reading](src/platforms/browser/skills/x-reading/SKILL.md)                                                                   | 已接入 |
+| 小红书笔记            | 是，登录小红书 | 笔记标题、正文和按顺序排列的图片轮播                 | [xiaohongshu-reading](src/platforms/browser/skills/xiaohongshu-reading/SKILL.md)；可用时调用 `read_xiaohongshu`                | 已接入 |
+| GitHub 公开仓库       | 否             | 默认 README，包含代码、表格、图片和链接              | [github-reading](src/platforms/browser/skills/github-reading/SKILL.md)                                                         | 已接入 |
+| YouTube 公开视频      | 否             | 视频信息、公开字幕、时间点链接及作者提供的材料       | [youtube-reading](src/platforms/browser/skills/youtube-reading/SKILL.md)；可用时调用 `read_youtube_transcript`，结合浏览器采集 | 已接入 |
+| Reddit 公开帖子或评论 | 否             | 帖子正文，或选中评论及其父帖和必要的上级评论         | [reddit-reading](src/platforms/browser/skills/reddit-reading/SKILL.md)                                                         | 已接入 |
+| 其他网页              | 按网站要求     | 可访问的正文、图片、嵌入页面及直接引用材料           | [web-reading](src/platforms/browser/skills/web-reading/SKILL.md)                                                               | 已接入 |
 
 Skill 约定读取范围，工具提供对应来源的获取方式。两端安装包均包含用于笔记读取的 `xiaohongshu-mcp`，以及已校验的 yt-dlp 和 Deno，用于读取 YouTube 字幕。YouTube 和 Reddit 的读取流程见[平台扩展设计](docs/platform-expansion-design.md)。
 
@@ -79,7 +79,7 @@ Skill 约定读取范围，工具提供对应来源的获取方式。两端安�
 
 1. 安装 Google Chrome。
 2. 安装 Postrove。macOS 用户打开 DMG，将 Postrove 拖入 Applications。安装包使用项目签名，首次打开时，macOS 可能要求在“系统设置 → 隐私与安全”中选择“仍要打开”。Windows 用户运行 EXE 安装程序并选择安装目录。Windows 安装程序当前未签名。
-3. 在“设置 → 后台模型”中新建连接，完成认证并选择模型。打开成员管理，登录平台并启用语言专家。现有 Codex 连接可通过一次重新授权迁移到 Pi 原生登录。
+3. 在“设置 → 后台模型”中新建连接，完成认证并选择模型。打开成员管理，登录平台并启用语言专家。
 4. 发起话题，或在阅读页添加链接。使用机器人转发时，先在设置中配置 Telegram 或飞书并授权聊天。飞书支持官方扫码创建应用，或连接具备单聊接收、发送和历史消息权限的已有应用。
 
 报告和网站会话保存在本机。任务执行时，相关问题和材料会发送给配置的模型。macOS 和 Windows 均支持通过“设置 → 关于”下载并安装应用更新。

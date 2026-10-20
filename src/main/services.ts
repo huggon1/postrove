@@ -31,7 +31,6 @@ import type { Language } from "../shared/language";
 import { app, safeStorage, shell, utilityProcess } from "electron";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { rm } from "node:fs/promises";
 import {
   channels,
   modelChannels,
@@ -55,15 +54,13 @@ import {
   configureMainModelNetwork,
 } from "./services/worker-environment";
 import { ModelService } from "./services/model-service";
-import { CodexClient, resolveCodexExecutable } from "./services/codex-client";
 import { ModelStore } from "./storage/model-store";
 import {
   encodeLocalIntegrationSecret,
   migrateQueuedIntegrationSecrets,
   readLocalIntegrationSecret,
 } from "./storage/local-integration-secret";
-import { AuthCleanup } from "./storage/auth-cleanup";
-import { checkModel, readPiCatalog } from "./services/model-worker-client";
+import { checkModel } from "./services/model-worker-client";
 
 import { XhsAuth } from "./services/xhs-auth";
 import { resolveRuntimeLayout } from "./services/runtime-layout";
@@ -140,7 +137,6 @@ export async function initializeServices(
     return safeStorage.decryptString(Buffer.from(value, "base64"));
   };
 
-  const authRoot = join(app.getPath("userData"), "model-auth");
   const restoreModelNetwork = configureMainModelNetwork();
   models = new ModelService({
     root: join(app.getPath("userData"), "pi"),
@@ -155,18 +151,6 @@ export async function initializeServices(
         decrypt: (bytes) => safeStorage.decryptString(bytes),
       },
     ),
-    journal: new AuthCleanup(
-      join(app.getPath("userData"), "auth-cleanup.json"),
-    ),
-    client: (id) =>
-      new CodexClient(
-        join(authRoot, id),
-        resolveCodexExecutable(),
-        app.getVersion(),
-      ),
-    removeHome: (id) =>
-      rm(join(authRoot, id), { recursive: true, force: true }),
-    catalog: readPiCatalog,
     openLogin: (url) => shell.openExternal(url),
     check: checkModel,
     changed,
@@ -302,7 +286,6 @@ export async function initializeServices(
             url,
             config,
             signal,
-            refreshCredential,
             onProgress,
             includeReferences = true,
             accessToken,
@@ -313,7 +296,6 @@ export async function initializeServices(
               url,
               config,
               signal,
-              refreshCredential,
               includeReferences,
               onProgress,
               accessToken,
@@ -417,7 +399,6 @@ export async function initializeServices(
             section,
             lease.config,
             signal,
-            lease.refreshCredential,
             taskId,
             onProgress,
           ),

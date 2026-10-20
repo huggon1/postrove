@@ -73,7 +73,6 @@ export class PlatformAccess {
     url: string,
     config: ModelExecutionConfig,
     signal: AbortSignal,
-    refreshCredential?: () => Promise<string>,
     includeReferences = true,
     onProgress?: (
       materials: ReadingMaterial[],
@@ -93,7 +92,6 @@ export class PlatformAccess {
       materialCollectionInstruction(url, includeReferences, browserUrl.href),
       signal,
       "collect",
-      refreshCredential,
       undefined,
       undefined,
       undefined,
@@ -257,7 +255,6 @@ export class PlatformAccess {
             material.url,
             config,
             signal,
-            refreshCredential,
             false,
             undefined,
             undefined,
@@ -280,7 +277,6 @@ export class PlatformAccess {
     section: SearchSection,
     config: ModelExecutionConfig,
     signal: AbortSignal,
-    refreshCredential?: () => Promise<string>,
     taskId = section.sectionId,
     onProgress?: (progress: SearchProgress) => Promise<void>,
   ) {
@@ -296,7 +292,6 @@ export class PlatformAccess {
       ),
       signal,
       "search",
-      refreshCredential,
       onProgress,
       section.checkpoint && section.checkpoint.state !== "prepared"
         ? {

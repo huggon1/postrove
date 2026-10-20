@@ -261,6 +261,12 @@ test("reading preserves materials, partial output, frozen language and restart r
       readFile(join(resultRoot, "result.md"), "utf8"),
     ).resolves.toContain("第一段");
   } finally {
+    await info.attach("reading-state", {
+      body: await readFile(join(profile, "forwarding.json")).catch(() =>
+        Buffer.from("{}"),
+      ),
+      contentType: "application/json",
+    });
     await app?.close();
     server.closeAllConnections();
     await new Promise<void>((done) => server.close(() => done()));

@@ -39,7 +39,6 @@ type Lease = {
   config: ModelExecutionConfig;
   generation?: number;
   release(): Promise<void>;
-  refreshCredential?(): Promise<string>;
 };
 
 export interface ForwardingWorkerHandle {
@@ -57,7 +56,6 @@ export interface ForwardingServiceDependencies {
     url: string,
     config: ModelExecutionConfig,
     signal: AbortSignal,
-    refreshCredential?: () => Promise<string>,
     onProgress?: (
       materials: ReadingMaterial[],
       changedId?: string,
@@ -523,7 +521,6 @@ export class ForwardingPipelineService {
             task.target.sourceUrl,
             entry.lease.config,
             entry.controller.signal,
-            entry.lease.refreshCredential?.bind(entry.lease),
             async (materials, changedId) => {
               if (this.active.get(taskId) !== entry || this.closed) return;
               await this.receive(
@@ -573,7 +570,6 @@ export class ForwardingPipelineService {
                 material.url,
                 entry.lease.config,
                 entry.controller.signal,
-                entry.lease.refreshCredential?.bind(entry.lease),
                 undefined,
                 false,
                 material.role === "main" && task.xhsAccessTokenCiphertext

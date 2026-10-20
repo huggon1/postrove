@@ -255,31 +255,6 @@ export function ModelSettings() {
           );
         })}
       </div>
-      {view?.migration && (
-        <article className="model-connection-card migration-card">
-          <Sparkle />
-          <div>
-            <h3>{t("Codex 订阅")}</h3>
-            <p>{view.current?.modelId}</p>
-          </div>
-          <button
-            className="secondary"
-            onClick={async () => {
-              if (
-                await action(() =>
-                  bridge.selectModelConnection({ providerId: "openai-codex" }),
-                )
-              ) {
-                setEditing(true);
-                setStep(1);
-              }
-            }}
-          >
-            {t("迁移连接")}
-            <ArrowRight />
-          </button>
-        </article>
-      )}
       {view && !view.current && !view.connections.length && (
         <div className="settings-empty">
           <Sparkle />
@@ -363,11 +338,13 @@ export function ModelSettings() {
                       onChange={(event) => setProviderId(event.target.value)}
                     >
                       <option value="">{t("选择供应商")}</option>
-                      {view?.providers.map((item) => (
-                        <option value={item.id} key={item.id}>
-                          {item.name}
-                        </option>
-                      ))}
+                      {view?.providers
+                        .filter((item) => item.builtin)
+                        .map((item) => (
+                          <option value={item.id} key={item.id}>
+                            {item.name}
+                          </option>
+                        ))}
                     </select>
                   </label>
                 ) : (

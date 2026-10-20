@@ -10,7 +10,7 @@ This document owns release preparation and publication. The [development guide](
 4. Record the source revision, workflow runs, package identity, screenshots, live trials, and remaining acceptance items in a local release evidence directory.
 5. Obtain publication approval from the release owner, then tag the approved main revision as `v<version>` and push the tag. The tag run creates a GitHub Release draft with reviewed notes and verified attachments.
 
-Upgrade verification builds the current package version and a verification version with the next patch number. These pairs stay in Actions artifacts. Manual runs produce evidence; tag runs repeat native verification and create one Release draft containing both platforms.
+Upgrade verification builds the current package version and a verification version with the next patch number. The macOS workflow also verifies the latest published version against the candidate when their versions differ. Draft creation waits for both upgrade checks and both platform packages. These pairs stay in Actions artifacts. Manual runs produce evidence; tag runs repeat native verification and create one Release draft containing both platforms.
 
 ## Signing and assets
 

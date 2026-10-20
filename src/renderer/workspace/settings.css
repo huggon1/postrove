@@ -1247,14 +1247,6 @@
   flex: none;
   font-size: 11px;
 }
-.migration-card {
-  display: flex;
-  align-items: center;
-}
-.migration-card > div {
-  flex: 1;
-  min-width: 0;
-}
 .model-connection-card h3 {
   font-size: 14px;
   font-weight: 550;
@@ -1717,9 +1709,6 @@
   }
   .model-connection-heading > .connection-pill {
     margin-left: 55px;
-  }
-  .migration-card {
-    flex-wrap: wrap;
   }
   .model-connection-actions {
     width: 100%;

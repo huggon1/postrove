@@ -238,6 +238,15 @@ test("Feishu setup, durable receipts, history recovery and account isolation", a
   let app = await launch();
   try {
     let page = await app.firstWindow();
+    const waitForReceiver = () =>
+      expect
+        .poll(async () => {
+          const reply = await page.evaluate(() =>
+            window.postrove.botStatus("feishu"),
+          );
+          return reply.ok ? reply.value.status : undefined;
+        })
+        .toBe("connected");
     const capture = (name: string) =>
       page.screenshot({
         path: info.outputPath(name + ".png"),
@@ -286,6 +295,7 @@ test("Feishu setup, durable receipts, history recovery and account isolation", a
     await guide
       .getByRole("button", { name: "验证连接并继续", exact: true })
       .click();
+    await waitForReceiver();
     await expect.poll(() => sockets.clients.size).toBe(1);
     await capture("feishu-awaiting-chat");
     send(message("discover", "hello"));
@@ -388,6 +398,7 @@ test("Feishu setup, durable receipts, history recovery and account isolation", a
     const beforeReconnect = connections;
     for (const socket of sockets.clients) socket.terminate();
     await expect.poll(() => connections).toBeGreaterThan(beforeReconnect);
+    await waitForReceiver();
     const post = message("rich", "", {
       message_type: "post",
       content: JSON.stringify({

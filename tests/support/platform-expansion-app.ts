@@ -72,7 +72,6 @@ app.setPath("userData", process.env.POSTROVE_BROWSER_FIXTURE_ROOT!);
         credential: "fictional",
       },
       new AbortController().signal,
-      undefined,
       section.sectionId,
       async (event) => {
         progress.push(event);
@@ -192,7 +191,6 @@ app.whenReady().then(async () => {
         credential: "fictional",
       },
       new AbortController().signal,
-      undefined,
       false,
       undefined,
       undefined,
