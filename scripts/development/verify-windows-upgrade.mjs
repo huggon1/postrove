@@ -71,6 +71,7 @@ require("./main.cjs");
 `,
 );
 let application,
+  baselineProcess,
   page,
   installed = false,
   phase = "build";
@@ -136,9 +137,10 @@ try {
     args: [],
     timeout: 45000,
   });
+  baselineProcess = application.process();
   page = await application.firstWindow({ timeout: 45000 });
   await expect(page.getByRole("navigation")).toBeVisible({ timeout: 30000 });
-  const originalPid = application.process().pid;
+  const originalPid = baselineProcess.pid;
   await page.evaluate(async () => {
     await window.postrove.saveLanguage("zh-CN");
     await window.postrove.saveAdvisorSettings({ enabled: ["reddit-ai-en"] });
@@ -246,7 +248,7 @@ try {
     join(evidence, "result.json"),
     JSON.stringify(result, null, 2) + "\n",
   );
-  if (application && application.process().exitCode === null)
+  if (application && baselineProcess?.exitCode === null)
     await application.close().catch(() => {});
   const owner = JSON.parse(
     await readFile(join(profile, ".branchout-owner.json"), "utf8").catch(

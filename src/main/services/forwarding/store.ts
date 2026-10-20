@@ -2,9 +2,9 @@ import { botOriginSchema } from "../../../shared/bot-contracts";
 import { readingMaterialsSchema } from "../../../shared/reading-contracts";
 import { promptExecutionSchema } from "../../../shared/execution-contracts";
 import { languageSchema, type Language } from "../../../shared/language";
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import { setTimeout as delay } from "node:timers/promises";
+import { renameWithRetry } from "../../storage/rename-with-retry";
 import { z } from "zod";
 import {
   sourceSchema,
@@ -137,23 +137,7 @@ export class ForwardingStore {
       await writeFile(`${this.file}.tmp`, JSON.stringify(next), {
         mode: 0o600,
       });
-      const deadline = Date.now() + 2000;
-      for (let attempt = 0; ; attempt++) {
-        try {
-          await rename(`${this.file}.tmp`, this.file);
-          break;
-        } catch (error) {
-          if (
-            process.platform !== "win32" ||
-            !["EPERM", "EBUSY", "EACCES"].includes(
-              (error as NodeJS.ErrnoException).code ?? "",
-            ) ||
-            Date.now() >= deadline
-          )
-            throw error;
-          await delay(Math.min(25 * 2 ** attempt, 200));
-        }
-      }
+      await renameWithRetry(`${this.file}.tmp`, this.file);
       this.state = next;
     });
     this.queue = operation.catch(() => {});
