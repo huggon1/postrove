@@ -813,7 +813,8 @@
 }
 .compact-body > .config-field:first-child,
 .setup-form > .config-field:first-child,
-.model-workspace > .setup-steps + .config-field {
+.model-workspace > .setup-steps + .config-field,
+.model-connection-mode + .config-field {
   margin-top: 0;
 }
 .compact-body > .full-width {
@@ -1202,6 +1203,9 @@
   overflow: auto;
   overscroll-behavior: contain;
   min-height: 0;
+}
+.model-connection-mode {
+  margin: 0 0 24px;
 }
 .model-connection-list {
   display: grid;

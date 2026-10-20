@@ -40,7 +40,7 @@ Telegram settings has a collapsed connection card and a focused setup drawer: ve
 
 ## Settings
 
-Settings contains Inbox connections, AI members, Background models, Preferences, and About. Model setup separates provider selection, native Pi authentication, and model/options. Saved connections expose edit and removal. Authentication controls follow the native provider's text, secret, selection, browser, or device-code prompts. Connection checks report their actual state.
+Settings contains Inbox connections, AI members, Background models, Preferences, and About. Model setup separates connection method, native Pi authentication, and model/options. The connection method selects either a built-in provider or a custom service configured with a provider ID and Pi `models.json`. Each method shows its own fields and advances through Continue. Switching methods retains field values and clears the previous method's validation feedback. Saved connections expose edit and removal. Authentication controls follow the native provider's text, secret, selection, browser, or device-code prompts. Connection checks report their actual state.
 
 Main freezes model metadata and options for active execution through a lease. Existing API connections migrate to Pi; existing Codex connections use staged native authorization. Cancellation retains the active connection. Browser visibility applies at the next browser operation. Platform sign-in always opens a visible window.
 

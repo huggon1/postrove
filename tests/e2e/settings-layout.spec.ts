@@ -21,11 +21,14 @@ test("settings and nested forms retain the approved layout through real controls
     const page = await app.firstWindow();
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));
-    const capture = (name: string) =>
-      page.screenshot({
+    const capture = async (name: string) => {
+      const dialog = page.getByRole("dialog").last();
+      if (await dialog.count()) await expect(dialog).toHaveCSS("opacity", "1");
+      return page.screenshot({
         path: info.outputPath(name + ".png"),
         animations: "disabled",
       });
+    };
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.getByRole("button", { name: "设置", exact: true }).click();
     await capture("inbox-cards");
@@ -88,6 +91,59 @@ test("settings and nested forms retain the approved layout through real controls
       page.getByRole("button", { name: "继续", exact: true }),
     ).toBeDisabled();
     await capture("model-provider");
+    const modelDialog = page.getByRole("dialog", {
+      name: "模型连接配置",
+      exact: true,
+    });
+    const builtIn = modelDialog.getByRole("button", {
+      name: "内置供应商",
+      exact: true,
+    });
+    const custom = modelDialog.getByRole("button", {
+      name: "自定义服务",
+      exact: true,
+    });
+    const next = modelDialog.getByRole("button", { name: "继续", exact: true });
+    await expect(builtIn).toHaveAttribute("aria-pressed", "true");
+    await expect(modelDialog.getByLabel("Pi models.json")).toHaveCount(0);
+    await modelDialog
+      .getByLabel("供应商", { exact: true })
+      .selectOption("openai");
+    await next.click();
+    await expect(
+      modelDialog.getByRole("heading", { name: "OpenAI", exact: true }),
+    ).toBeVisible();
+    await capture("model-builtin-auth");
+    await modelDialog
+      .getByRole("button", { name: "上一步", exact: true })
+      .click();
+    await custom.click();
+    await expect(custom).toHaveAttribute("aria-pressed", "true");
+    await expect(modelDialog.getByLabel("供应商", { exact: true })).toHaveCount(
+      0,
+    );
+    await expect(next).toHaveCount(1);
+    await modelDialog
+      .getByLabel("供应商 ID", { exact: true })
+      .fill("draft-provider");
+    await modelDialog.getByLabel("Pi models.json", { exact: true }).fill("{");
+    await next.click();
+    await expect(modelDialog.getByRole("alert")).toHaveText(
+      "请填写有效的 JSON 对象",
+    );
+    await capture("model-custom-validation");
+    await builtIn.click();
+    await expect(modelDialog.getByRole("alert")).toHaveCount(0);
+    await expect(modelDialog.getByLabel("供应商", { exact: true })).toHaveValue(
+      "openai",
+    );
+    await custom.click();
+    await expect(
+      modelDialog.getByLabel("供应商 ID", { exact: true }),
+    ).toHaveValue("draft-provider");
+    await expect(
+      modelDialog.getByLabel("Pi models.json", { exact: true }),
+    ).toHaveValue("{");
     await page.getByRole("button", { name: "关闭", exact: true }).click();
     await page.getByRole("button", { name: "定时发送", exact: true }).click();
     await page
@@ -155,6 +211,35 @@ test("settings and nested forms retain the approved layout through real controls
     ).toBe(true);
     expect(await feishu.innerText()).not.toMatch(/[\u4e00-\u9fff]/u);
     await capture("feishu-existing-en-narrow");
+    await feishu.getByRole("button", { name: "Close", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Background models", exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: "New connection", exact: true })
+      .click();
+    const englishModel = page.getByRole("dialog", {
+      name: "Model connection",
+      exact: true,
+    });
+    await expect(
+      englishModel.getByRole("button", {
+        name: "Built-in providers",
+        exact: true,
+      }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await capture("model-builtin-en-narrow");
+    await englishModel
+      .getByRole("button", { name: "Custom service", exact: true })
+      .press("Enter");
+    await expect(
+      englishModel.getByRole("button", { name: "Custom service", exact: true }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(await englishModel.innerText()).not.toMatch(/[\u4e00-\u9fff]/u);
+    expect(
+      await englishModel.evaluate((el) => el.scrollWidth <= el.clientWidth),
+    ).toBe(true);
+    await capture("model-custom-en-narrow");
     expect(errors).toEqual([]);
   } finally {
     await app.close();

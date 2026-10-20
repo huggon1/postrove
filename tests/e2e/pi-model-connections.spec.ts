@@ -153,11 +153,14 @@ test("native Pi UI, reasoning, API options, leases, and restart share one model 
     let launched = await launch(profile, { POSTROVE_TEST_ENDPOINT: endpoint });
     app = launched.app;
     let page = launched.page;
-    const capture = (name: string) =>
-      page.screenshot({
+    const capture = async (name: string) => {
+      const dialog = page.getByRole("dialog").last();
+      if (await dialog.count()) await expect(dialog).toHaveCSS("opacity", "1");
+      return page.screenshot({
         path: info.outputPath(name + ".png"),
         animations: "disabled",
       });
+    };
     await capture("model-empty");
     const initial = await modelView(page);
     const ids = initial.providers.map((p: any) => p.id);
@@ -171,7 +174,7 @@ test("native Pi UI, reasoning, API options, leases, and restart share one model 
     ).toBe(true);
     await page.getByRole("button", { name: "新建连接", exact: true }).click();
     await capture("model-provider");
-    await page.getByText("自定义模型目录", { exact: true }).click();
+    await page.getByRole("button", { name: "自定义服务", exact: true }).click();
     await capture("model-catalog");
     const catalog = {
       providers: {
@@ -197,13 +200,13 @@ test("native Pi UI, reasoning, API options, leases, and restart share one model 
       .getByLabel("供应商 ID", { exact: true })
       .fill("fixture-provider");
     await page.getByLabel("Pi models.json", { exact: true }).fill("{");
-    await page.getByRole("button", { name: "载入目录", exact: true }).click();
+    await page.getByRole("button", { name: "继续", exact: true }).click();
     await expect(page.getByRole("dialog").getByRole("alert")).toBeVisible();
     await capture("model-catalog-validation");
     await page
       .getByLabel("Pi models.json", { exact: true })
       .fill(JSON.stringify(catalog));
-    await page.getByRole("button", { name: "载入目录", exact: true }).click();
+    await page.getByRole("button", { name: "继续", exact: true }).click();
     await expect(
       page.getByRole("heading", { name: "Fixture provider", exact: true }),
     ).toBeVisible();

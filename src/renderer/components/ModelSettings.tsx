@@ -63,6 +63,9 @@ export function ModelSettings() {
   const [editing, setEditing] = useState(false),
     [step, setStep] = useState(0),
     [providerId, setProviderId] = useState("");
+  const [connectionMode, setConnectionMode] = useState<"builtin" | "custom">(
+    "builtin",
+  );
   const [modelId, setModelId] = useState(""),
     [name, setName] = useState("");
   const [options, setOptions] = useState<PiOptions>(defaultPiOptions),
@@ -180,6 +183,7 @@ export function ModelSettings() {
             onClick={() => {
               setEditing(true);
               setStep(0);
+              setConnectionMode("builtin");
               setProviderId("");
               setError("");
             }}
@@ -321,46 +325,86 @@ export function ModelSettings() {
             />
             {step === 0 && (
               <>
-                <label className="config-field">
-                  <span>{t("供应商")}</span>
-                  <select
-                    aria-label={t("供应商")}
-                    value={providerId}
-                    onChange={(event) => setProviderId(event.target.value)}
-                  >
-                    <option value="">{t("选择供应商")}</option>
-                    {view?.providers.map((item) => (
-                      <option value={item.id} key={item.id}>
-                        {item.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <details className="config-details">
-                  <summary>{t("自定义模型目录")}</summary>
-                  <label className="config-field">
-                    <span>{t("供应商 ID")}</span>
-                    <input
-                      value={customProvider}
-                      onChange={(event) =>
-                        setCustomProvider(event.target.value)
-                      }
-                    />
-                  </label>
-                  <label className="config-field">
-                    <span>models.json</span>
-                    <textarea
-                      aria-label="Pi models.json"
-                      className="code-input"
-                      rows={10}
-                      value={customJson}
-                      onChange={(event) => setCustomJson(event.target.value)}
-                    />
-                  </label>
+                <div
+                  className="setup-mode model-connection-mode"
+                  role="group"
+                  aria-label={t("连接方式")}
+                >
                   <button
-                    className="secondary"
+                    type="button"
+                    aria-pressed={connectionMode === "builtin"}
                     disabled={busy}
-                    onClick={async () => {
+                    onClick={() => {
+                      setConnectionMode("builtin");
+                      setError("");
+                    }}
+                  >
+                    {t("内置供应商")}
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={connectionMode === "custom"}
+                    disabled={busy}
+                    onClick={() => {
+                      setConnectionMode("custom");
+                      setError("");
+                    }}
+                  >
+                    {t("自定义服务")}
+                  </button>
+                </div>
+                {connectionMode === "builtin" ? (
+                  <label className="config-field">
+                    <span>{t("供应商")}</span>
+                    <select
+                      aria-label={t("供应商")}
+                      value={providerId}
+                      disabled={busy}
+                      onChange={(event) => setProviderId(event.target.value)}
+                    >
+                      <option value="">{t("选择供应商")}</option>
+                      {view?.providers.map((item) => (
+                        <option value={item.id} key={item.id}>
+                          {item.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : (
+                  <>
+                    <label className="config-field">
+                      <span>{t("供应商 ID")}</span>
+                      <input
+                        value={customProvider}
+                        disabled={busy}
+                        onChange={(event) =>
+                          setCustomProvider(event.target.value)
+                        }
+                      />
+                    </label>
+                    <label className="config-field">
+                      <span>models.json</span>
+                      <textarea
+                        aria-label="Pi models.json"
+                        className="code-input"
+                        rows={10}
+                        value={customJson}
+                        disabled={busy}
+                        onChange={(event) => setCustomJson(event.target.value)}
+                      />
+                    </label>
+                  </>
+                )}
+                <button
+                  className="primary full-width"
+                  disabled={
+                    busy ||
+                    (connectionMode === "builtin"
+                      ? !providerId
+                      : !customProvider.trim() || !customJson.trim())
+                  }
+                  onClick={async () => {
+                    if (connectionMode === "custom") {
                       try {
                         jsonObject(customJson);
                       } catch {
@@ -376,17 +420,7 @@ export function ModelSettings() {
                         )
                       )
                         setStep(1);
-                    }}
-                  >
-                    {t("载入目录")}
-                    <ArrowRight />
-                  </button>
-                </details>
-                <button
-                  className="primary full-width"
-                  disabled={!providerId || busy}
-                  onClick={async () => {
-                    if (
+                    } else if (
                       await action(() =>
                         bridge.selectModelConnection({ providerId }),
                       )
