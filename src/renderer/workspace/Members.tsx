@@ -7,6 +7,7 @@ import {
   CheckCircle,
   CircleNotch,
   Globe,
+  Info,
   Plus,
   ShieldCheck,
   SignOut,
@@ -318,6 +319,14 @@ export function Members({
               </>
             )}
             <div className="config-actions vertical">
+              {!connected && (
+                <div className="platform-account-notice" role="note">
+                  <Info aria-hidden="true" />
+                  <span>
+                    {t("使用平台 AI 可能触发账号风控，建议使用小号登录。")}
+                  </span>
+                </div>
+              )}
               <button
                 className="primary"
                 disabled={busy}
