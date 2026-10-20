@@ -1,0 +1,870 @@
+{
+  "scope": "Real current Electron UI, preload, IPC and schema-validated fictional stores. Completed authored replies and reading examples; no platform request. Fresh review profiles removed after capture.",
+  "build": {
+    "revision": "ef6d49fd4371a0631bf4baef09935545827633d5",
+    "dirty": true,
+    "version": "0.2.0",
+    "platform": "darwin-arm64",
+    "builtAt": "2026-10-20T09:20:00.000Z"
+  },
+  "originalUrl": "https://www.youtube.com/watch?v=DEMO1234abc",
+  "viewport": {
+    "width": 1100,
+    "height": 760
+  },
+  "checks": {
+    "schemaValidation": true,
+    "profileReadBack": true,
+    "rendererErrors": [],
+    "rendererHttpRequests": [],
+    "cachedArtworkLoaded": true,
+    "allFourIndependentMembers": true,
+    "realOriginalTabSwitch": true,
+    "sourceLanguage": "en",
+    "englishVisibleHanChecked": true
+  },
+  "captures": [
+    {
+      "language": "zh-CN",
+      "scene": "topics",
+      "file": "topics-zh-CN.png",
+      "width": 2200,
+      "height": 1520,
+      "sha256": "f58e6b7b3b2010ed233248ac3f08ace38cbe12b6c1151120cea5e4a43f9779bc",
+      "visibleHanAudit": null,
+      "devicePixelRatio": 1,
+      "overflow": 0,
+      "modal": [],
+      "elements": []
+    },
+    {
+      "language": "zh-CN",
+      "scene": "topic",
+      "file": "topic-zh-CN.png",
+      "width": 2200,
+      "height": 1520,
+      "sha256": "f3683f3684db1f89e67fce411a1dbd6ce3bb95a73c48bccc87238eed4a9b29eb",
+      "visibleHanAudit": null,
+      "devicePixelRatio": 1,
+      "overflow": 0,
+      "modal": [
+        {
+          "x": 80,
+          "y": 24,
+          "w": 940,
+          "h": 712
+        }
+      ],
+      "elements": [
+        {
+          "className": "full-reply",
+          "tag": "ARTICLE",
+          "text": "✦enGemini · YouTube · 英文YouTube · 10月20日 · 17:20阅读版本原文实际提问跟着一个短教程，逐步动手\n先看角色如何移动，",
+          "x": 121,
+          "y": 293.75,
+          "w": 843,
+          "h": 422.828125
+        },
+        {
+          "className": "source-tile ",
+          "tag": "DIV",
+          "text": "用 AI 做第一个像素小游戏虚构演示来源 · 占位链接收取",
+          "x": 217,
+          "y": 625.5859375,
+          "w": 747,
+          "h": 60.9921875
+        },
+        {
+          "className": "full-reply",
+          "tag": "ARTICLE",
+          "text": "GenGrok · 英文X · 10月20日 · 17:20阅读版本原文实际提问先做最小的可玩循环\n从一个角色、一块平台开始。先实现左右移动，再加跳跃和落地碰撞",
+          "x": 121,
+          "y": 716.578125,
+          "w": 843,
+          "h": 422.828125
+        },
+        {
+          "className": "source-tile ",
+          "tag": "DIV",
+          "text": "一个角色，也能开始做游戏虚构演示来源 · 占位链接收取",
+          "x": 217,
+          "y": 1048.4140625,
+          "w": 747,
+          "h": 60.9921875
+        },
+        {
+          "className": "full-reply",
+          "tag": "ARTICLE",
+          "text": "点中点点 · 中文小红书 · 10月20日 · 17:20阅读版本原文实际提问先画一个简单的小世界\n用 16×16 的角色和两种颜色搭出场景。先完成一个能走、能",
+          "x": 121,
+          "y": 1139.40625,
+          "w": 843,
+          "h": 422.828125
+        },
+        {
+          "className": "source-tile ",
+          "tag": "DIV",
+          "text": "16×16 像素角色入门虚构演示来源 · 占位链接收取",
+          "x": 217,
+          "y": 1471.2421875,
+          "w": 747,
+          "h": 60.9921875
+        },
+        {
+          "className": "full-reply",
+          "tag": "ARTICLE",
+          "text": "RenReddit AI · 英文Reddit · 10月20日 · 17:20阅读版本原文实际提问把第一作的范围收小\n只做一个房间和一个目标。先写下“能移动、",
+          "x": 121,
+          "y": 1562.234375,
+          "w": 843,
+          "h": 421.828125
+        },
+        {
+          "className": "source-tile ",
+          "tag": "DIV",
+          "text": "第一款小游戏，先完成一个房间虚构演示来源 · 占位链接收取",
+          "x": 217,
+          "y": 1894.0703125,
+          "w": 747,
+          "h": 60.9921875
+        }
+      ]
+    },
+    {
+      "language": "zh-CN",
+      "scene": "topic-source",
+      "file": "topic-source-zh-CN.png",
+      "width": 2200,
+      "height": 1520,
+      "sha256": "f3683f3684db1f89e67fce411a1dbd6ce3bb95a73c48bccc87238eed4a9b29eb",
+      "visibleHanAudit": null,
+      "devicePixelRatio": 1,
+      "overflow": 0,
+      "modal": [
+        {
+          "x": 80,
+          "y": 24,
+          "w": 940,
+          "h": 712
+        }
+      ],
+      "elements": [
+        {
+          "className": "full-reply",
+          "tag": "ARTICLE",
+          "text": "✦enGemini · YouTube · 英文YouTube · 10月20日 · 17:20阅读版本原文实际提问跟着一个短教程，逐步动手\n先看角色如何移动，",
+          "x": 121,
+          "y": 293.75,
+          "w": 843,
+          "h": 422.828125
+        },
+        {
+          "className": "source-tile ",
+          "tag": "DIV",
+          "text": "用 AI 做第一个像素小游戏虚构演示来源 · 占位链接收取",
+          "x": 217,
+          "y": 625.5859375,
+          "w": 747,
+          "h": 60.9921875
+        },
+        {
+          "className": "full-reply",
+          "tag": "ARTICLE",
+          "text": "GenGrok · 英文X · 10月20日 · 17:20阅读版本原文实际提问先做最小的可玩循环\n从一个角色、一块平台开始。先实现左右移动，再加跳跃和落地碰撞",
+          "x": 121,
+          "y": 716.578125,
+          "w": 843,
+          "h": 422.828125
+        },
+        {
+          "className": "source-tile ",
+          "tag": "DIV",
+          "text": "一个角色，也能开始做游戏虚构演示来源 · 占位链接收取",
+          "x": 217,
+          "y": 1048.4140625,
+          "w": 747,
+          "h": 60.9921875
+        },
+        {
+          "className": "full-reply",
+          "tag": "ARTICLE",
+          "text": "点中点点 · 中文小红书 · 10月20日 · 17:20阅读版本原文实际提问先画一个简单的小世界\n用 16×16 的角色和两种颜色搭出场景。先完成一个能走、能",
+          "x": 121,
+          "y": 1139.40625,
+          "w": 843,
+          "h": 422.828125
+        },
+        {
+          "className": "source-tile ",
+          "tag": "DIV",
+          "text": "16×16 像素角色入门虚构演示来源 · 占位链接收取",
+          "x": 217,
+          "y": 1471.2421875,
+          "w": 747,
+          "h": 60.9921875
+        },
+        {
+          "className": "full-reply",
+          "tag": "ARTICLE",
+          "text": "RenReddit AI · 英文Reddit · 10月20日 · 17:20阅读版本原文实际提问把第一作的范围收小\n只做一个房间和一个目标。先写下“能移动、",
+          "x": 121,
+          "y": 1562.234375,
+          "w": 843,
+          "h": 421.828125
+        },
+        {
+          "className": "source-tile ",
+          "tag": "DIV",
+          "text": "第一款小游戏，先完成一个房间虚构演示来源 · 占位链接收取",
+          "x": 217,
+          "y": 1894.0703125,
+          "w": 747,
+          "h": 60.9921875
+        }
+      ]
+    },
+    {
+      "language": "zh-CN",
+      "scene": "reading",
+      "file": "reading-zh-CN.png",
+      "width": 2200,
+      "height": 1520,
+      "sha256": "80f6d2bbeb035a0b563ad51ed0d182787ad4051e6ecabe04b01f961857c5a0ea",
+      "visibleHanAudit": null,
+      "devicePixelRatio": 1,
+      "overflow": 0,
+      "modal": [
+        {
+          "x": 130,
+          "y": 24,
+          "w": 840,
+          "h": 712
+        }
+      ],
+      "elements": [
+        {
+          "className": "",
+          "tag": "H1",
+          "text": "用 AI 做第一个像素小游戏",
+          "x": 227.5,
+          "y": 165,
+          "w": 630,
+          "h": 40.296875
+        },
+        {
+          "className": "reader-toolbar",
+          "tag": "DIV",
+          "text": "阅读版本原文处理状态",
+          "x": 227.5,
+          "y": 229.296875,
+          "w": 630,
+          "h": 31
+        },
+        {
+          "className": "reader-introduction",
+          "tag": "P",
+          "text": "先做一个角色、一块平台和一次跳跃。跟着示例教程，逐步理解移动、跳跃和碰撞，再让 AI 帮你拆解下一步。",
+          "x": 227.5,
+          "y": 284.296875,
+          "w": 630,
+          "h": 99
+        },
+        {
+          "className": "markdown",
+          "tag": "DIV",
+          "text": "\n先让一个角色动起来\n00:00 · 创建角色与场景　 02:14 · 移动与跳跃　 05:32 · 平台碰撞\n从一个小场景开始：左右移动、按空格跳跃、落回平台",
+          "x": 227.5,
+          "y": 404.296875,
+          "w": 630,
+          "h": 601.7265625
+        },
+        {
+          "className": "",
+          "tag": "IMG",
+          "text": "",
+          "x": 227.5,
+          "y": 404.296875,
+          "w": 630,
+          "h": 225.75
+        }
+      ]
+    },
+    {
+      "language": "zh-CN",
+      "scene": "reading-original",
+      "file": "reading-original-zh-CN.png",
+      "width": 2200,
+      "height": 1520,
+      "sha256": "c59f7134c9e7fc90b5ae3cae6bcd51dd8b109320b01ad019f98d093b2a7d234e",
+      "visibleHanAudit": null,
+      "devicePixelRatio": 1,
+      "overflow": 0,
+      "modal": [
+        {
+          "x": 130,
+          "y": 24,
+          "w": 840,
+          "h": 712
+        }
+      ],
+      "elements": [
+        {
+          "className": "",
+          "tag": "H1",
+          "text": "用 AI 做第一个像素小游戏",
+          "x": 227.5,
+          "y": 165,
+          "w": 630,
+          "h": 40.296875
+        },
+        {
+          "className": "reader-toolbar",
+          "tag": "DIV",
+          "text": "阅读版本原文处理状态",
+          "x": 227.5,
+          "y": 229.296875,
+          "w": 630,
+          "h": 31
+        },
+        {
+          "className": "markdown",
+          "tag": "DIV",
+          "text": "\nMake one character move\n00:00 · Set up the scene　 02:14 · Move and jump　 05:32 ",
+          "x": 227.5,
+          "y": 284.296875,
+          "w": 630,
+          "h": 601.7265625
+        },
+        {
+          "className": "",
+          "tag": "IMG",
+          "text": "",
+          "x": 227.5,
+          "y": 284.296875,
+          "w": 630,
+          "h": 225.75
+        }
+      ]
+    },
+    {
+      "language": "zh-CN",
+      "scene": "reading-code",
+      "file": "reading-code-zh-CN.png",
+      "width": 2200,
+      "height": 1520,
+      "sha256": "b970baa968b3eef86b04a19182b462bc4e44d09edbd2b1d51bb5f8c7769a0dac",
+      "visibleHanAudit": null,
+      "devicePixelRatio": 1,
+      "overflow": 0,
+      "modal": [
+        {
+          "x": 130,
+          "y": 24,
+          "w": 840,
+          "h": 712
+        }
+      ],
+      "elements": [
+        {
+          "className": "",
+          "tag": "H1",
+          "text": "用 AI 做第一个像素小游戏",
+          "x": 227.5,
+          "y": -182.5,
+          "w": 630,
+          "h": 40.296875
+        },
+        {
+          "className": "reader-toolbar",
+          "tag": "DIV",
+          "text": "阅读版本原文处理状态",
+          "x": 227.5,
+          "y": -118.203125,
+          "w": 630,
+          "h": 31
+        },
+        {
+          "className": "reader-introduction",
+          "tag": "P",
+          "text": "先做一个角色、一块平台和一次跳跃。跟着示例教程，逐步理解移动、跳跃和碰撞，再让 AI 帮你拆解下一步。",
+          "x": 227.5,
+          "y": -63.203125,
+          "w": 630,
+          "h": 99
+        },
+        {
+          "className": "markdown",
+          "tag": "DIV",
+          "text": "\n先让一个角色动起来\n00:00 · 创建角色与场景　 02:14 · 移动与跳跃　 05:32 · 平台碰撞\n从一个小场景开始：左右移动、按空格跳跃、落回平台",
+          "x": 227.5,
+          "y": 56.796875,
+          "w": 630,
+          "h": 601.7265625
+        },
+        {
+          "className": "",
+          "tag": "IMG",
+          "text": "",
+          "x": 227.5,
+          "y": 56.796875,
+          "w": 630,
+          "h": 225.75
+        }
+      ]
+    },
+    {
+      "language": "en",
+      "scene": "topics",
+      "file": "topics-en.png",
+      "width": 2200,
+      "height": 1520,
+      "sha256": "f83c957ac748b41b1ad2c616323cf43acc9b03678a7735636a86b577cfba66dd",
+      "visibleHanAudit": {
+        "allowed": [
+          "点",
+          "中"
+        ],
+        "identityExceptions": [
+          {
+            "text": "点",
+            "selector": ".avatar.diandian",
+            "meaning": "Diandian avatar"
+          },
+          {
+            "text": "中",
+            "selector": ".avatar.diandian .avatar-language",
+            "meaning": "Chinese-speaking expert language badge"
+          }
+        ],
+        "forbidden": []
+      },
+      "devicePixelRatio": 1,
+      "overflow": 0,
+      "modal": [],
+      "elements": []
+    },
+    {
+      "language": "en",
+      "scene": "topic",
+      "file": "topic-en.png",
+      "width": 2200,
+      "height": 1520,
+      "sha256": "00efe78631af1b8ce1ab2ac15c0bdaf4575a33d848e39060a5e3abef779732aa",
+      "visibleHanAudit": {
+        "allowed": [
+          "点",
+          "中"
+        ],
+        "identityExceptions": [
+          {
+            "text": "点",
+            "selector": ".avatar.diandian",
+            "meaning": "Diandian avatar"
+          },
+          {
+            "text": "中",
+            "selector": ".avatar.diandian .avatar-language",
+            "meaning": "Chinese-speaking expert language badge"
+          }
+        ],
+        "forbidden": []
+      },
+      "devicePixelRatio": 1,
+      "overflow": 0,
+      "modal": [
+        {
+          "x": 80,
+          "y": 24,
+          "w": 940,
+          "h": 712
+        }
+      ],
+      "elements": [
+        {
+          "className": "full-reply",
+          "tag": "ARTICLE",
+          "text": "✦enGemini · YouTube · EnglishYouTube · Oct 20 · 05:20 PMReading versionOriginalS",
+          "x": 121,
+          "y": 293.75,
+          "w": 843,
+          "h": 450.078125
+        },
+        {
+          "className": "source-tile ",
+          "tag": "DIV",
+          "text": "Your first pixel game with AIFictional demo source · Placeholder linkCollect",
+          "x": 217,
+          "y": 652.8359375,
+          "w": 747,
+          "h": 60.9921875
+        },
+        {
+          "className": "full-reply",
+          "tag": "ARTICLE",
+          "text": "GenGrok · EnglishX · Oct 20 · 05:20 PMReading versionOriginalSubmitted questionB",
+          "x": 121,
+          "y": 743.828125,
+          "w": 843,
+          "h": 450.078125
+        },
+        {
+          "className": "source-tile ",
+          "tag": "DIV",
+          "text": "One character is enough to beginFictional demo source · Placeholder linkCollect",
+          "x": 217,
+          "y": 1102.9140625,
+          "w": 747,
+          "h": 60.9921875
+        },
+        {
+          "className": "full-reply",
+          "tag": "ARTICLE",
+          "text": "点中Diandian · ChineseXiaohongshu · Oct 20 · 05:20 PMReading versionOriginalSubmit",
+          "x": 121,
+          "y": 1193.90625,
+          "w": 843,
+          "h": 450.078125
+        },
+        {
+          "className": "source-tile ",
+          "tag": "DIV",
+          "text": "A first 16×16 pixel characterFictional demo source · Placeholder linkCollect",
+          "x": 217,
+          "y": 1552.9921875,
+          "w": 747,
+          "h": 60.9921875
+        },
+        {
+          "className": "full-reply",
+          "tag": "ARTICLE",
+          "text": "RenReddit AI · EnglishReddit · Oct 20 · 05:20 PMReading versionOriginalSubmitted",
+          "x": 121,
+          "y": 1643.984375,
+          "w": 843,
+          "h": 419.828125
+        },
+        {
+          "className": "source-tile ",
+          "tag": "DIV",
+          "text": "For your first game, finish one roomFictional demo source · Placeholder linkColl",
+          "x": 217,
+          "y": 1973.8203125,
+          "w": 747,
+          "h": 60.9921875
+        }
+      ]
+    },
+    {
+      "language": "en",
+      "scene": "topic-source",
+      "file": "topic-source-en.png",
+      "width": 2200,
+      "height": 1520,
+      "sha256": "1e0880f71598f70f356ad3d176e740b961f492d9edd0307718b4c018900cfc6c",
+      "visibleHanAudit": {
+        "allowed": [
+          "点",
+          "中"
+        ],
+        "identityExceptions": [
+          {
+            "text": "点",
+            "selector": ".avatar.diandian",
+            "meaning": "Diandian avatar"
+          },
+          {
+            "text": "中",
+            "selector": ".avatar.diandian .avatar-language",
+            "meaning": "Chinese-speaking expert language badge"
+          }
+        ],
+        "forbidden": []
+      },
+      "devicePixelRatio": 1,
+      "overflow": 0,
+      "modal": [
+        {
+          "x": 80,
+          "y": 24,
+          "w": 940,
+          "h": 712
+        }
+      ],
+      "elements": [
+        {
+          "className": "full-reply",
+          "tag": "ARTICLE",
+          "text": "✦enGemini · YouTube · EnglishYouTube · Oct 20 · 05:20 PMReading versionOriginalS",
+          "x": 121,
+          "y": 284.75,
+          "w": 843,
+          "h": 450.078125
+        },
+        {
+          "className": "source-tile ",
+          "tag": "DIV",
+          "text": "Your first pixel game with AIFictional demo source · Placeholder linkCollect",
+          "x": 217,
+          "y": 643.8359375,
+          "w": 747,
+          "h": 60.9921875
+        },
+        {
+          "className": "full-reply",
+          "tag": "ARTICLE",
+          "text": "GenGrok · EnglishX · Oct 20 · 05:20 PMReading versionOriginalSubmitted questionB",
+          "x": 121,
+          "y": 734.828125,
+          "w": 843,
+          "h": 450.078125
+        },
+        {
+          "className": "source-tile ",
+          "tag": "DIV",
+          "text": "One character is enough to beginFictional demo source · Placeholder linkCollect",
+          "x": 217,
+          "y": 1093.9140625,
+          "w": 747,
+          "h": 60.9921875
+        },
+        {
+          "className": "full-reply",
+          "tag": "ARTICLE",
+          "text": "点中Diandian · ChineseXiaohongshu · Oct 20 · 05:20 PMReading versionOriginalSubmit",
+          "x": 121,
+          "y": 1184.90625,
+          "w": 843,
+          "h": 450.078125
+        },
+        {
+          "className": "source-tile ",
+          "tag": "DIV",
+          "text": "A first 16×16 pixel characterFictional demo source · Placeholder linkCollect",
+          "x": 217,
+          "y": 1543.9921875,
+          "w": 747,
+          "h": 60.9921875
+        },
+        {
+          "className": "full-reply",
+          "tag": "ARTICLE",
+          "text": "RenReddit AI · EnglishReddit · Oct 20 · 05:20 PMReading versionOriginalSubmitted",
+          "x": 121,
+          "y": 1634.984375,
+          "w": 843,
+          "h": 419.828125
+        },
+        {
+          "className": "source-tile ",
+          "tag": "DIV",
+          "text": "For your first game, finish one roomFictional demo source · Placeholder linkColl",
+          "x": 217,
+          "y": 1964.8203125,
+          "w": 747,
+          "h": 60.9921875
+        }
+      ]
+    },
+    {
+      "language": "en",
+      "scene": "reading",
+      "file": "reading-en.png",
+      "width": 2200,
+      "height": 1520,
+      "sha256": "30c0b6a496b473f29701a8488087fcbff7edccc6e3a1d3d2e9069e6e3746fe36",
+      "visibleHanAudit": {
+        "allowed": [],
+        "identityExceptions": [],
+        "forbidden": []
+      },
+      "devicePixelRatio": 1,
+      "overflow": 0,
+      "modal": [
+        {
+          "x": 130,
+          "y": 24,
+          "w": 840,
+          "h": 712
+        }
+      ],
+      "elements": [
+        {
+          "className": "",
+          "tag": "H1",
+          "text": "Your first pixel game with AI",
+          "x": 227.5,
+          "y": 163,
+          "w": 630,
+          "h": 40.296875
+        },
+        {
+          "className": "reader-toolbar",
+          "tag": "DIV",
+          "text": "Reading versionOriginalProcessing status",
+          "x": 227.5,
+          "y": 227.296875,
+          "w": 630,
+          "h": 29
+        },
+        {
+          "className": "reader-introduction",
+          "tag": "P",
+          "text": "Start with one character, one platform, and one jump. Follow a sample tutorial t",
+          "x": 227.5,
+          "y": 280.296875,
+          "w": 630,
+          "h": 99
+        },
+        {
+          "className": "markdown",
+          "tag": "DIV",
+          "text": "\nMake one character move\n00:00 · Set up the scene　 02:14 · Move and jump　 05:32 ",
+          "x": 227.5,
+          "y": 400.296875,
+          "w": 630,
+          "h": 601.7265625
+        },
+        {
+          "className": "",
+          "tag": "IMG",
+          "text": "",
+          "x": 227.5,
+          "y": 400.296875,
+          "w": 630,
+          "h": 225.75
+        }
+      ]
+    },
+    {
+      "language": "en",
+      "scene": "reading-original",
+      "file": "reading-original-en.png",
+      "width": 2200,
+      "height": 1520,
+      "sha256": "ad88c8087ed2b2e3c09645cb51ae896cdb6974825398a80d71878a5f8c16b1cd",
+      "visibleHanAudit": {
+        "allowed": [],
+        "identityExceptions": [],
+        "forbidden": []
+      },
+      "devicePixelRatio": 1,
+      "overflow": 0,
+      "modal": [
+        {
+          "x": 130,
+          "y": 24,
+          "w": 840,
+          "h": 712
+        }
+      ],
+      "elements": [
+        {
+          "className": "",
+          "tag": "H1",
+          "text": "Your first pixel game with AI",
+          "x": 227.5,
+          "y": 163,
+          "w": 630,
+          "h": 40.296875
+        },
+        {
+          "className": "reader-toolbar",
+          "tag": "DIV",
+          "text": "Reading versionOriginalProcessing status",
+          "x": 227.5,
+          "y": 227.296875,
+          "w": 630,
+          "h": 29
+        },
+        {
+          "className": "markdown",
+          "tag": "DIV",
+          "text": "\nMake one character move\n00:00 · Set up the scene　 02:14 · Move and jump　 05:32 ",
+          "x": 227.5,
+          "y": 280.296875,
+          "w": 630,
+          "h": 601.7265625
+        },
+        {
+          "className": "",
+          "tag": "IMG",
+          "text": "",
+          "x": 227.5,
+          "y": 280.296875,
+          "w": 630,
+          "h": 225.75
+        }
+      ]
+    },
+    {
+      "language": "en",
+      "scene": "reading-code",
+      "file": "reading-code-en.png",
+      "width": 2200,
+      "height": 1520,
+      "sha256": "4ded73ba82ff3a279f9256f9bbf6420c2d2058494c39ce8d18b12cc222ee9841",
+      "visibleHanAudit": {
+        "allowed": [],
+        "identityExceptions": [],
+        "forbidden": []
+      },
+      "devicePixelRatio": 1,
+      "overflow": 0,
+      "modal": [
+        {
+          "x": 130,
+          "y": 24,
+          "w": 840,
+          "h": 712
+        }
+      ],
+      "elements": [
+        {
+          "className": "",
+          "tag": "H1",
+          "text": "Your first pixel game with AI",
+          "x": 227.5,
+          "y": -180.5,
+          "w": 630,
+          "h": 40.296875
+        },
+        {
+          "className": "reader-toolbar",
+          "tag": "DIV",
+          "text": "Reading versionOriginalProcessing status",
+          "x": 227.5,
+          "y": -116.203125,
+          "w": 630,
+          "h": 29
+        },
+        {
+          "className": "reader-introduction",
+          "tag": "P",
+          "text": "Start with one character, one platform, and one jump. Follow a sample tutorial t",
+          "x": 227.5,
+          "y": -63.203125,
+          "w": 630,
+          "h": 99
+        },
+        {
+          "className": "markdown",
+          "tag": "DIV",
+          "text": "\nMake one character move\n00:00 · Set up the scene　 02:14 · Move and jump　 05:32 ",
+          "x": 227.5,
+          "y": 56.796875,
+          "w": 630,
+          "h": 601.7265625
+        },
+        {
+          "className": "",
+          "tag": "IMG",
+          "text": "",
+          "x": 227.5,
+          "y": 56.796875,
+          "w": 630,
+          "h": 225.75
+        }
+      ]
+    }
+  ]
+}
