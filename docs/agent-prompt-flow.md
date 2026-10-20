@@ -21,6 +21,8 @@ Main prepares the question outside the bridge. It translates into the expert lan
 - Chinese: `请基于本平台的相关帖子回答，并附原帖链接。`
 - English: `Answer using relevant posts on this platform and include links to the original posts.`
 
+[The proposed source profiles](platform-expansion-design.md#one-preparation-flow-source-specific-sentences) replace this shared sentence with a localized sentence for the expert's source type. Gemini/YouTube and Reddit retain the same browser system and explicit Skill loading.
+
 The bridge task contains that exact text and the output schema. The platform Skill supplies its fixed AI entry address and interaction guide. Main saves a captured stable answer before acknowledging the same session's citation phase. Browser captures provide the original answer bytes. Formatting and translation produce a separately saved reading version.
 
 ## Explicit Skill and tool loading

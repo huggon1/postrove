@@ -6,6 +6,8 @@ Postrove is a local Electron application. Main owns configuration, scheduling, p
 
 ![System architecture](architecture/overview.svg)
 
+The diagram includes the proposed Gemini/YouTube, Reddit AI, source-profile, and transcript-reader extension. [Platform expansion design](platform-expansion-design.md) owns those additions and their acceptance gates. The runtime description below covers the current X/Grok and Xiaohongshu/点点 implementation.
+
 ## Runtime boundaries and data ownership
 
 | Layer | Responsibility |

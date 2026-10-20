@@ -3,7 +3,6 @@ import {
   ArrowRight,
   BookmarkSimple,
   ChatCircle,
-  ChatTeardropDots,
   Check,
   Clock,
   GearSix,
@@ -189,8 +188,8 @@ export function App() {
             aria-label={t("Postrove 话题首页")}
             onClick={() => setPage("topics")}
           >
-            <span className="brand-symbol">
-              <ChatTeardropDots weight="fill" />
+            <span className="brand-symbol" aria-hidden="true">
+              <img src="../assets/postrove-mark.svg" alt="" />
             </span>
             <span>
               postrove<span className="brand-dot">.</span>

@@ -143,10 +143,9 @@ label {
   width: 34px;
   display: grid;
   place-items: center;
-  color: var(--accent);
-  transform: rotate(-9deg);
 }
-.brand-symbol svg {
+.brand-symbol img {
+  display: block;
   width: 33px;
   height: 33px;
 }
@@ -1315,7 +1314,7 @@ label {
     font-size: 25px;
     gap: 7px;
   }
-  .brand-symbol svg {
+  .brand-symbol img {
     width: 30px;
     height: 30px;
   }

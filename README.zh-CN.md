@@ -12,9 +12,20 @@ Postrove 是一款桌面应用，通过各平台自身的 AI 查找相关帖子�
 
 发起一个话题，选择本次回答的成员。各成员独立回答，并附上平台帖子和来源。打开话题后，可以阅读回复、查看成员回执，按单条、选中或全部收集来源。
 
+| 内容平台 | 平台 AI | 登录站点 | 提问语言 | 状态 |
+| --- | --- | --- | --- | --- |
+| X | Grok | X | 中文、英文 | 已接入 |
+| 小红书 | 点点 | 小红书 | 中文 | 已接入 |
+| YouTube | Gemini | Gemini Apps，使用 Google 账号 | 中文、英文 | 待接入 |
+| Reddit | Reddit AI 搜索（Ask） | Reddit | 英文 | 待接入 |
+
 同一次平台登录可以启用多位语言专家。Grok 中文和英文共用 X 连接，点点在小红书使用中文。应用按专家语言准备提问，按阅读语言生成阅读版本，并保留原文。
 
+扩展设计中，每组“内容平台 × 平台 AI”拥有独立的顾问路线，分别启用语言专家并生成独立回复。未来用 Gemini 获取其他平台内容时，各条路线可以共用 Gemini 登录。
+
 定时发送可以每天或每周发送已保存的问题。应用运行时，每次发送创建一个新话题。
+
+待接入项遵循[平台扩展设计](docs/platform-expansion-design.md)，完成实现和真实账号验收后开放。
 
 ### 收集内容，稍后阅读
 
@@ -22,14 +33,20 @@ Postrove 是一款桌面应用，通过各平台自身的 AI 查找相关帖子�
 
 比如看到一篇很长的技术文章，想留到以后读，可以把链接转发给配置好的 Telegram 或飞书应用机器人。Postrove 会读取内容并生成摘要，之后你就可以在应用中先看摘要，再阅读正文。链接也可以直接在应用中添加。
 
-| 来源 | 解析目标 | 能力说明 |
-| --- | --- | --- |
-| 通用网页 | 正文、图片及直接引用材料 | 基础浏览器读取 |
-| X 帖子 | 正文、图片、引用帖子及作者提供的材料链接 | 基础浏览器读取，配合内置 X 阅读 Skill |
-| 小红书笔记 | 笔记文字和图片 | 基础浏览器读取与内置阅读 Skill；macOS 安装包自带 `xiaohongshu-mcp`，增强笔记读取 |
-| GitHub 仓库 | 默认 README | 基础浏览器读取，配合内置 GitHub 阅读 Skill |
+读取规则明确要采集的内容。Agent 按实际页面加载对应 Skill。其他页面使用通用网页规则，由 Agent 识别正文并选择读取方式。
 
-平台访问权限和登录状态决定实际读取范围。部分读取成功时，应用保留已获取的内容，并显示读取范围。
+| 页面 | 需要登录 | 读取范围 | Skill / 读取工具 | 状态 |
+| --- | --- | --- | --- | --- |
+| X 帖子 | 是，登录 X | 正文、按顺序排列的图片、引用帖子及作者提供的材料链接 | [x-reading](src/platforms/browser/skills/x-reading/SKILL.md) | 已接入 |
+| 小红书笔记 | 是，登录小红书 | 笔记标题、正文和按顺序排列的图片轮播 | [xiaohongshu-reading](src/platforms/browser/skills/xiaohongshu-reading/SKILL.md)；可用时调用 `read_xiaohongshu` | 已接入 |
+| GitHub 公开仓库 | 否 | 默认 README，包含代码、表格、图片和链接 | [github-reading](src/platforms/browser/skills/github-reading/SKILL.md) | 已接入 |
+| YouTube 公开视频 | 否 | 视频信息、公开字幕及时间点链接 | 优先调用 `read_youtube_transcript`，失败后通过 `youtube-reading` 尝试网页字幕 | 待接入 |
+| Reddit 公开帖子或评论 | 否 | 帖子正文，或选中评论及其父帖和必要的上级评论 | `reddit-reading` | 待接入 |
+| 其他网页 | 按网站要求 | 可访问的正文、图片、嵌入页面及直接引用材料 | [web-reading](src/platforms/browser/skills/web-reading/SKILL.md) | 已接入 |
+
+Skill 约定读取范围，工具提供对应来源的获取方式。macOS 安装包自带 `xiaohongshu-mcp`，供笔记读取工具使用。YouTube 和 Reddit 的读取流程见[平台扩展设计](docs/platform-expansion-design.md)。
+
+在成员管理中登录 X 或小红书后，提问和内容读取共用该账号。部分读取成功时，应用保留已获取的内容，并显示读取范围。
 
 ## 架构
 

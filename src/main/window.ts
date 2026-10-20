@@ -1,6 +1,7 @@
 import { buildIdentity } from "../shared/build-identity";
 import { BrowserWindow } from "electron";
 import { join } from "node:path";
+export const applicationIcon = join(__dirname, "../assets/postrove.png");
 export function createWindow(mode = "installed") {
   const window = new BrowserWindow({
     width: 1100,
@@ -12,7 +13,7 @@ export function createWindow(mode = "installed") {
       mode === "installed"
         ? "Postrove"
         : `Postrove · ${mode} · ${buildIdentity.revision.slice(0, 8) + (buildIdentity.dirty ? " dirty" : "")} · ${process.env.POSTROVE_TEST_DATA}`,
-    icon: join(__dirname, "../assets/postrove.png"),
+    icon: applicationIcon,
     webPreferences: {
       preload: join(__dirname, "preload.cjs"),
       nodeIntegration: false,

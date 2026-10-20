@@ -36,6 +36,10 @@ npm run package:app
 
 Packaging clears generated `release/` output, rebuilds the app and icon, and writes ARM64 DMG, ZIP, update manifests, blockmaps, and checksums. The cleanup also retires the obsolete bird-search runtime.
 
+## Application artwork
+
+[`assets/postrove-icon.svg`](../assets/postrove-icon.svg) supplies the README, window, Dock, favicon, and package icon. [`assets/postrove-mark.svg`](../assets/postrove-mark.svg) supplies the compact workspace mark. `npm run build` copies both SVGs and renders `dist/assets/postrove.png`; `npm run build:icon` renders `build/postrove.icns` for macOS packaging.
+
 ## Prepare a review profile
 
 ```sh

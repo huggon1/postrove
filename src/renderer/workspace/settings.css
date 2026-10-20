@@ -9,9 +9,6 @@
   color: #3963ab;
   background: #e9effa;
 }
-.brand-symbol {
-  color: #426fe1;
-}
 .page.one-column:has(.settings-layout) {
   max-width: 1150px;
 }
