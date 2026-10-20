@@ -1,3 +1,4 @@
+import type { PlatformConnectionId } from "./advisor-contracts";
 import type {
   BotChannel,
   BotCredentialsByChannel,
@@ -83,6 +84,11 @@ export const modelChannels = {
   refresh: "model:refresh",
   check: "model:check",
   cancelCheck: "model:cancelCheck",
+} as const;
+export const platformConnectionChannels = {
+  status: "platform-connection:status",
+  login: "platform-connection:login",
+  logout: "platform-connection:logout",
 } as const;
 export const xChannels = {
   status: "x:status",
@@ -198,6 +204,11 @@ export interface DesktopBridge {
   refreshModels(): Promise<ModelReply<void>>;
   checkModel(): Promise<ModelReply<void>>;
   cancelModelCheck(): Promise<ModelReply<void>>;
+  platformStatus(
+    id: PlatformConnectionId,
+  ): Promise<ModelReply<{ signedIn: boolean; installed: boolean }>>;
+  loginPlatform(id: PlatformConnectionId): Promise<ModelReply<void>>;
+  logoutPlatform(id: PlatformConnectionId): Promise<ModelReply<void>>;
   xStatus(): Promise<ModelReply<{ signedIn: boolean }>>;
   loginX(): Promise<ModelReply<void>>;
   logoutX(): Promise<ModelReply<void>>;

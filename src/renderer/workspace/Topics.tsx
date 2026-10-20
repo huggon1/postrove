@@ -1,3 +1,4 @@
+import { sourceProfiles } from "../../shared/source-profiles";
 import { useState } from "react";
 import {
   ArrowRight,
@@ -618,7 +619,7 @@ export function TopicThread({
               <div>
                 <strong>{advisorName(sectionAdvisor(section))}</strong>
                 <span>
-                  {section.platform === "x" ? "X" : t("小红书")}
+                  {t(sourceProfiles[section.platform].name)}
                   {section.finishedAt && (
                     <>
                       {" "}

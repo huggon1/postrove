@@ -8,13 +8,15 @@ The top navigation contains Topics, Reading, and Scheduled messages. Settings an
 
 The composer sends the question to its selected enabled members. An HTTPS link opens Add link. Source collection offers individual, selected, and all-source actions. Selecting a collected source opens its reading record. AI members produce independent replies to the original question.
 
+On Windows, closing the final window shuts down services and exits the application; minimizing keeps it running. On macOS, closing a window keeps the application running, and the Dock reopens the workspace.
+
 ## Members and language
 
-One platform connection owns a shared browser session. Its language switches enable individual members. X offers Grok in Chinese and English; Xiaohongshu offers 点点 in Chinese. Members opens platform connection cards, a focused sign-in step, login verification, language selection, and sign-out confirmation.
+A website connection owns its shared browser session. Each source-platform/AI route enables its own language experts. X/Grok and YouTube/Gemini offer Chinese and English; Xiaohongshu/点点 offers Chinese; Reddit AI offers English. Gemini routes share Google sign-in. Reddit supports guest questions and optional sign-in. Members opens platform connection cards, a focused sign-in step, login verification, language selection, and sign-out confirmation.
 
 Interface language controls application labels. Expert language controls the exact question sent to the platform AI. Reading language controls prepared replies and collected material; its default follows the interface language. Main freezes the resolved reading language when accepting a run. Saved content keeps its original language after preference changes.
 
-Main translates the question into the expert language and appends one sentence requesting platform posts and original links. Each expert opens a fresh conversation. The application saves the exact submitted question and captured answer. Formatting and translation create a separate reading version. The reader can switch between reading and original versions and inspect the actual question.
+Main translates the question into the expert language and appends one source-profile sentence requesting original posts, comments, or YouTube videos and their links. Each expert opens a fresh conversation. The application saves the exact submitted question and captured answer. Formatting and translation create a separate reading version. The reader can switch between reading and original versions and inspect the actual question.
 
 ## Replies, receipts, and recovery
 
@@ -34,7 +36,7 @@ Member changes update future recipient sets. A schedule with zero enabled recipi
 
 Reading contains saved and partial materials. Add link accepts HTTPS addresses. Telegram and Feishu authorized messages enter the same collection pipeline. Main saves the accepted message identity before acknowledging intake. Repeated message identities reuse their queue entry.
 
-Collection captures the main text, images, and one level of direct references. GitHub collection targets the default README. Materials keep their individual sources, coverage, translated chunks, introductions, and issues. The reader offers a material selector, original/reading versions, source navigation, progress, Stop, retry, result files, and native logs. Markdown preserves links, code, images, and diagrams.
+Collection captures the main text, images, and one level of direct references. The capture Agent loads the source's reading Skill and chooses available tools and page controls for its scope. GitHub collection targets the default README. YouTube collection uses original captions, metadata, and creator-supplied materials, with timestamp links retaining video identity. Reddit collection reads the selected post or comment with its required context. Materials keep their individual sources, coverage, translated chunks, introductions, and issues. The reader offers a material selector, original/reading versions, source navigation, progress, Stop, retry, result files, and native logs. Markdown preserves links, code, images, and diagrams.
 
 Telegram settings has a collapsed connection card and a focused setup drawer: verified Token, discovered-chat authorization, then reading access. Feishu uses scan-to-create or existing App ID/Secret, application permissions, discovered direct-chat authorization, and account management. Credential replacement verifies the new account before commit. Revocation affects later intake while preserving accepted records. Review profiles start bot receiving paused. [Bot contracts](data-contracts.md#shared-bot-receipts-and-feishu-accounts) own deduplication and history recovery.
 
@@ -52,6 +54,6 @@ Deleting a topic or reading record changes visibility and offers Undo for eight 
 
 ## Application updates
 
-Installed macOS builds check GitHub Releases after startup and every six hours. About shows version, check state, release notes, download, cancellation, and installation. Source builds show the installed-build requirement. Download requires a user action.
+Installed macOS and Windows builds check GitHub Releases after startup and every six hours. About shows version, check state, release notes, download, cancellation, and installation. Source builds show the installed-build requirement. Download requires a user action.
 
 Install and Restart waits for active work after confirmation, holds admission in both queues, validates the package, and shuts down services. A failure resumes admission. Cancelling the wait resumes queued work. Restart opens the same profile, preserves accepted records, and resumes queued work. [Release preparation](development.md#release-preparation) owns signing and package acceptance.

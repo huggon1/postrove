@@ -18,7 +18,12 @@ import { selectLanguage, t } from "../i18n";
 import { Avatar } from "./ui";
 import { SectionHeading } from "./forms";
 import { usePlatformStatus } from "./use-platform-status";
-import { advisors } from "../../shared/advisor-contracts";
+import {
+  advisors,
+  advisorById,
+  allowsGuest,
+  platformConnections,
+} from "../../shared/advisor-contracts";
 import type { Workspace } from "./use-workspace";
 import type { ReactNode } from "react";
 
@@ -113,7 +118,11 @@ export function Settings({
           <>
             <SectionHeading title={t("AI 成员")} />
             <div className="settings-members">
-              {[advisors[0], advisors[2]]
+              {platformConnections
+                .map((connection) => ({
+                  ...advisorById(connection.advisorId),
+                  source: connection.source,
+                }))
                 .filter(
                   (connection) =>
                     platformStatus[connection.connectionId]?.signedIn ||
@@ -130,12 +139,8 @@ export function Settings({
                   >
                     <Avatar id={connection.id} languageBadge={false} />
                     <span>
-                      <strong>
-                        {connection.platform === "x" ? "Grok" : t("点点")}
-                      </strong>
-                      <small>
-                        {connection.platform === "x" ? "X" : t("小红书")}
-                      </small>
+                      <strong>{t(connection.name)}</strong>
+                      <small>{t(connection.source)}</small>
                       <span className="settings-expert-tags">
                         {advisors
                           .filter(
@@ -162,7 +167,9 @@ export function Settings({
                       {t(
                         platformStatus[connection.connectionId]?.signedIn
                           ? "已连接"
-                          : "待连接",
+                          : allowsGuest(connection.connectionId)
+                            ? "可使用"
+                            : "待连接",
                       )}
                     </span>
                     <CaretRight />

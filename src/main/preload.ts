@@ -9,12 +9,19 @@ import {
   forwardingChannels,
   telegramChannels,
   modelChannels,
+  platformConnectionChannels,
   xChannels,
   xhsChannels,
   type DesktopBridge,
 } from "../shared/ipc-contracts";
 
 const bridge: DesktopBridge = {
+  platformStatus: (id) =>
+    ipcRenderer.invoke(platformConnectionChannels.status, id),
+  loginPlatform: (id) =>
+    ipcRenderer.invoke(platformConnectionChannels.login, id),
+  logoutPlatform: (id) =>
+    ipcRenderer.invoke(platformConnectionChannels.logout, id),
   advisorSettings: () => ipcRenderer.invoke("advisors:view"),
   saveAdvisorSettings: (input) => ipcRenderer.invoke("advisors:save", input),
   cancelAdvisorRun: (taskId, sectionId) =>

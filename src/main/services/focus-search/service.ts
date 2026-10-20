@@ -1,3 +1,4 @@
+import { sourceProfiles } from "../../../shared/source-profiles";
 import type { ContentRequest } from "../../../shared/content-contracts";
 import type { ExecutionGate } from "../execution-gate";
 import { randomUUID } from "node:crypto";
@@ -16,6 +17,7 @@ import type { TaskService } from "../tasks/task-service";
 import type { ForwardingPipelineService } from "../forwarding/service";
 import {
   advisorById,
+  advisorRouteFor,
   legacyAdvisor,
   type AdvisorId,
 } from "../../../shared/advisor-contracts";
@@ -189,6 +191,7 @@ export class FocusSearchService {
       ) => Promise<string>;
       revisions?: (
         platform: SearchSection["platform"],
+        routeId?: string,
       ) => Promise<{ skillRevision: string; promptRevision: string }>;
       publish?: (report: FocusSearchReport) => Promise<unknown>;
     } = {},
@@ -501,10 +504,15 @@ export class FocusSearchService {
         runId: randomUUID(),
         advisorId: id,
         connectionId: advisor.connectionId,
+        routeId: advisorRouteFor(advisor).id,
+        sourceProfileRevision: sourceProfiles[advisor.platform].revision,
         platform: advisor.platform,
         promptLanguage: advisor.language,
         prompt: input.question,
-        ...(await this.options.revisions?.(advisor.platform)),
+        ...(await this.options.revisions?.(
+          advisor.platform,
+          advisorRouteFor(advisor).id,
+        )),
         checkpoint: { state: "prepared" },
         state: "pending",
         rawReply: "",

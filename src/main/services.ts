@@ -1,3 +1,4 @@
+import { YoutubeTranscriptReader } from "./services/youtube-transcript";
 import { FeishuService } from "./integrations/feishu/service";
 import { FeishuAdapter } from "./integrations/feishu/adapter";
 import { FeishuStore } from "./integrations/feishu/store";
@@ -34,6 +35,7 @@ import { rm } from "node:fs/promises";
 import {
   channels,
   modelChannels,
+  platformConnectionChannels,
   xChannels,
   xhsChannels,
 } from "../shared/ipc-contracts";
@@ -69,7 +71,12 @@ import { resolveRuntimeLayout } from "./services/runtime-layout";
 import { AdvisorStore } from "./storage/advisor-store";
 import { ContentService } from "./services/content-service";
 import { ResultPublisher } from "./services/result-publisher";
-import { legacyAdvisor } from "../shared/advisor-contracts";
+import {
+  advisorRoutes,
+  platformConnectionIdSchema,
+  platformConnections,
+  legacyAdvisor,
+} from "../shared/advisor-contracts";
 import { createHash } from "node:crypto";
 import { loadPlatformSkill } from "../platforms/browser/skills";
 import {
@@ -185,9 +192,14 @@ export async function initializeServices(
     () => models!.acquire(),
     join(app.getPath("userData"), "browser-traces"),
   );
+  const transcripts = new YoutubeTranscriptReader(
+    runtimeLayout.runtimeRoot,
+    join(app.getPath("userData"), "capture-evidence"),
+  );
   const results = new ResultPublisher(
     join(app.getPath("userData"), "results"),
     imageRoot,
+    transcripts.evidenceRoot,
   );
   const browserAgent = new BrowserAgent(
     browser,
@@ -228,6 +240,7 @@ export async function initializeServices(
         { config, release: async () => {} },
         taskId,
       ),
+    transcripts,
   );
 
   const platformAccess = new PlatformAccess(browserAgent, browser, imageRoot);
@@ -293,6 +306,7 @@ export async function initializeServices(
             onProgress,
             includeReferences = true,
             accessToken,
+            attemptId,
           ) =>
             platformAccess.collect(
               taskId,
@@ -303,6 +317,7 @@ export async function initializeServices(
               includeReferences,
               onProgress,
               accessToken,
+              attemptId,
             ),
         }),
   });
@@ -413,12 +428,20 @@ export async function initializeServices(
     {
       language: () => preferences.resolvedReadingLanguage,
       advisorIds: () => advisorStore.view().enabled,
-      revisions: async (platform) => ({
+      revisions: async (platform, routeId) => ({
         skillRevision:
           "sha256:" +
           createHash("sha256")
             .update(
-              await loadPlatformSkill(`${platform}-search`, "search", platform),
+              await loadPlatformSkill(
+                advisorRoutes.find(
+                  (route) =>
+                    route.id === routeId ||
+                    (!routeId && route.platform === platform),
+                )!.skill,
+                "search",
+                routeId ?? platform,
+              ),
             )
             .digest("hex"),
         promptRevision:
@@ -833,6 +856,32 @@ export async function initializeServices(
       }
     });
   stage("external_ipc");
+  for (const channel of Object.values(platformConnectionChannels))
+    handle(channel, async (event, ...args: unknown[]) => {
+      if (
+        !event.senderFrame ||
+        event.senderFrame !== event.sender.mainFrame ||
+        event.senderFrame.url !== expected ||
+        args.length !== 1
+      )
+        return { ok: false, message: "无效的请求" };
+      const id = platformConnectionIdSchema.safeParse(args[0]);
+      if (!id.success) return { ok: false, message: "无效的请求" };
+      const connection = platformConnections.find(
+        (item) => item.id === id.data,
+      )!;
+      try {
+        if (channel === platformConnectionChannels.status)
+          return { ok: true, value: await browser.status(connection.site) };
+        if (channel === platformConnectionChannels.login)
+          await browser.login(connection.site);
+        else await browser.logout(connection.site);
+        return { ok: true, value: undefined };
+      } catch {
+        return { ok: false, message: "平台登录操作未完成，请稍后重试" };
+      }
+    });
+
   for (const channel of Object.values(xChannels))
     handle(channel, async (event, ...args: unknown[]) => {
       if (

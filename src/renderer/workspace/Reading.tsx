@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { sourceProfiles } from "../../shared/source-profiles";
 import {
   ArrowUpRight,
   BookOpen,
@@ -157,11 +158,9 @@ export function ReadingLibrary({
                   <BookOpen weight="duotone" />
                 )}
                 <span className="reading-origin">
-                  {item.platform === "xiaohongshu"
-                    ? t("小红书")
-                    : item.platform === "x"
-                      ? "X"
-                      : new URL(item.sourceUrl).hostname.replace(/^www\./, "")}
+                  {item.platform === "web" || item.platform === "github"
+                    ? new URL(item.sourceUrl).hostname.replace(/^www\./, "")
+                    : t(sourceProfiles[item.platform].name)}
                 </span>
               </button>
               <div className="reading-card-body">

@@ -19,9 +19,11 @@ POSTROVE_TEST_DATA="$PWD/tmp/dev-profile" npm run dev
 
 The selected directory retains its records across launches. A separate path defaults to review mode, with bot receiving paused during preparation. Saving bot credentials starts the selected receiver for that instance.
 
-## Work with X or Xiaohongshu content
+In Windows PowerShell, set the same profile with `$env:POSTROVE_TEST_DATA = "$PWD/tmp/dev-profile"` before running `npm run dev`.
 
-Install Google Chrome and sign in through Settings. Shared Chrome retains sessions under the selected profile. `npm run setup:xhs` prepares the optional Xiaohongshu note reader; browser capture provides fallback.
+## Work with platform content
+
+Install Google Chrome and configure the platform connection in Members. Shared Chrome retains site sessions under the selected profile. Reddit supports guest use. `npm run setup:xhs` prepares the optional Xiaohongshu note reader. `npm run setup:youtube` downloads and verifies pinned yt-dlp and Deno for original YouTube captions; browser capture supplies fallback. `npm run prepare:runtime` prepares both packaged readers.
 
 ## Check types or build output
 
@@ -34,11 +36,11 @@ npm run prepare:runtime
 npm run package:app
 ```
 
-Packaging clears generated `release/` output, rebuilds the app and icon, and writes ARM64 DMG, ZIP, update manifests, blockmaps, and checksums. The cleanup also retires the obsolete bird-search runtime.
+Run `npm run package:app` on macOS Apple silicon or `npm run package:windows` on Windows x64. Packaging clears generated `release/` output and rebuilds the app and icon. macOS produces DMG, ZIP, and `latest-mac.yml`; Windows produces a per-user NSIS EXE and `latest.yml`. Both commands write blockmaps, SHA-256 checksums, and a build manifest after checking the update feed's package digest. The cleanup also retires the obsolete bird-search runtime.
 
 ## Application artwork
 
-[`assets/postrove-icon.svg`](../assets/postrove-icon.svg) supplies the README, window, Dock, favicon, and package icon. [`assets/postrove-mark.svg`](../assets/postrove-mark.svg) supplies the compact workspace mark. `npm run build` copies both SVGs and renders `dist/assets/postrove.png`; `npm run build:icon` renders `build/postrove.icns` for macOS packaging.
+[`assets/postrove-icon.svg`](../assets/postrove-icon.svg) supplies the README, window, Dock, favicon, and package icon. [`assets/postrove-mark.svg`](../assets/postrove-mark.svg) supplies the compact workspace mark. `npm run build` copies both SVGs and renders `dist/assets/postrove.png`; `npm run build:icon` renders `build/postrove.ico` and, on macOS, `build/postrove.icns` from the same artwork.
 
 ## Prepare a review profile
 
@@ -66,6 +68,8 @@ The helper's `--help` lists sample selection. `--retry-existing` exercises the r
 
 ## Release preparation
 
-After local packaging, `npm run test:package` launches the packaged executable with separate data, checks startup and restart, and saves evidence under `.tmp/package-verification/`. Options `--app` and `--output` select other package and evidence paths.
+After local packaging, `npm run test:package` launches the native packaged executable with separate data, checks startup, enabled updates, and retained language and schedules after restart. It saves evidence under `.tmp/package-verification/`. Options `--app`, `--profile`, and `--output` select the installation, retained test data, and evidence paths.
 
-The [release guide](releasing.md) owns approval, signing, assets, and GitHub publication. Its manual verification workflow uses `npm run prepare:upgrade` to build a signed pair and `npm run test:upgrade` to verify native replacement and restart. Evidence enters `.tmp/signed-upgrade/evidence/` and workflow artifacts.
+On Windows, `npm run test:windows-installation` exercises installation, reinstallation, and uninstallation in a Unicode path. `npm run test:windows-upgrade` builds two versions, installs the baseline, and uses the production updater to download, replace, and restart the application. Evidence enters `.tmp/windows-installation/` and `.tmp/windows-upgrade/evidence/`.
+
+The [release guide](releasing.md) owns approval, signing, assets, and GitHub publication. On macOS, its workflow uses `npm run prepare:upgrade` to build a signed pair and `npm run test:upgrade` to verify native replacement and restart on a separate runner. Evidence enters `.tmp/signed-upgrade/evidence/` and workflow artifacts.

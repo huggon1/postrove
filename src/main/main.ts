@@ -83,7 +83,9 @@ if (!locked) {
   app.on("activate", () => {
     if (app.isReady()) open();
   });
-  app.on("window-all-closed", () => {});
+  app.on("window-all-closed", () => {
+    if (process.platform === "win32") app.quit();
+  });
   app.on("before-quit", (event) => {
     if (shuttingDown || !servicesReady) return;
     event.preventDefault();
@@ -118,7 +120,7 @@ if (!locked) {
         (language) => installMenu(language, open),
       );
       const driver =
-        app.isPackaged && process.platform === "darwin"
+        app.isPackaged && ["darwin", "win32"].includes(process.platform)
           ? createElectronUpdateDriver()
           : undefined;
       updates = new ApplicationUpdates({

@@ -13,6 +13,10 @@ import {
 } from "@phosphor-icons/react";
 import {
   advisors,
+  advisorById,
+  allowsGuest,
+  advisorRoutes,
+  platformConnections,
   type Advisor,
   type AdvisorId,
 } from "../../shared/advisor-contracts";
@@ -23,7 +27,10 @@ import { ConfirmDialog, Feedback, SetupSteps } from "./forms";
 import { usePlatformStatus } from "./use-platform-status";
 import type { Workspace } from "./use-workspace";
 
-const connections = [advisors[0], advisors[2]];
+const connections = platformConnections.map((connection) => ({
+  ...advisorById(connection.advisorId),
+  source: connection.source,
+}));
 export function Members({
   workspace,
   onClose,
@@ -49,20 +56,15 @@ export function Members({
     try {
       const reply =
         kind === "check"
-          ? current.platform === "x"
-            ? await bridge.xStatus()
-            : await bridge.xhsStatus()
-          : current.platform === "x"
-            ? await (kind === "login" ? bridge.loginX() : bridge.logoutX())
-            : await (kind === "login" ? bridge.loginXhs() : bridge.logoutXhs());
+          ? await bridge.platformStatus(current.connectionId)
+          : await (kind === "login"
+              ? bridge.loginPlatform(current.connectionId)
+              : bridge.logoutPlatform(current.connectionId));
       if (!reply.ok) {
         setError(reply.message);
         return false;
       }
-      const check =
-        current.platform === "x"
-          ? await bridge.xStatus()
-          : await bridge.xhsStatus();
+      const check = await bridge.platformStatus(current.connectionId);
       if (check.ok) {
         setStatus((old) => ({
           ...old,
@@ -106,44 +108,62 @@ export function Members({
     }
   }
   const choices = (connection: Advisor) => (
-    <div className="expert-picker">
-      <span className="expert-picker-label">{t("语言专家")}</span>
-      <div className="expert-options">
-        {advisors
-          .filter((advisor) => advisor.connectionId === connection.connectionId)
-          .map((advisor) => {
-            const active = workspace.members?.enabled.includes(advisor.id);
-            return (
-              <button
-                key={advisor.id}
-                type="button"
-                role="switch"
-                aria-label={advisorName(advisor.id)}
-                aria-checked={!!active}
-                disabled={
-                  busy ||
-                  (!status[connection.connectionId]?.signedIn && !active)
-                }
-                className="expert-option"
-                onClick={() =>
-                  active ? setDisabling(advisor) : void toggle(advisor)
-                }
-              >
-                <span className="expert-language-symbol">
-                  {advisor.language === "en" ? "En" : "中"}
-                </span>
-                <span>
-                  <b>
-                    {t(advisor.language === "en" ? "英文专家" : "中文专家")}
-                  </b>
-                </span>
-                <span className="expert-option-check">
-                  {active ? <Check /> : <Plus />}
-                </span>
-              </button>
-            );
-          })}
-      </div>
+    <div className="expert-route-list">
+      {advisorRoutes
+        .filter((route) => route.connectionId === connection.connectionId)
+        .map((route) => (
+          <div className="expert-picker" key={route.id}>
+            <span className="expert-picker-label">
+              {route.platform === "youtube" ? "YouTube" : t("语言专家")}
+            </span>
+            <div className="expert-options">
+              {advisors
+                .filter(
+                  (advisor) =>
+                    advisor.connectionId === connection.connectionId &&
+                    advisor.platform === route.platform,
+                )
+                .map((advisor) => {
+                  const active = workspace.members?.enabled.includes(
+                    advisor.id,
+                  );
+                  return (
+                    <button
+                      key={advisor.id}
+                      type="button"
+                      role="switch"
+                      aria-label={advisorName(advisor.id)}
+                      aria-checked={!!active}
+                      disabled={
+                        busy ||
+                        (!status[connection.connectionId]?.signedIn &&
+                          !allowsGuest(connection.connectionId) &&
+                          !active)
+                      }
+                      className="expert-option"
+                      onClick={() =>
+                        active ? setDisabling(advisor) : void toggle(advisor)
+                      }
+                    >
+                      <span className="expert-language-symbol">
+                        {advisor.language === "en" ? "En" : "中"}
+                      </span>
+                      <span>
+                        <b>
+                          {t(
+                            advisor.language === "en" ? "英文专家" : "中文专家",
+                          )}
+                        </b>
+                      </span>
+                      <span className="expert-option-check">
+                        {active ? <Check /> : <Plus />}
+                      </span>
+                    </button>
+                  );
+                })}
+            </div>
+          </div>
+        ))}
     </div>
   );
   const connected = !!current && status[current.connectionId]?.signedIn;
@@ -154,11 +174,7 @@ export function Members({
       onClose={onClose}
     >
       <ModalHeader
-        title={
-          current
-            ? `${current.platform === "x" ? "Grok" : t("点点")} · ${t("配置")}`
-            : t("我的成员")
-        }
+        title={current ? `${t(current.name)} · ${t("配置")}` : t("我的成员")}
         onClose={onClose}
         leading={
           current && (
@@ -185,8 +201,8 @@ export function Members({
               <header>
                 <Avatar id={connection.id} languageBadge={false} />
                 <div className="adapter-heading">
-                  <h3>{connection.platform === "x" ? "Grok" : t("点点")}</h3>
-                  <p>{connection.platform === "x" ? "X" : t("小红书")}</p>
+                  <h3>{t(connection.name)}</h3>
+                  <p>{t(connection.source)}</p>
                 </div>
                 <span
                   className={`connection-pill ${status[connection.connectionId]?.signedIn ? "connected" : ""}`}
@@ -195,12 +211,15 @@ export function Members({
                   {t(
                     status[connection.connectionId]?.signedIn
                       ? "已连接"
-                      : "待连接",
+                      : allowsGuest(connection.connectionId)
+                        ? "可使用"
+                        : "待连接",
                   )}
                 </span>
                 <button
                   className={
-                    status[connection.connectionId]?.signedIn
+                    status[connection.connectionId]?.signedIn ||
+                    allowsGuest(connection.connectionId)
                       ? "secondary"
                       : "primary"
                   }
@@ -210,7 +229,8 @@ export function Members({
                   }}
                 >
                   {t(
-                    status[connection.connectionId]?.signedIn
+                    status[connection.connectionId]?.signedIn ||
+                      allowsGuest(connection.connectionId)
                       ? "管理配置"
                       : "连接平台",
                   )}
@@ -223,25 +243,29 @@ export function Members({
         </div>
       ) : (
         <div className="member-detail">
-          <aside
-            className={`connection-identity ${current.platform === "x" ? "grok" : "diandian"}`}
-          >
+          <aside className={`connection-identity ${current.platform}`}>
             <Avatar id={current.id} languageBadge={false} />
-            <h3>{current.platform === "x" ? "Grok" : t("点点")}</h3>
-            <span>{current.platform === "x" ? "X" : t("小红书")}</span>
+            <h3>{t(current.name)}</h3>
+            <span>{t(current.source)}</span>
             <div className="identity-line" />
             <span className="identity-status">
               {connected ? <CheckCircle /> : <Globe />}
-              {t(connected ? "已连接" : "待连接")}
+              {t(
+                connected
+                  ? "已连接"
+                  : allowsGuest(current.connectionId)
+                    ? "可使用"
+                    : "待连接",
+              )}
             </span>
           </aside>
           <div className="member-workspace">
-            {connected ? (
+            {connected || allowsGuest(current.connectionId) ? (
               <>
                 {choices(current)}
                 <div className="role-language-route">
                   <span>
-                    <small>{t("提问语言")}</small>
+                    <small>{t("专家语言")}</small>
                     <b>
                       {advisors
                         .filter(
@@ -258,7 +282,7 @@ export function Members({
                   <ArrowRight />
                   <span>
                     <small>{t("平台")}</small>
-                    <b>{current.platform === "x" ? "Grok" : t("点点")}</b>
+                    <b>{t(current.name)}</b>
                   </span>
                   <ArrowRight />
                   <span>
@@ -344,9 +368,7 @@ export function Members({
             if (await action("logout")) setDisconnect(false);
           }}
         >
-          {current?.platform === "x"
-            ? "Grok · X"
-            : `${t("点点")} · ${t("小红书")}`}
+          {current && `${t(current.name)} · ${t(current.source)}`}
         </ConfirmDialog>
       )}
       {disabling && (

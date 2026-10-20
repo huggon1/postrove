@@ -120,11 +120,11 @@ test("language experts share a connection and freeze identity, language and exac
     assert.notEqual(report.sections[0].runId, report.sections[1].runId);
     assert.equal(
       seen[0].prompt,
-      "我的问题\n\n请基于本平台的相关帖子回答，并附原帖链接。",
+      "我的问题\n\n请基于相关 X 帖子回答，并附原帖链接。",
     );
     assert.equal(
       seen[1].prompt,
-      "My question\n\nAnswer using relevant posts on this platform and include links to the original posts.",
+      "My question\n\nAnswer using relevant X posts and include links to the original posts.",
     );
     assert.ok(
       report.sections.every(

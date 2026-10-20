@@ -9,7 +9,7 @@ export interface UiForwardingReport {
   materialId: string;
   taskId: string;
   title: string;
-  platform: "github" | "x" | "xiaohongshu" | "web";
+  platform: import("../shared/source-contracts").SourceContent["platform"];
   sourceUrl: string;
   sourceIdentity: string;
   fetchedAt: string;

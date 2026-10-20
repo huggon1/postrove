@@ -13,30 +13,38 @@ import { _electron as electron, expect } from "@playwright/test";
 
 const args = process.argv.slice(2);
 if (args.includes("--help")) {
-  console.log("Usage: npm run test:package -- [--app PATH] [--output PATH]");
+  console.log(
+    "Usage: npm run test:package -- [--app PATH] [--profile PATH] [--output PATH]",
+  );
   process.exit(0);
 }
 const options = new Map();
 for (let i = 0; i < args.length; i += 2) {
-  assert.ok(["--app", "--output"].includes(args[i]), "Unknown option");
+  assert.ok(
+    ["--app", "--profile", "--output"].includes(args[i]),
+    "Unknown option",
+  );
   assert.ok(
     args[i + 1] && !args[i + 1].startsWith("--"),
     "Option requires a path",
   );
   options.set(args[i], resolve(args[i + 1]));
 }
-assert.equal(
-  process.platform,
-  "darwin",
-  "Use a macOS runner for package verification",
+assert.ok(
+  ["darwin", "win32"].includes(process.platform),
+  "Use a native macOS or Windows runner",
 );
+const windows = process.platform === "win32";
 const appPath =
-  options.get("--app") ?? resolve("release/mac-arm64/Postrove.app");
+  options.get("--app") ??
+  resolve(windows ? "release/win-unpacked" : "release/mac-arm64/Postrove.app");
 const output = options.get("--output") ?? resolve(".tmp/package-verification");
-const resources = join(appPath, "Contents/Resources");
+const resources = join(appPath, windows ? "resources" : "Contents/Resources");
 const expected = JSON.parse(await readFile("package.json", "utf8")).version;
 await mkdir(output, { recursive: true });
-const profile = await mkdtemp(join(output, "profile-"));
+const profile =
+  options.get("--profile") ?? (await mkdtemp(join(output, "profile-")));
+await mkdir(profile, { recursive: true });
 let application,
   page,
   phase = "resources";
@@ -49,22 +57,36 @@ env.POSTROVE_TEST_DATA = profile;
 env.POSTROVE_RUN_MODE = "review";
 const launch = async () => {
   application = await electron.launch({
-    executablePath: join(appPath, "Contents/MacOS/Postrove"),
+    executablePath: join(
+      appPath,
+      windows ? "Postrove.exe" : "Contents/MacOS/Postrove",
+    ),
     args: [],
     env,
     timeout: 30000,
   });
   page = await application.firstWindow({ timeout: 30000 });
   page.on("pageerror", (error) => rendererErrors.push(error.name));
-  await expect(page.getByRole("navigation")).toBeVisible();
+  await expect(page.getByRole("navigation")).toBeVisible({ timeout: 30000 });
 };
 try {
   await access(join(resources, "app.asar"));
   await access(join(resources, "app-update.yml"));
-  await access(join(resources, ".runtime/xiaohongshu-mcp"), constants.X_OK);
+  await access(
+    join(resources, `.runtime/xiaohongshu-mcp${windows ? ".exe" : ""}`),
+    windows ? constants.F_OK : constants.X_OK,
+  );
   await access(join(resources, ".runtime/XIAOHONGSHU-LICENSE"));
+  for (const name of ["yt-dlp", "deno"])
+    await access(
+      join(resources, ".runtime/youtube", name + (windows ? ".exe" : "")),
+      windows ? constants.F_OK : constants.X_OK,
+    );
+  for (const name of ["runtime.json", "YT-DLP-LICENSE", "DENO-LICENSE"])
+    await access(join(resources, ".runtime/youtube", name));
   phase = "startup";
   await launch();
+  await page.evaluate(() => window.postrove.saveLanguage("zh-CN"));
   const identity = await application.evaluate(({ app }) => {
     const fs = process.getBuiltinModule("fs"),
       path = process.getBuiltinModule("path");
@@ -79,8 +101,13 @@ try {
     ])
       if (!fs.existsSync(path.join(root, name)))
         throw Error("Missing application resource");
-    if (fs.existsSync(path.join(root, "dist/main/update-test.cjs")))
-      throw Error("Test entry included in release package");
+    for (const name of [
+      "update-test.cjs",
+      "upgrade-trial.cjs",
+      "windows-upgrade-check.cjs",
+    ])
+      if (fs.existsSync(path.join(root, "dist/main", name)))
+        throw Error("Test entry included in release package");
     return {
       packaged: app.isPackaged,
       version: app.getVersion(),
@@ -124,6 +151,26 @@ try {
   assert.equal(updateState.ok, true);
   assert.notEqual(updateState.value.state, "disabled");
   assert.equal(updateState.value.version, expected);
+  const retained = await page.evaluate(async () => {
+    await window.postrove.saveAdvisorSettings({ enabled: ["reddit-ai-en"] });
+    const view = await window.postrove.follows();
+    if (!view.ok) throw Error("Schedule state is unavailable");
+    const existing = view.value.find(
+      (follow) => follow.name === "Package retained schedule",
+    );
+    if (existing) return { ok: true };
+    const saved = await window.postrove.saveFollow({
+      name: "Package retained schedule",
+      question: "A reading routine",
+      platforms: ["reddit"],
+      advisorIds: ["reddit-ai-en"],
+      period: "all",
+      schedule: { cadence: "daily", time: "23:59" },
+    });
+    if (!saved.ok) return saved;
+    return window.postrove.setFollowPaused(saved.value.followId, true);
+  });
+  assert.equal(retained.ok, true);
   await expect
     .poll(() =>
       updates
@@ -154,6 +201,12 @@ try {
     page.getByRole("region", { name: "Application updates", exact: true }),
   ).toContainText(`Postrove ${expected}`);
   await page.screenshot({ path: join(output, "settings-en.png") });
+  await page
+    .getByRole("button", { name: "Scheduled sends", exact: true })
+    .click();
+  await expect(
+    page.getByText("Package retained schedule", { exact: true }).first(),
+  ).toBeVisible();
   assert.deepEqual(rendererErrors, []);
   phase = "shutdown";
   await application.close();
@@ -176,6 +229,7 @@ try {
           "default headless mode",
           "app icon",
           "language persistence",
+          "schedule persistence",
           "clean shutdown",
         ],
         boundary:
@@ -219,5 +273,6 @@ try {
     ]);
     clearTimeout(timer);
   }
-  await rm(profile, { recursive: true, force: true });
+  if (!options.has("--profile"))
+    await rm(profile, { recursive: true, force: true });
 }

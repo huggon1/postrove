@@ -32,3 +32,17 @@ mac:
       arch: [arm64]
     - target: zip
       arch: [arm64]
+win:
+  artifactName: Postrove-${version}-win-${arch}.${ext}
+  icon: build/postrove.ico
+  requestedExecutionLevel: asInvoker
+  target:
+    - target: nsis
+      arch: [x64]
+nsis:
+  oneClick: false
+  perMachine: false
+  allowElevation: false
+  allowToChangeInstallationDirectory: true
+  runAfterFinish: false
+  deleteAppDataOnUninstall: false

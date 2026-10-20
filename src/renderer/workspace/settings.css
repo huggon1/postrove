@@ -311,7 +311,8 @@
   opacity: 0.48;
   cursor: default;
 }
-.member-workspace > .expert-picker {
+.member-workspace > .expert-picker,
+.member-workspace > .expert-route-list {
   margin: 25px 0 18px;
 }
 .role-language-route {
@@ -1760,4 +1761,9 @@
   .spin {
     animation: none;
   }
+}
+
+.expert-route-list {
+  display: grid;
+  gap: 18px;
 }

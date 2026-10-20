@@ -1,3 +1,5 @@
+import type { TranscriptEvidence } from "../../shared/transcript-contracts";
+import { advisorById, legacyAdvisor } from "../../shared/advisor-contracts";
 import {
   mkdir,
   readFile,
@@ -5,6 +7,7 @@ import {
   rm,
   writeFile,
   copyFile,
+  readdir,
 } from "node:fs/promises";
 import { join, basename, resolve, sep } from "node:path";
 import { randomUUID, createHash } from "node:crypto";
@@ -20,6 +23,7 @@ type Package = {
   markdown: string;
   sources: { name: string; markdown: string }[];
   status: string;
+  evidence?: TranscriptEvidence[];
   assets?: { url: string; cachedUrl?: string }[];
 };
 
@@ -33,6 +37,7 @@ export class ResultPublisher {
   constructor(
     private root: string,
     private imageRoot?: string,
+    private evidenceRoot?: string,
   ) {}
   path(kind: ResultKind, runId: string) {
     return join(this.root, kind, runId, "result.md");
@@ -49,7 +54,10 @@ export class ResultPublisher {
       `# ${report.question}\n\n${report.createdAt} · ${report.status}\n\n` +
       report.sections
         .map((section) => {
-          const name = section.platform === "x" ? "Grok" : "点点";
+          const name = advisorById(
+            section.advisorId ??
+              legacyAdvisor(section.platform, section.promptLanguage),
+          ).name;
           return (
             `## ${name} · ${section.promptLanguage}\n\n${section.readingReply || section.rawReply || section.error || section.state}\n\n` +
             (section.processingIssue
@@ -84,6 +92,8 @@ export class ResultPublisher {
             sectionId,
             advisorId,
             connectionId,
+            routeId,
+            sourceProfileRevision,
             promptLanguage,
             prompt,
             skillRevision,
@@ -93,6 +103,8 @@ export class ResultPublisher {
             sectionId,
             advisorId,
             connectionId,
+            routeId,
+            sourceProfileRevision,
             promptLanguage,
             prompt,
             skillRevision,
@@ -135,6 +147,9 @@ export class ResultPublisher {
       markdown,
       sources,
       status: task.state,
+      evidence: materials.flatMap((material) =>
+        material.source?.evidence ? [material.source.evidence] : [],
+      ),
       assets: materials.flatMap((material) => material.source?.images ?? []),
     });
   }
@@ -224,6 +239,62 @@ export class ResultPublisher {
               rebaseLinks(await localize(source.markdown), "../"),
               { mode: 0o600 },
             );
+          const readerAttempts: { videoId: string; path: string }[] = [];
+          const evidenceFiles: { path: string; sha256: string }[] = [];
+          const evidenceKeys = new Set(
+            (input.evidence ?? []).map((evidence) => evidence.artifactKey),
+          );
+          if (
+            this.evidenceRoot &&
+            input.kind === "reading" &&
+            /^[a-f0-9-]{36}$/.test(input.runId)
+          ) {
+            try {
+              for (const videoId of await readdir(
+                join(this.evidenceRoot, input.runId, "youtube"),
+              ))
+                if (/^[A-Za-z0-9_-]{11}$/.test(videoId))
+                  evidenceKeys.add(`${input.runId}/youtube/${videoId}`);
+            } catch (error) {
+              if ((error as NodeJS.ErrnoException).code !== "ENOENT")
+                throw error;
+            }
+          }
+          for (const key of evidenceKeys) {
+            if (
+              !this.evidenceRoot ||
+              !/^[a-f0-9-]{36}\/youtube\/[A-Za-z0-9_-]{11}$/.test(key)
+            )
+              continue;
+            const videoId = key.split("/")[2];
+            const source = join(this.evidenceRoot, key);
+            const target = join(staging, "evidence", "youtube", videoId);
+            await mkdir(target, { recursive: true, mode: 0o700 });
+            for (const file of [
+              "metadata.json",
+              "captions.json3",
+              "segments.json",
+              "references.json",
+              "reader-attempt.json",
+            ]) {
+              try {
+                await copyFile(join(source, file), join(target, file));
+                evidenceFiles.push({
+                  path: `evidence/youtube/${videoId}/${file}`,
+                  sha256: createHash("sha256")
+                    .update(await readFile(join(target, file)))
+                    .digest("hex"),
+                });
+              } catch (error) {
+                if ((error as NodeJS.ErrnoException).code !== "ENOENT")
+                  throw error;
+              }
+            }
+            readerAttempts.push({
+              videoId,
+              path: `evidence/youtube/${videoId}`,
+            });
+          }
           await writeFile(
             join(staging, "manifest.json"),
             JSON.stringify(
@@ -234,6 +305,32 @@ export class ResultPublisher {
                 admittedAt: input.admittedAt,
                 publishedAt: new Date().toISOString(),
                 status: input.status,
+                ...(readerAttempts.length ? { readerAttempts } : {}),
+                ...(evidenceFiles.length ? { evidenceFiles } : {}),
+                ...(input.evidence?.length
+                  ? {
+                      evidence: input.evidence.map(
+                        ({
+                          kind,
+                          captureId,
+                          videoId,
+                          language,
+                          trackKind,
+                          transcriptCoverage,
+                          visualCoverage,
+                        }) => ({
+                          kind,
+                          captureId,
+                          videoId,
+                          language,
+                          trackKind,
+                          transcriptCoverage,
+                          visualCoverage,
+                          path: `evidence/youtube/${videoId}`,
+                        }),
+                      ),
+                    }
+                  : {}),
                 sha256: createHash("sha256").update(markdown).digest("hex"),
                 resultPath: this.path(input.kind, input.runId),
               },

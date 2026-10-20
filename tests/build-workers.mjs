@@ -5,6 +5,7 @@ await build({
   define: { __POSTROVE_BUILD_IDENTITY__: JSON.stringify(identity) },
   entryPoints: {
     "browser-app": "tests/support/browser-app.ts",
+    "platform-expansion-app": "tests/support/platform-expansion-app.ts",
     "pi-model-worker": "tests/support/pi-model-worker.ts",
     "worker-network-app": "tests/support/worker-network-app.ts",
     forwarding: "tests/support/forwarding.ts",

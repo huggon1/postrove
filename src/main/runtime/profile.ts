@@ -116,7 +116,7 @@ export async function prepareProfile(
           if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
         }
       }
-      for (const folder of ["results", "material-images"]) {
+      for (const folder of ["results", "material-images", "capture-evidence"]) {
         try {
           await regularTree(join(source, folder));
           await cp(join(source, folder), join(stage, folder), {

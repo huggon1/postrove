@@ -1,3 +1,8 @@
+import { advisorRoutes } from "../../shared/advisor-contracts";
+import geminiSearch from "./skills/gemini-youtube-search/SKILL.md";
+import redditSearch from "./skills/reddit-search/SKILL.md";
+import youtubeReading from "./skills/youtube-reading/SKILL.md";
+import redditReading from "./skills/reddit-reading/SKILL.md";
 import xSearch from "./skills/x-search/SKILL.md";
 import xhsSearch from "./skills/xiaohongshu-search/SKILL.md";
 import xReading from "./skills/x-reading/SKILL.md";
@@ -28,6 +33,10 @@ function skill(
 
 const contents = [
   xSearch,
+  geminiSearch,
+  redditSearch,
+  youtubeReading,
+  redditReading,
   xhsSearch,
   xReading,
   xhsReading,
@@ -50,7 +59,10 @@ export async function platformSkillCatalog(
   return (await platformSkills())
     .filter((item) =>
       purpose === "search"
-        ? item.name === `${platform}-search`
+        ? item.name ===
+          advisorRoutes.find(
+            (route) => route.id === platform || route.platform === platform,
+          )?.skill
         : item.name.endsWith("-reading"),
     )
     .map(({ name, description }) => ({ name, description }));

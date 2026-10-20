@@ -1,5 +1,5 @@
 import type { SourceContent } from "../shared/source-contracts";
-export type Platform = "github" | "x" | "xiaohongshu" | "web";
+export type Platform = SourceContent["platform"];
 export type ReadResult = {
   taskId: string;
   platform: Platform;

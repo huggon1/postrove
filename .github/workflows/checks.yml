@@ -39,3 +39,31 @@ jobs:
             test-results/
             playwright-report/
           retention-days: 7
+  windows:
+    name: Windows x64
+    runs-on: windows-2025
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm run prepare:runtime
+      - run: npm run package:windows
+      - run: npm run test:package
+      - run: npm run test:windows-installation
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: windows-evidence
+          path: |
+            test-results/
+            playwright-report/
+            .tmp/package-verification/
+            .tmp/windows-installation/
+          if-no-files-found: warn
+          retention-days: 7

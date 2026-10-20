@@ -1,3 +1,4 @@
+import { youtubeVideo, redditPost } from "../../../shared/source-profiles";
 import type {
   BotForwardingSubmission,
   BotOrigin,
@@ -63,6 +64,7 @@ export interface ForwardingServiceDependencies {
     ) => Promise<void>,
     includeReferences?: boolean,
     accessToken?: string,
+    attemptId?: string,
   ) => Promise<ReadingMaterial[]>;
   language?: () => Language;
   publish?: (detail: ForwardingTaskDetail) => Promise<unknown>;
@@ -123,7 +125,7 @@ async function normalizeInput(rawUrl: string) {
         new URL(parsed).searchParams.get("xsec_token") ?? undefined,
     };
   return {
-    sourceUrl: parsed,
+    sourceUrl: youtubeVideo(parsed)?.url ?? redditPost(parsed)?.url ?? parsed,
     xhsAccessToken: undefined,
   };
 }
@@ -547,6 +549,7 @@ export class ForwardingPipelineService {
                   task.xhsAccessTokenCiphertext,
                 )
               : undefined,
+            task.attemptId ?? task.resultId,
           );
           if (this.active.get(taskId) !== entry || this.closed) return;
           if (
@@ -578,6 +581,7 @@ export class ForwardingPipelineService {
                       task.xhsAccessTokenCiphertext,
                     )
                   : undefined,
+                task.attemptId ?? task.resultId,
               );
               material.source = collected[0].source;
               material.state = material.source ? "pending" : "failed";

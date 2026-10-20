@@ -1,3 +1,4 @@
+import { platformConnections } from "../../shared/advisor-contracts";
 import { useEffect, useState } from "react";
 import { bridge } from "../bridge";
 import { t } from "../i18n";
@@ -12,13 +13,14 @@ export function usePlatformStatus() {
     const load = async () => {
       const current = ++revision;
       const results = await Promise.allSettled([
-        bridge.xStatus(),
-        bridge.xhsStatus(),
+        ...platformConnections.map((connection) =>
+          bridge.platformStatus(connection.id),
+        ),
       ]);
       if (!alive || revision !== current) return;
       const next: typeof status = {};
       results.forEach((result, index) => {
-        const id = index === 0 ? "x-grok" : "xiaohongshu-diandian";
+        const id = platformConnections[index].id;
         if (result.status === "fulfilled" && result.value.ok) {
           const value = result.value.value;
           next[id] = {

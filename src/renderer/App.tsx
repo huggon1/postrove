@@ -11,7 +11,8 @@ import {
   Users,
   X,
 } from "@phosphor-icons/react";
-import type { AdvisorId } from "../shared/advisor-contracts";
+import { advisorById, type AdvisorId } from "../shared/advisor-contracts";
+import { sourceProfiles } from "../shared/source-profiles";
 import type { Follow } from "../shared/focus-search-contracts";
 import type { RecordDeletion, RecordRef } from "../shared/deletion-contracts";
 import { bridge } from "./bridge";
@@ -378,16 +379,14 @@ export function App() {
                 <button
                   className="aside-person"
                   key={id}
-                  onClick={() =>
-                    openMembers(
-                      id.startsWith("x-") ? "x-grok" : "xiaohongshu-diandian",
-                    )
-                  }
+                  onClick={() => openMembers(advisorById(id).connectionId)}
                 >
                   <Avatar id={id} />
                   <span>
                     <strong>{advisorName(id)}</strong>
-                    <small>{id.startsWith("x-") ? "X" : t("小红书")}</small>
+                    <small>
+                      {t(sourceProfiles[advisorById(id).platform].name)}
+                    </small>
                   </span>
                   <span className="member-presence" />
                 </button>

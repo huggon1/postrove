@@ -1905,3 +1905,12 @@ replies and receipts are selected. */
     font-size: 12px;
   }
 }
+
+.avatar.gemini {
+  background: #e9efff;
+  color: #4875df;
+}
+.avatar.reddit {
+  background: #fff0e9;
+  color: #d55c30;
+}

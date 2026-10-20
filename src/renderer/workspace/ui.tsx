@@ -21,9 +21,15 @@ export function Avatar({
   return (
     <span
       aria-hidden="true"
-      className={`avatar ${person ? (person.platform === "x" ? "grok" : "diandian") : "me"} ${small ? "small" : ""}`}
+      className={`avatar ${person ? { x: "grok", xiaohongshu: "diandian", youtube: "gemini", reddit: "reddit" }[person.platform] : "me"} ${small ? "small" : ""}`}
     >
-      {person ? person.platform === "x" ? "G" : "点" : <User weight="fill" />}
+      {person ? (
+        { x: "G", xiaohongshu: "点", youtube: "✦", reddit: "R" }[
+          person.platform
+        ]
+      ) : (
+        <User weight="fill" />
+      )}
       {languageBadge && person && (
         <span className="avatar-language">
           {person.language === "en" ? "en" : "中"}
@@ -34,7 +40,7 @@ export function Avatar({
 }
 export function advisorName(id: AdvisorId) {
   const advisor = advisorById(id);
-  return `${advisor.platform === "x" ? "Grok" : t("点点")} · ${t(advisor.language === "en" ? "英文" : "中文")}`;
+  return `${t(advisor.name) + (advisor.platform === "youtube" ? " · YouTube" : "")} · ${t(advisor.language === "en" ? "英文" : "中文")}`;
 }
 export function IconButton({
   label,
