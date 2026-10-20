@@ -30,7 +30,13 @@ Browser access uses a shared serial lock. Search and reading enter independent q
 
 ## Scheduled messages
 
-A scheduled message stores a name, question, selected members, and a daily or weekly local send time. Each due occurrence creates a new topic with frozen conditions. The running application admits occurrences; occurrences missed while closed expire. An outstanding run for the same schedule skips that occurrence. Edits affect later admissions; pause and delete affect future occurrences.
+A scheduled message stores a name, question, selected members, and a repeat rule. The editor supports one send on a date, daily repetition, selected weekdays, monthly repetition, and fixed minute or hour intervals. Calendar rules support an interval of 1–52 days, weeks, or months and up to six send times. Weekly presets select every day, Monday–Friday, or weekends. Monthly rules select a day, the last day, or the first through fourth or last occurrence of a weekday. A missing monthly date skips that month.
+
+Each rule saves its time zone and start date. Repeating rules accept an inclusive end date. Daily and weekly intervals use the start date as their anchor; weekly intervals start on Monday. Monthly intervals use the start month. Fixed intervals use elapsed time from the start date and anchor time. Calendar sends retain their saved wall time across daylight-saving changes; a missing wall time skips the occurrence and a repeated wall time uses its first instant.
+
+The editor previews up to three upcoming occurrences in the saved zone. A one-time rule previews its single occurrence. Save and resume require a future occurrence. An exhausted rule retains its record, displays Ended, and can be edited to a future date. Pause retains the rule's original interval anchor.
+
+Each due occurrence creates a new topic with frozen conditions. The running application admits occurrences; occurrences missed while closed expire. An outstanding run for the same schedule skips that occurrence. Edits affect later admissions; pause and delete affect future occurrences.
 
 Member changes update future recipient sets. A schedule with zero enabled recipients becomes paused. The editor requires an enabled recipient before save or resume. Already admitted topics retain their member snapshot. Historical time-range fields remain readable; new sends use the exact question and the post-enhancement sentence.
 

@@ -35,7 +35,7 @@ One platform sign-in can enable several language experts. Grok in Chinese and En
 
 Expert language is the language Postrove uses to communicate with that platform AI. It also influences the content the AI searches for.
 
-Scheduled messages send a saved question daily or weekly while Postrove is open. Each occurrence creates its own topic.
+Scheduled messages send a saved question once, daily, on selected weekdays, monthly, or at a fixed minute or hour interval while Postrove is open. Set multiple times, a time zone, and date bounds, then preview the next sends. Each occurrence creates its own topic.
 
 ### Ask in your language. Read in your language.
 

@@ -2,15 +2,16 @@
 
 [Data contracts](../../docs/data-contracts.md) owns field meaning and persistence. Schema files define implemented command and result shapes.
 
-| File                                                                                        | Scope                                                      |
-| ------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| `focus-search-contracts.ts`                                                                 | Questions, follows, reports, candidates, and submissions   |
-| `advisor-contracts.ts`                                                                      | Shared platform connections and language expert identities |
-| `content-contracts.ts`                                                                      | Shared text operations and structured output               |
-| `source-contracts.ts`                                                                       | Source identities, snapshots, and content blocks           |
-| `reading-contracts.ts`                                                                      | Materials, chunks, introductions, and coverage             |
-| `forwarding-view-contracts.ts`                                                              | Parsing views                                              |
-| `task-contracts.ts`                                                                         | Task status, activity, and result references               |
-| `model-contracts.ts`                                                                        | Model connections and execution configuration              |
-| `bot-contracts.ts`, `feishu-contracts.ts`, `telegram-contracts.ts`, `platform-contracts.ts` | Integration views                                          |
-| `ipc-contracts.ts`                                                                          | Renderer bridge                                            |
+| File                                                                                        | Scope                                                                    |
+| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `focus-search-contracts.ts`                                                                 | Questions, follows, reports, candidates, and submissions                 |
+| `schedule-contracts.ts`, `schedules.ts`                                                     | Versioned repeat rules, legacy normalization, and zone-aware occurrences |
+| `advisor-contracts.ts`                                                                      | Shared platform connections and language expert identities               |
+| `content-contracts.ts`                                                                      | Shared text operations and structured output                             |
+| `source-contracts.ts`                                                                       | Source identities, snapshots, and content blocks                         |
+| `reading-contracts.ts`                                                                      | Materials, chunks, introductions, and coverage                           |
+| `forwarding-view-contracts.ts`                                                              | Parsing views                                                            |
+| `task-contracts.ts`                                                                         | Task status, activity, and result references                             |
+| `model-contracts.ts`                                                                        | Model connections and execution configuration                            |
+| `bot-contracts.ts`, `feishu-contracts.ts`, `telegram-contracts.ts`, `platform-contracts.ts` | Integration views                                                        |
+| `ipc-contracts.ts`                                                                          | Renderer bridge                                                          |

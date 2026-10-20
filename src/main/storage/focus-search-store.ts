@@ -1,6 +1,7 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { advisorById, legacyAdvisor } from "../../shared/advisor-contracts";
 import { dirname } from "node:path";
+import { normalizeSchedule } from "../../shared/schedules";
 import {
   searchStateSchema,
   type SearchState,
@@ -22,10 +23,15 @@ export class FocusSearchStore {
           );
           section.connectionId ??= advisorById(section.advisorId).connectionId;
         }
-      for (const follow of this.state.follows)
+      for (const follow of this.state.follows) {
+        follow.schedule = normalizeSchedule(
+          follow.schedule,
+          new Date(follow.createdAt),
+        );
         follow.advisorIds ??= follow.platforms.map((platform) =>
           legacyAdvisor(platform),
         );
+      }
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT")
         throw new Error(

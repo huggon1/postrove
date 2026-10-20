@@ -10,7 +10,6 @@ import {
   type SearchSection,
   type SearchAddition,
   type Follow,
-  type FollowSchedule,
 } from "../../../shared/focus-search-contracts";
 import { FocusSearchStore } from "../../storage/focus-search-store";
 import type { TaskService } from "../tasks/task-service";
@@ -25,21 +24,10 @@ import { searchInstruction } from "../../../platforms/browser/prompts";
 import type { SearchProgress } from "../browser-agent";
 import { localizedText, type Language } from "../../../shared/language";
 import { failureMessages } from "../../../shared/task-failure";
+import { nextScheduleRun, normalizeSchedule } from "../../../shared/schedules";
 
-/** Next future local wall-clock occurrence. Calendar arithmetic preserves local time across DST. */
-export function nextFollowRun(schedule: FollowSchedule, after: Date): string {
-  const [hour, minute] = schedule.time.split(":").map(Number);
-  const next = new Date(after);
-  next.setHours(hour, minute, 0, 0);
-  if (schedule.cadence === "weekly") {
-    next.setDate(
-      next.getDate() + ((schedule.weekday! - next.getDay() + 7) % 7),
-    );
-    if (next.getTime() <= after.getTime()) next.setDate(next.getDate() + 7);
-  } else if (next.getTime() <= after.getTime())
-    next.setDate(next.getDate() + 1);
-  return next.toISOString();
-}
+/** Shared calendar and elapsed-interval calculation for future occurrences. */
+export const nextFollowRun = nextScheduleRun;
 
 type SearchExecution = {
   content?: (
@@ -165,7 +153,6 @@ export class FocusSearchService {
   private schedules: Promise<unknown> = Promise.resolve();
   private timer?: ReturnType<typeof setInterval>;
   private closed = false;
-  private timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   constructor(
     private store: FocusSearchStore,
     private tasks: TaskService,
@@ -206,6 +193,7 @@ export class FocusSearchService {
     const after = Math.max(
       timestamp.getTime(),
       follow.lastOccurrenceAt ? new Date(follow.lastOccurrenceAt).getTime() : 0,
+      follow.lastEvaluatedAt ? new Date(follow.lastEvaluatedAt).getTime() : 0,
     );
     return nextFollowRun(follow.schedule, new Date(after));
   }
@@ -276,8 +264,23 @@ export class FocusSearchService {
           else if (report.status === "failed") report.taskOutcome = "failed";
         }
       }
-      for (const follow of state.follows)
+      for (const follow of state.follows) {
+        follow.schedule = normalizeSchedule(
+          follow.schedule,
+          new Date(follow.createdAt),
+        );
+        if (follow.nextRunAt && new Date(follow.nextRunAt) <= this.clock()) {
+          follow.lastOccurrenceAt = follow.nextRunAt;
+          follow.lastSkippedAt = follow.nextRunAt;
+        }
         follow.nextRunAt = this.nextRun(follow);
+        follow.lastEvaluatedAt = new Date(
+          Math.max(
+            this.clock().getTime(),
+            Date.parse(follow.lastEvaluatedAt ?? "1970-01-01"),
+          ),
+        ).toISOString();
+      }
     });
     for (const report of this.reports()) {
       if (report.status === "queued") {
@@ -334,7 +337,13 @@ export class FocusSearchService {
   }
   async saveFollow(raw: unknown): Promise<Follow> {
     const input = saveFollowSchema.parse(raw);
-    this.validateAdvisors(input.advisorIds);
+    this.validateAdvisors(
+      input.advisorIds ??
+        input.platforms.map((platform) => legacyAdvisor(platform)),
+    );
+    input.schedule = normalizeSchedule(input.schedule, this.clock());
+    const nextRunAt = nextFollowRun(input.schedule, this.clock());
+    if (!nextRunAt) throw this.scheduleExpired();
     const follow: Follow = {
       ...input,
       name: input.name ?? input.question.slice(0, 80),
@@ -343,7 +352,7 @@ export class FocusSearchService {
       revision: 1,
       createdAt: this.now(),
       updatedAt: this.now(),
-      nextRunAt: nextFollowRun(input.schedule, this.clock()),
+      nextRunAt,
     };
     await this.serialSchedule(() =>
       this.store.update((s) => s.follows.push(follow)),
@@ -353,17 +362,23 @@ export class FocusSearchService {
   }
   async updateFollow(raw: unknown): Promise<Follow> {
     const input = updateFollowSchema.parse(raw);
-    this.validateAdvisors(input.advisorIds);
+    this.validateAdvisors(
+      input.advisorIds ??
+        input.platforms.map((platform) => legacyAdvisor(platform)),
+    );
+    input.schedule = normalizeSchedule(input.schedule, this.clock());
     let result!: Follow;
     await this.serialSchedule(() =>
       this.store.update((state) => {
         const follow = state.follows.find((f) => f.followId === input.followId);
         if (!follow) throw new Error("Follow not found");
+        const nextRunAt = this.nextRun({ ...follow, schedule: input.schedule });
+        if (!nextRunAt) throw this.scheduleExpired();
         Object.assign(follow, input, {
           name: input.name ?? input.question.slice(0, 80),
           revision: follow.revision + 1,
           updatedAt: this.now(),
-          nextRunAt: this.nextRun({ ...follow, schedule: input.schedule }),
+          nextRunAt,
         });
         result = structuredClone(follow);
       }),
@@ -379,23 +394,34 @@ export class FocusSearchService {
     )
       throw new Error("Advisor is unavailable");
   }
+  private scheduleExpired() {
+    return new Error(
+      localizedText(
+        this.options.language?.(),
+        "此规则已没有未来发送时间，请调整日期或重复规则",
+        "No future sends. Adjust the dates or repeat rule.",
+      ),
+    );
+  }
   async reconcileAdvisors() {
     if (!this.options.advisorIds) return;
     const enabled = this.options.advisorIds();
-    await this.store.update((state) => {
-      for (const follow of state.follows) {
-        const ids = (
-          follow.advisorIds ??
-          follow.platforms.map((platform) => legacyAdvisor(platform))
-        ).filter((id) => enabled.includes(id));
-        if (ids.length) {
-          follow.advisorIds = ids;
-          follow.platforms = [
-            ...new Set(ids.map((id) => advisorById(id).platform)),
-          ];
-        } else follow.paused = true;
-      }
-    });
+    await this.serialSchedule(() =>
+      this.store.update((state) => {
+        for (const follow of state.follows) {
+          const ids = (
+            follow.advisorIds ??
+            follow.platforms.map((platform) => legacyAdvisor(platform))
+          ).filter((id) => enabled.includes(id));
+          if (ids.length) {
+            follow.advisorIds = ids;
+            follow.platforms = [
+              ...new Set(ids.map((id) => advisorById(id).platform)),
+            ];
+          } else follow.paused = true;
+        }
+      }),
+    );
     this.changed();
   }
   async setFollowPaused(followId: string, paused: boolean) {
@@ -412,6 +438,7 @@ export class FocusSearchService {
         follow.paused = paused;
         follow.updatedAt = this.now();
         follow.nextRunAt = this.nextRun(follow);
+        if (!paused && !follow.nextRunAt) throw this.scheduleExpired();
       }),
     );
     this.changed();
@@ -428,22 +455,40 @@ export class FocusSearchService {
     return this.serialSchedule(async () => {
       if (this.closed) return;
       const timestamp = this.clock();
-      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      if (timezone !== this.timezone) {
-        this.timezone = timezone;
-        await this.store.update((state) => {
-          for (const follow of state.follows)
-            follow.nextRunAt = this.nextRun(follow, timestamp);
-        });
-        this.changed();
-        return;
-      }
       for (const follow of this.follows()) {
         if (
-          follow.paused ||
+          !follow.nextRunAt ||
           new Date(follow.nextRunAt).getTime() > timestamp.getTime()
         )
           continue;
+        const scheduledFor = follow.nextRunAt;
+        if (follow.paused) {
+          await this.store.update((state) => {
+            const current = state.follows.find(
+              (f) => f.followId === follow.followId,
+            )!;
+            current.nextRunAt = this.nextRun(current, timestamp);
+            current.lastEvaluatedAt = timestamp.toISOString();
+            current.lastSkippedAt = scheduledFor;
+          });
+          this.changed();
+          continue;
+        }
+        const advisorIds = (
+          follow.advisorIds ??
+          follow.platforms.map((platform) => legacyAdvisor(platform))
+        ).filter(
+          (id) =>
+            !this.options.advisorIds || this.options.advisorIds().includes(id),
+        );
+        if (!advisorIds.length) {
+          await this.store.update((state) => {
+            state.follows.find((f) => f.followId === follow.followId)!.paused =
+              true;
+          });
+          this.changed();
+          continue;
+        }
         const late =
           timestamp.getTime() - new Date(follow.nextRunAt).getTime() >= 60_000;
         const outstanding = this.reports().some(
@@ -456,17 +501,20 @@ export class FocusSearchService {
           const current = state.follows.find(
             (f) => f.followId === follow.followId,
           )!;
-          current.lastOccurrenceAt = follow.nextRunAt;
+          current.lastOccurrenceAt = scheduledFor;
           current.nextRunAt = this.nextRun(current, timestamp);
-          if (late || outstanding) current.lastSkippedAt = follow.nextRunAt;
+          current.lastEvaluatedAt = timestamp.toISOString();
+          if (late || outstanding) current.lastSkippedAt = scheduledFor;
         });
         if (!late && !outstanding)
           await this.startRun(
             {
               question: follow.question,
-              platforms: follow.platforms,
+              platforms: [
+                ...new Set(advisorIds.map((id) => advisorById(id).platform)),
+              ],
               period: "all",
-              advisorIds: follow.advisorIds,
+              advisorIds,
             },
             follow,
           );
@@ -537,7 +585,7 @@ export class FocusSearchService {
             followId: follow.followId,
             followName: follow.name,
             followRevision: follow.revision,
-            scheduledFor: follow.nextRunAt,
+            scheduledFor: follow.nextRunAt!,
           }
         : {}),
       sections,

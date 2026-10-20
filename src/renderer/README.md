@@ -9,6 +9,7 @@
 | `workspace/Members.tsx`                                                         | Shared platform connections and language experts                                                       |
 | `workspace/Reading.tsx`                                                         | HTTPS intake, library, material reader and reading status                                              |
 | `workspace/Schedules.tsx`                                                       | Scheduled messages and editor                                                                          |
+| `workspace/ScheduleFields.tsx`                                                  | Repeat-rule draft, controls, localized summary, and occurrence preview                                 |
 | `workspace/Settings.tsx`                                                        | Settings categories and preferences                                                                    |
 | `workspace/use-workspace.ts`                                                    | Snapshot refresh, operation/error state                                                                |
 | `workspace/ui.tsx`                                                              | Avatars, accessible modal with nested focus/scroll restoration, icon controls and saved-time rendering |

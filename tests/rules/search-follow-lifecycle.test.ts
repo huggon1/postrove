@@ -7,7 +7,7 @@
  */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, rm, writeFile, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { FocusSearchStore } from "../../src/main/storage/focus-search-store";
@@ -19,6 +19,7 @@ import {
   saveFollowSchema,
   type SearchSection,
 } from "../../src/shared/focus-search-contracts";
+import type { AdvisorId } from "../../src/shared/advisor-contracts";
 
 const conditions = {
   question: "公开的独立游戏开发记录",
@@ -36,6 +37,7 @@ const waitUntil = async (predicate: () => boolean) => {
 async function fixture(
   execute: (s: SearchSection, signal: AbortSignal) => Promise<any>,
   clock: () => Date = () => new Date("2026-10-12T08:00:00"),
+  advisorIds?: () => AdvisorId[],
 ) {
   const dir = await mkdtemp(join(tmpdir(), "postrove-search-contract-"));
   const store = new FocusSearchStore(join(dir, "search.json"));
@@ -64,7 +66,7 @@ async function fixture(
       release: async () => {},
     }),
     () => {},
-    { now: clock, schedulerIntervalMs: 0 },
+    { now: clock, schedulerIntervalMs: 0, advisorIds },
   );
   return {
     service,
@@ -208,7 +210,7 @@ test("scheduler skips outstanding same follow, queues other follows, freezes con
     await f.service.tickSchedules();
     assert.equal(f.service.reports().length, 2, "offline occurrences expire");
     assert.ok(
-      new Date(f.service.follows()[0].nextRunAt).getTime() > now.getTime(),
+      new Date(f.service.follows()[0].nextRunAt!).getTime() > now.getTime(),
     );
   } finally {
     release?.();
@@ -324,6 +326,227 @@ test("startup reconciles committed report outcomes after task-status persistence
       id: f.service.readTask(id).reportId,
     });
     assert.equal(f.tasks.read(id)?.failure, undefined);
+  } finally {
+    await f.cleanup();
+  }
+});
+
+test("single and finite recurring schedules persist exhaustion and refuse an expired resume", async () => {
+  let now = new Date("2026-10-20T00:00:00Z");
+  const f = await fixture(
+    async () => ({ rawReply: "完成", candidates: [] }),
+    () => now,
+  );
+  const base = {
+    version: 2,
+    timeZone: "Asia/Shanghai",
+    startDate: "2026-10-20",
+    times: ["09:00"],
+  };
+  try {
+    const once = await f.service.saveFollow({
+      ...conditions,
+      schedule: { ...base, cadence: "once" },
+    });
+    now = new Date("2026-10-20T01:00:00Z");
+    await Promise.all([f.service.tickSchedules(), f.service.tickSchedules()]);
+    assert.equal(f.service.reports().length, 1);
+    assert.equal(
+      f.service.reports()[0].scheduledFor,
+      "2026-10-20T01:00:00.000Z",
+    );
+    assert.equal(f.service.follows()[0].nextRunAt, null);
+    await waitUntil(() => f.service.reports()[0].status === "partial");
+    await f.service.recover();
+    await f.service.tickSchedules();
+    assert.equal(f.service.reports().length, 1);
+    await assert.rejects(
+      f.service.setFollowPaused(once.followId, false),
+      /未来发送时间|No future sends/,
+    );
+    await assert.rejects(
+      f.service.saveFollow({
+        ...conditions,
+        schedule: { ...base, cadence: "once" },
+      }),
+    );
+    const bounded = await f.service.saveFollow({
+      ...conditions,
+      schedule: {
+        ...base,
+        cadence: "daily",
+        interval: 1,
+        endDate: "2026-10-21",
+        times: ["18:00"],
+      },
+    });
+    now = new Date("2026-10-21T10:00:00Z");
+    await f.service.tickSchedules();
+    assert.equal(
+      f.service.follows().find((s) => s.followId === bounded.followId)!
+        .nextRunAt,
+      null,
+    );
+    const reopened = new FocusSearchStore(join(f.dir, "search.json"));
+    await reopened.open();
+    assert.equal(reopened.snapshot().follows[0].nextRunAt, null);
+  } finally {
+    await f.cleanup();
+  }
+});
+
+test("offline single occurrences expire and clock rollback preserves the evaluation watermark", async () => {
+  let now = new Date("2026-10-20T00:00:00Z");
+  const f = await fixture(
+    async () => ({ rawReply: "完成", candidates: [] }),
+    () => now,
+  );
+  try {
+    await f.service.saveFollow({
+      ...conditions,
+      schedule: {
+        version: 2,
+        cadence: "once",
+        timeZone: "Asia/Shanghai",
+        startDate: "2026-10-20",
+        times: ["09:00"],
+      },
+    });
+    now = new Date("2026-10-22T00:00:00Z");
+    await f.service.recover();
+    assert.equal(f.service.follows()[0].nextRunAt, null);
+    now = new Date("2026-10-20T00:30:00Z");
+    await f.service.recover();
+    now = new Date("2026-10-20T01:00:00Z");
+    await f.service.tickSchedules();
+    assert.equal(f.service.reports().length, 0);
+    assert.equal(f.service.follows()[0].nextRunAt, null);
+  } finally {
+    await f.cleanup();
+  }
+});
+
+test("paused rules advance their anchor and expose exhaustion while the app remains open", async () => {
+  let now = new Date("2026-10-20T00:00:00Z");
+  const f = await fixture(
+    async () => ({ rawReply: "完成", candidates: [] }),
+    () => now,
+  );
+  try {
+    const base = {
+      version: 2,
+      timeZone: "Asia/Shanghai",
+      startDate: "2026-10-20",
+      times: ["09:00"],
+    };
+    const once = await f.service.saveFollow({
+      ...conditions,
+      schedule: { ...base, cadence: "once" },
+    });
+    const repeated = await f.service.saveFollow({
+      ...conditions,
+      schedule: { ...base, cadence: "interval", interval: 2, unit: "hours" },
+    });
+    await f.service.setFollowPaused(once.followId, true);
+    await f.service.setFollowPaused(repeated.followId, true);
+    now = new Date("2026-10-20T02:30:00Z");
+    await f.service.tickSchedules();
+    assert.equal(f.service.reports().length, 0);
+    assert.equal(
+      f.service.follows().find((f) => f.followId === once.followId)!.nextRunAt,
+      null,
+    );
+    assert.equal(
+      f.service.follows().find((f) => f.followId === repeated.followId)!
+        .nextRunAt,
+      "2026-10-20T03:00:00.000Z",
+    );
+    await f.service.setFollowPaused(repeated.followId, false);
+    assert.equal(
+      f.service.follows().find((f) => f.followId === repeated.followId)!
+        .nextRunAt,
+      "2026-10-20T03:00:00.000Z",
+    );
+    now = new Date("2026-10-20T00:30:00Z");
+    await f.service.recover();
+    assert.equal(
+      f.service.follows().find((f) => f.followId === once.followId)!.nextRunAt,
+      null,
+    );
+  } finally {
+    await f.cleanup();
+  }
+});
+
+test("due schedules recheck recipients and pause when every selected expert is removed", async () => {
+  let now = new Date("2026-10-20T00:00:00Z");
+  let enabled: AdvisorId[] = ["x-grok-zh"];
+  const f = await fixture(
+    async () => ({ rawReply: "完成", candidates: [] }),
+    () => now,
+    () => enabled,
+  );
+  try {
+    const follow = await f.service.saveFollow({
+      ...conditions,
+      advisorIds: enabled,
+      schedule: {
+        version: 2,
+        cadence: "daily",
+        interval: 1,
+        timeZone: "Asia/Shanghai",
+        startDate: "2026-10-20",
+        times: ["09:00"],
+      },
+    });
+    enabled = [];
+    now = new Date("2026-10-20T01:00:00Z");
+    await f.service.tickSchedules();
+    assert.equal(f.service.reports().length, 0);
+    assert.equal(f.service.follows()[0].paused, true);
+    await assert.rejects(
+      f.service.setFollowPaused(follow.followId, false),
+      /unavailable/,
+    );
+  } finally {
+    await f.cleanup();
+  }
+});
+
+test("opening legacy schedules normalizes their rules and retains the original file until a commit", async () => {
+  const f = await fixture(async () => ({ rawReply: "完成", candidates: [] }));
+  try {
+    const follow = await f.service.saveFollow({
+      ...conditions,
+      schedule: daily,
+    });
+    const file = join(f.dir, "search.json");
+    const state = JSON.parse(await readFile(file, "utf8"));
+    state.follows[0].schedule = {
+      cadence: "weekly",
+      time: "08:30",
+      weekday: 5,
+    };
+    const original = JSON.stringify(state);
+    await writeFile(file, original);
+    const reopened = new FocusSearchStore(file);
+    await reopened.open();
+    const migrated = reopened.snapshot().follows[0];
+    assert.equal(migrated.followId, follow.followId);
+    assert.equal(migrated.question, conditions.question);
+    assert.deepEqual(migrated.schedule, {
+      version: 2,
+      cadence: "weekly",
+      interval: 1,
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      startDate: "2026-10-12",
+      times: ["08:30"],
+      weekdays: [5],
+    });
+    assert.equal(await readFile(file, "utf8"), original);
+    await reopened.update(() => {});
+    const persisted = JSON.parse(await readFile(file, "utf8"));
+    assert.equal(persisted.follows[0].schedule.version, 2);
   } finally {
     await f.cleanup();
   }
