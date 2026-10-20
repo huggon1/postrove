@@ -1,3 +1,4 @@
+import { launchChineseApplication } from "../support/application";
 // Failure cases for the native Pi connection boundary:
 // - Provider/model choices drift from the installed Pi catalog or lose valid IDs.
 // - API-key, browser OAuth, device-code, and cancelled prompts use vendor UI branches.
@@ -14,7 +15,6 @@
 import {
   test,
   expect,
-  _electron as electron,
   type ElectronApplication,
   type Page,
 } from "@playwright/test";
@@ -41,7 +41,7 @@ const pathWithoutCodex =
     : "/usr/bin:/bin";
 
 async function launch(profile: string, extra: Record<string, string> = {}) {
-  const app = await electron.launch({
+  const app = await launchChineseApplication({
     args: ["."],
     env: {
       ...process.env,

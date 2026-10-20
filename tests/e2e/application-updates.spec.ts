@@ -1,4 +1,5 @@
-import { test, expect, _electron as electron } from "@playwright/test";
+import { launchChineseApplication } from "../support/application";
+import { test, expect } from "@playwright/test";
 import { mkdtemp, rm, writeFile, readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
@@ -6,7 +7,7 @@ import { join, resolve } from "node:path";
 
 test("development shows the version and packaged-update boundary", async ({}, info) => {
   const profile = await mkdtemp(join(tmpdir(), "postrove-update-e2e-"));
-  const application = await electron.launch({
+  const application = await launchChineseApplication({
     args: ["."],
     env: {
       ...process.env,
@@ -48,7 +49,7 @@ test("update shutdown resumes queued searches on the next launch", async ({}, in
   await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
   const endpoint = `http://127.0.0.1:${(server.address() as any).port}`;
   const launch = () =>
-    electron.launch({
+    launchChineseApplication({
       args: [resolve("dist/main/update-test.cjs")],
       env: {
         ...process.env,
@@ -171,7 +172,7 @@ test("updates preserve work through cancellation, signature failure, and install
       apiKey: "fictional",
     }),
   );
-  const application = await electron.launch({
+  const application = await launchChineseApplication({
     args: [resolve("dist/main/update-test.cjs")],
     env: {
       ...process.env,

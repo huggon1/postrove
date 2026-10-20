@@ -1,5 +1,5 @@
 import type { Language } from "../shared/language";
-let current: Language = "zh-CN";
+let current: Language = "en";
 export function setNativeLanguage(language: Language) {
   current = language;
 }

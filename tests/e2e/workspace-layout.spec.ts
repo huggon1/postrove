@@ -1,4 +1,5 @@
-import { test, expect, _electron as electron } from "@playwright/test";
+import { launchChineseApplication } from "../support/application";
+import { test, expect } from "@playwright/test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -8,7 +9,7 @@ import { join } from "node:path";
 test("topic navigation and settings fit both languages at desktop and compact widths", async ({}, info) => {
   test.setTimeout(120_000);
   const profile = await mkdtemp(join(tmpdir(), "postrove-layout-"));
-  const app = await electron.launch({
+  const app = await launchChineseApplication({
     args: ["."],
     env: {
       ...process.env,

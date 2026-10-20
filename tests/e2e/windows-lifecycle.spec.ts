@@ -1,4 +1,5 @@
-import { test, expect, _electron as electron } from "@playwright/test";
+import { launchChineseApplication } from "../support/application";
+import { test, expect } from "@playwright/test";
 import { mkdtemp, mkdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -9,7 +10,7 @@ test("Windows close exits cleanly and restart retains the workspace profile", as
   const profile = join(root, "应用 数据");
   await mkdir(profile);
   const launch = () =>
-    electron.launch({
+    launchChineseApplication({
       args: ["."],
       env: {
         ...process.env,

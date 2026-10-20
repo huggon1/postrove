@@ -1,4 +1,5 @@
-import { test, expect, _electron as electron } from "@playwright/test";
+import { launchChineseApplication } from "../support/application";
+import { test, expect } from "@playwright/test";
 import { createServer } from "node:http";
 import { mkdtemp, mkdir, writeFile, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -101,7 +102,7 @@ test("topic workspace connects experts, sends independently, reads and schedules
   });
   await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
   const launch = () =>
-    electron.launch({
+    launchChineseApplication({
       args: ["."],
       env: {
         ...process.env,

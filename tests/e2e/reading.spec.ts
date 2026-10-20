@@ -1,5 +1,6 @@
+import { launchChineseApplication } from "../support/application";
 import sharp from "sharp";
-import { test, expect, _electron as electron } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 import { createServer } from "node:http";
 import { mkdtemp, mkdir, writeFile, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -165,9 +166,9 @@ test("reading preserves materials, partial output, frozen language and restart r
       baseUrl: endpoint,
     }),
   );
-  let app: Awaited<ReturnType<typeof electron.launch>> | undefined;
+  let app: Awaited<ReturnType<typeof launchChineseApplication>> | undefined;
   const launch = async () => {
-    app = await electron.launch({
+    app = await launchChineseApplication({
       args: ["."],
       env: {
         ...process.env,

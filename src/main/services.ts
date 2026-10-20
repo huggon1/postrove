@@ -97,7 +97,10 @@ export async function initializeServices(
   let tasks: TaskService | undefined;
   let taskView: UnifiedTaskService | undefined;
   let xhsAuth: XhsAuth | undefined;
-  const preferences = new Preferences(app.getPath("userData"));
+  const preferences = new Preferences(
+    app.getPath("userData"),
+    app.getPreferredSystemLanguages(),
+  );
   await preferences.open();
   onLanguage(preferences.language);
   stage("runtime_layout");

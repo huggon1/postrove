@@ -1,3 +1,4 @@
+import { launchChineseApplication } from "../support/application";
 // Failure cases written before implementation:
 // - credentials verify but events/permissions are missing; failed replacement destroys a working bot;
 // - duplicate or concurrent events enqueue twice; callbacks wait for parsing/ack delivery;
@@ -5,7 +6,7 @@
 // - paged offline history skips messages; restart loses queued work or retries acknowledgement as a new task;
 // - account replacement inherits another app's grants; review mode opens a competing receiver;
 // - secrets appear in status/errors/artifacts; setup clips at a narrow width.
-import { test, expect, _electron as electron } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 import { createServer } from "node:http";
 import { WebSocketServer } from "ws";
 import protobuf from "protobufjs";
@@ -173,7 +174,7 @@ test("Feishu setup, durable receipts, history recovery and account isolation", a
   await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
   endpoint = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
   const launch = (mode = "test") =>
-    electron.launch({
+    launchChineseApplication({
       args: ["."],
       env: {
         ...process.env,
@@ -583,7 +584,7 @@ test("Feishu registration cancellation keeps the configured app", async ({}, inf
     );
   });
   await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
-  const app = await electron.launch({
+  const app = await launchChineseApplication({
     args: ["."],
     env: {
       ...process.env,

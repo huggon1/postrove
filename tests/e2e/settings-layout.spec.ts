@@ -1,4 +1,5 @@
-import { test, expect, _electron as electron } from "@playwright/test";
+import { launchChineseApplication } from "../support/application";
+import { test, expect } from "@playwright/test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -9,7 +10,7 @@ import { tmpdir } from "node:os";
 test("settings and nested forms retain the approved layout through real controls", async ({}, info) => {
   test.setTimeout(90_000);
   const root = await mkdtemp(join(tmpdir(), "postrove-settings-layout-"));
-  const app = await electron.launch({
+  const app = await launchChineseApplication({
     args: ["."],
     env: {
       ...process.env,

@@ -1,11 +1,7 @@
+import { launchChineseApplication } from "../support/application";
 import { prepareProfile } from "../../src/main/runtime/profile";
 import { createServer, type Server } from "node:http";
-import {
-  test,
-  expect,
-  _electron as electron,
-  type ElectronApplication,
-} from "@playwright/test";
+import { test, expect, type ElectronApplication } from "@playwright/test";
 import { mkdtemp, mkdir, writeFile, readFile, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
@@ -14,7 +10,7 @@ let server: Server, endpoint: string;
 let requests: string[];
 let root: string, profile: string, application: ElectronApplication;
 async function launch(mode = "test") {
-  application = await electron.launch({
+  application = await launchChineseApplication({
     args: ["."],
     env: {
       ...process.env,
@@ -197,7 +193,7 @@ app.whenReady().then(() => app.emit("activate"));
 await import(${JSON.stringify(pathToFileURL(resolve("dist/main/main.cjs")).href)});
 `,
   );
-  application = await electron.launch({
+  application = await launchChineseApplication({
     args: [wrapper],
     env: {
       ...process.env,

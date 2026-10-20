@@ -26,7 +26,7 @@ export function useWorkspace() {
   });
   const [settings, setSettings] = useState<UiSettings>();
   const [preferences, setPreferences] = useState<ApplicationPreferences>({
-    language: "zh-CN",
+    language: "en",
     readingLanguage: "app",
     taskBrowserVisible: false,
   });

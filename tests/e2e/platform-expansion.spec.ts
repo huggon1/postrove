@@ -1,3 +1,4 @@
+import { launchChineseApplication } from "../support/application";
 import { test, expect, _electron as electron } from "@playwright/test";
 import { createServer } from "node:http";
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
@@ -24,7 +25,7 @@ test("new members share Gemini setup, enable Reddit guest use, and retain schedu
       ],
     }),
   );
-  const app = await electron.launch({
+  const app = await launchChineseApplication({
     args: ["."],
     env: {
       ...process.env,

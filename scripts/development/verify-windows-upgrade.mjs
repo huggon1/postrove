@@ -140,6 +140,7 @@ try {
   await expect(page.getByRole("navigation")).toBeVisible({ timeout: 30000 });
   const originalPid = application.process().pid;
   await page.evaluate(async () => {
+    await window.postrove.saveLanguage("zh-CN");
     await window.postrove.saveAdvisorSettings({ enabled: ["reddit-ai-en"] });
     const saved = await window.postrove.saveFollow({
       name: "Upgrade retained schedule",

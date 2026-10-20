@@ -2,7 +2,7 @@ import { ipcErrorMessages, type IpcErrorCode } from "../../shared/ipc-errors";
 import { useSyncExternalStore } from "react";
 import catalog from "./en.json";
 import type { Language } from "../../shared/language";
-let language: Language = "zh-CN";
+let language: Language = "en";
 const listeners = new Set<() => void>();
 export function selectLanguage(next: Language) {
   language = next;
