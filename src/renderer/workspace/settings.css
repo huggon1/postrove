@@ -747,6 +747,24 @@
   align-items: stretch;
   flex-direction: column;
 }
+.platform-account-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 11px 13px;
+  border-radius: 10px;
+  background: #fff8e9;
+  color: #805d24;
+  font-size: 13px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.platform-account-notice svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 3px;
+}
 .config-actions.vertical button {
   justify-content: center;
 }

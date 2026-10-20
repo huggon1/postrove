@@ -329,6 +329,7 @@
   "启用专家": "Enable experts",
   "等待完成平台登录": "Waiting for platform sign-in",
   "打开登录窗口": "Open sign-in window",
+  "使用平台 AI 可能触发账号风控，建议使用小号登录。": "Using platform AI may trigger account restrictions. We recommend signing in with a secondary account.",
   "检查登录状态": "Check sign-in",
   "尚未检测到登录": "Sign-in not detected",
   "平台账号": "Platform account",
