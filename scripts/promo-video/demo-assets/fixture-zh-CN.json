@@ -1,0 +1,315 @@
+{
+  "scope": "Authored fictional demo. Placeholder URLs are never fetched.",
+  "business-generation.json": {
+    "generation": "search-follow-v1",
+    "state": "committed"
+  },
+  "preferences.json": {
+    "language": "zh-CN",
+    "readingLanguage": "zh-CN"
+  },
+  "advisors.json": {
+    "version": 1,
+    "enabled": [
+      "youtube-gemini-en",
+      "x-grok-en",
+      "xiaohongshu-diandian-zh",
+      "reddit-ai-en"
+    ]
+  },
+  "focus-search.json": {
+    "version": 1,
+    "reports": [
+      {
+        "reportId": "e35f08d6-841f-40a6-b105-e7ee0c9f192e",
+        "taskId": "6ed23cc2-ec99-47f7-8c69-c2325d86bd51",
+        "createdAt": "2026-10-20T09:20:00.000Z",
+        "question": "我想用 AI 做一个像素小游戏，应该从哪里开始？",
+        "outputLanguage": "zh-CN",
+        "taskOutcome": "completed",
+        "origin": "manual",
+        "status": "completed",
+        "finishedAt": "2026-10-20T09:20:00.000Z",
+        "period": "all",
+        "platforms": [
+          "youtube",
+          "x",
+          "xiaohongshu",
+          "reddit"
+        ],
+        "sections": [
+          {
+            "sectionId": "74bd875c-3be6-4592-9da2-17df155e8fbe",
+            "platform": "youtube",
+            "advisorId": "youtube-gemini-en",
+            "connectionId": "gemini-web",
+            "routeId": "youtube-gemini",
+            "runId": "d3748fe1-9b5b-46fb-b005-30d5f455b3e6",
+            "readingReply": "### 跟着一个短教程，逐步动手\n\n先看角色如何移动，再理解跳跃与平台碰撞。把教程拆成三个小练习，遇到问题时让 AI 帮你解释。\n\n*虚构演示回复 · 示例来源*",
+            "promptLanguage": "en",
+            "prompt": "I want to make a pixel game with AI. Where do I start?",
+            "platformPrompt": "I want to make a pixel game with AI. Where do I start?",
+            "citationExtraction": {
+              "state": "completed"
+            },
+            "state": "completed",
+            "rawReply": "### Follow one short tutorial, step by step\n\nSee how movement works, then explore jumping and platform collisions. Treat each part as a small exercise and ask AI to explain what you observe.\n\n*Fictional demo reply · Sample sources*",
+            "candidates": [
+              {
+                "candidateId": "d9e8d354-2fec-451c-aeb7-2e1c212a431c",
+                "postKey": "youtube:video:DEMO1234abc",
+                "url": "https://www.youtube.com/watch?v=DEMO1234abc",
+                "title": "用 AI 做第一个像素小游戏",
+                "description": "虚构演示来源 · 占位链接"
+              }
+            ],
+            "finishedAt": "2026-10-20T09:20:00.000Z"
+          },
+          {
+            "sectionId": "7e25fd4a-9f55-4aba-9b41-b97b569de7a1",
+            "platform": "x",
+            "advisorId": "x-grok-en",
+            "connectionId": "x-grok",
+            "routeId": "x-grok",
+            "runId": "6c1c372c-6865-477b-9273-56b9e516b5f4",
+            "readingReply": "### 先做最小的可玩循环\n\n从一个角色、一块平台开始。先实现左右移动，再加跳跃和落地碰撞。每完成一步，就让 AI 解释代码。\n\n*虚构演示回复 · 示例来源*",
+            "promptLanguage": "en",
+            "prompt": "I want to make a pixel game with AI. Where do I start?",
+            "platformPrompt": "I want to make a pixel game with AI. Where do I start?",
+            "citationExtraction": {
+              "state": "completed"
+            },
+            "state": "completed",
+            "rawReply": "### Build the smallest playable loop\n\nStart with one character and one platform. Add movement, then jumping and landing collisions. Ask AI to explain each small change.\n\n*Fictional demo reply · Sample sources*",
+            "candidates": [
+              {
+                "candidateId": "bdaed543-65df-4550-951d-6ccaad4d9d48",
+                "postKey": "x:9999999999999999999",
+                "url": "https://x.com/postrove_demo/status/9999999999999999999",
+                "title": "一个角色，也能开始做游戏",
+                "description": "虚构演示来源 · 占位链接"
+              }
+            ],
+            "finishedAt": "2026-10-20T09:20:00.000Z"
+          },
+          {
+            "sectionId": "8c0154af-4cc8-452c-a88b-302b1f1ea73e",
+            "platform": "xiaohongshu",
+            "advisorId": "xiaohongshu-diandian-zh",
+            "connectionId": "xiaohongshu-diandian",
+            "routeId": "xiaohongshu-diandian",
+            "runId": "86a8163c-d7d1-40fb-b799-ae467776078c",
+            "readingReply": "### 先画一个简单的小世界\n\n用 16×16 的角色和两种颜色搭出场景。先完成一个能走、能跳的小房间，再逐步丰富画面。\n\n*虚构演示回复 · 示例来源*",
+            "promptLanguage": "zh-CN",
+            "prompt": "我想用 AI 做一个像素小游戏，应该从哪里开始？",
+            "platformPrompt": "我想用 AI 做一个像素小游戏，应该从哪里开始？",
+            "citationExtraction": {
+              "state": "completed"
+            },
+            "state": "completed",
+            "rawReply": "### 先画一个简单的小世界\n\n用 16×16 的角色和两种颜色搭出场景。先完成一个能走、能跳的小房间，再逐步丰富画面。\n\n*虚构演示回复 · 示例来源*",
+            "candidates": [
+              {
+                "candidateId": "e3204cdc-4824-47f2-92f0-4876c129d832",
+                "postKey": "xiaohongshu:postrove_pixel_demo",
+                "url": "https://www.xiaohongshu.com/explore/postrove_pixel_demo",
+                "title": "16×16 像素角色入门",
+                "description": "虚构演示来源 · 占位链接"
+              }
+            ],
+            "finishedAt": "2026-10-20T09:20:00.000Z"
+          },
+          {
+            "sectionId": "7c67f9c8-71e0-46e8-9734-a291dc54bfc0",
+            "platform": "reddit",
+            "advisorId": "reddit-ai-en",
+            "connectionId": "reddit-web",
+            "routeId": "reddit-ai",
+            "runId": "6434b1d5-5f4d-4eef-a70c-54799aebf92f",
+            "readingReply": "### 把第一作的范围收小\n\n只做一个房间和一个目标。先写下“能移动、能跳、能落地”，让 AI 帮你逐项调试。\n\n*虚构演示回复 · 示例来源*",
+            "promptLanguage": "en",
+            "prompt": "I want to make a pixel game with AI. Where do I start?",
+            "platformPrompt": "I want to make a pixel game with AI. Where do I start?",
+            "citationExtraction": {
+              "state": "completed"
+            },
+            "state": "completed",
+            "rawReply": "### Keep the first game small\n\nMake one room with one goal. Write down “move, jump, land,” then use AI to help debug each part.\n\n*Fictional demo reply · Sample sources*",
+            "candidates": [
+              {
+                "candidateId": "77541db8-f0ab-469c-b01a-572bf198da2e",
+                "postKey": "reddit:post:demopixel",
+                "url": "https://www.reddit.com/r/postrove_demo/comments/demopixel/",
+                "title": "第一款小游戏，先完成一个房间",
+                "description": "虚构演示来源 · 占位链接"
+              }
+            ],
+            "finishedAt": "2026-10-20T09:20:00.000Z"
+          }
+        ],
+        "submissions": []
+      }
+    ],
+    "follows": []
+  },
+  "forwarding.json": {
+    "version": 1,
+    "tasks": [
+      {
+        "taskId": "f149c708-eb25-424a-a47e-a1e296c811a7",
+        "materials": [
+          {
+            "id": "pixel-demo-main",
+            "role": "main",
+            "url": "https://www.youtube.com/watch?v=DEMO1234abc",
+            "title": "用 AI 做第一个像素小游戏",
+            "source": {
+              "sourceUrl": "https://www.youtube.com/watch?v=DEMO1234abc",
+              "markdown": "![Pixel character and platforms: fictional tutorial artwork](https://postrove-demo.example/pixel-game.png)\n\n## Make one character move\n\n[00:00 · Set up the scene](https://www.youtube.com/watch?v=DEMO1234abc&t=0s)　 [02:14 · Move and jump](https://www.youtube.com/watch?v=DEMO1234abc&t=134s)　 [05:32 · Platform collisions](https://www.youtube.com/watch?v=DEMO1234abc&t=332s)\n\nBegin with a tiny scene: move left and right, press space to jump, and land on a platform. Run each small change and observe what happens.\n\n```text\nCharacter: move left/right → press space to jump\nScene: one platform → check landing collisions\n```\n\n**Ask AI next:** “Break a character jump into three small steps and explain each one.”\n\n*Fictional demo material and placeholder sources illustrate the reading workflow.*",
+              "platform": "youtube",
+              "title": "Your first pixel game with AI",
+              "sourceIdentity": "Pixel Lab · Fictional demo",
+              "sourceKey": "youtube:video:DEMO1234abc",
+              "fetchedAt": "2026-10-20T09:20:00.000Z",
+              "contentBlocks": [
+                {
+                  "type": "text",
+                  "text": "![Pixel character and platforms: fictional tutorial artwork](https://postrove-demo.example/pixel-game.png)\n\n## Make one character move\n\n[00:00 · Set up the scene](https://www.youtube.com/watch?v=DEMO1234abc&t=0s)　 [02:14 · Move and jump](https://www.youtube.com/watch?v=DEMO1234abc&t=134s)　 [05:32 · Platform collisions](https://www.youtube.com/watch?v=DEMO1234abc&t=332s)\n\nBegin with a tiny scene: move left and right, press space to jump, and land on a platform. Run each small change and observe what happens.\n\n```text\nCharacter: move left/right → press space to jump\nScene: one platform → check landing collisions\n```\n\n**Ask AI next:** “Break a character jump into three small steps and explain each one.”\n\n*Fictional demo material and placeholder sources illustrate the reading workflow.*"
+                }
+              ],
+              "images": [
+                {
+                  "imageId": "pixel-scene",
+                  "url": "https://postrove-demo.example/pixel-game.png",
+                  "alt": "Pixel Lab · Fictional demo",
+                  "cachedUrl": "postrove-image://c40febaf61d6ef5a6b6b8b4b6b2a667e29460949636d17f28c0108e631711c36"
+                }
+              ],
+              "completeness": "complete",
+              "completenessNote": "Fictional demo source · Placeholder link"
+            },
+            "chunks": [
+              {
+                "index": 0,
+                "original": "![Pixel character and platforms: fictional tutorial artwork](https://postrove-demo.example/pixel-game.png)\n\n## Make one character move\n\n[00:00 · Set up the scene](https://www.youtube.com/watch?v=DEMO1234abc&t=0s)　 [02:14 · Move and jump](https://www.youtube.com/watch?v=DEMO1234abc&t=134s)　 [05:32 · Platform collisions](https://www.youtube.com/watch?v=DEMO1234abc&t=332s)\n\nBegin with a tiny scene: move left and right, press space to jump, and land on a platform. Run each small change and observe what happens.\n\n```text\nCharacter: move left/right → press space to jump\nScene: one platform → check landing collisions\n```\n\n**Ask AI next:** “Break a character jump into three small steps and explain each one.”\n\n*Fictional demo material and placeholder sources illustrate the reading workflow.*",
+                "translated": "![像素角色与平台：虚构教程示意图](https://postrove-demo.example/pixel-game.png)\n\n## 先让一个角色动起来\n\n[00:00 · 创建角色与场景](https://www.youtube.com/watch?v=DEMO1234abc&t=0s)　 [02:14 · 移动与跳跃](https://www.youtube.com/watch?v=DEMO1234abc&t=134s)　 [05:32 · 平台碰撞](https://www.youtube.com/watch?v=DEMO1234abc&t=332s)\n\n从一个小场景开始：左右移动、按空格跳跃、落回平台。每完成一步，就运行一次并观察结果。\n\n```text\n角色：左右移动 → 空格跳跃\n场景：一块平台 → 检查落地碰撞\n```\n\n**给 AI 的下一问：**“请把角色跳跃拆成三个小步骤，并解释每一步。”\n\n*虚构演示材料与占位来源，用于展示阅读流程。*",
+                "complete": true
+              }
+            ],
+            "summary": "先做一个角色、一块平台和一次跳跃。跟着示例教程，逐步理解移动、跳跃和碰撞，再让 AI 帮你拆解下一步。",
+            "state": "completed"
+          }
+        ],
+        "materialId": "8027f382-636a-42b9-ab63-786648128bbc",
+        "resultId": "f79348d2-2b59-46bb-8816-6bc1895b26be",
+        "target": {
+          "sourceUrl": "https://www.youtube.com/watch?v=DEMO1234abc",
+          "entry": "app"
+        },
+        "state": "completed",
+        "phase": "已保存",
+        "outputLanguage": "zh-CN",
+        "source": {
+          "sourceUrl": "https://www.youtube.com/watch?v=DEMO1234abc",
+          "markdown": "![Pixel character and platforms: fictional tutorial artwork](https://postrove-demo.example/pixel-game.png)\n\n## Make one character move\n\n[00:00 · Set up the scene](https://www.youtube.com/watch?v=DEMO1234abc&t=0s)　 [02:14 · Move and jump](https://www.youtube.com/watch?v=DEMO1234abc&t=134s)　 [05:32 · Platform collisions](https://www.youtube.com/watch?v=DEMO1234abc&t=332s)\n\nBegin with a tiny scene: move left and right, press space to jump, and land on a platform. Run each small change and observe what happens.\n\n```text\nCharacter: move left/right → press space to jump\nScene: one platform → check landing collisions\n```\n\n**Ask AI next:** “Break a character jump into three small steps and explain each one.”\n\n*Fictional demo material and placeholder sources illustrate the reading workflow.*",
+          "platform": "youtube",
+          "title": "Your first pixel game with AI",
+          "sourceIdentity": "Pixel Lab · Fictional demo",
+          "sourceKey": "youtube:video:DEMO1234abc",
+          "fetchedAt": "2026-10-20T09:20:00.000Z",
+          "contentBlocks": [
+            {
+              "type": "text",
+              "text": "![Pixel character and platforms: fictional tutorial artwork](https://postrove-demo.example/pixel-game.png)\n\n## Make one character move\n\n[00:00 · Set up the scene](https://www.youtube.com/watch?v=DEMO1234abc&t=0s)　 [02:14 · Move and jump](https://www.youtube.com/watch?v=DEMO1234abc&t=134s)　 [05:32 · Platform collisions](https://www.youtube.com/watch?v=DEMO1234abc&t=332s)\n\nBegin with a tiny scene: move left and right, press space to jump, and land on a platform. Run each small change and observe what happens.\n\n```text\nCharacter: move left/right → press space to jump\nScene: one platform → check landing collisions\n```\n\n**Ask AI next:** “Break a character jump into three small steps and explain each one.”\n\n*Fictional demo material and placeholder sources illustrate the reading workflow.*"
+            }
+          ],
+          "images": [
+            {
+              "imageId": "pixel-scene",
+              "url": "https://postrove-demo.example/pixel-game.png",
+              "alt": "Pixel Lab · Fictional demo",
+              "cachedUrl": "postrove-image://c40febaf61d6ef5a6b6b8b4b6b2a667e29460949636d17f28c0108e631711c36"
+            }
+          ],
+          "completeness": "complete",
+          "completenessNote": "Fictional demo source · Placeholder link"
+        },
+        "activities": [],
+        "report": {
+          "materials": [
+            {
+              "id": "pixel-demo-main",
+              "role": "main",
+              "url": "https://www.youtube.com/watch?v=DEMO1234abc",
+              "title": "用 AI 做第一个像素小游戏",
+              "source": {
+                "sourceUrl": "https://www.youtube.com/watch?v=DEMO1234abc",
+                "markdown": "![Pixel character and platforms: fictional tutorial artwork](https://postrove-demo.example/pixel-game.png)\n\n## Make one character move\n\n[00:00 · Set up the scene](https://www.youtube.com/watch?v=DEMO1234abc&t=0s)　 [02:14 · Move and jump](https://www.youtube.com/watch?v=DEMO1234abc&t=134s)　 [05:32 · Platform collisions](https://www.youtube.com/watch?v=DEMO1234abc&t=332s)\n\nBegin with a tiny scene: move left and right, press space to jump, and land on a platform. Run each small change and observe what happens.\n\n```text\nCharacter: move left/right → press space to jump\nScene: one platform → check landing collisions\n```\n\n**Ask AI next:** “Break a character jump into three small steps and explain each one.”\n\n*Fictional demo material and placeholder sources illustrate the reading workflow.*",
+                "platform": "youtube",
+                "title": "Your first pixel game with AI",
+                "sourceIdentity": "Pixel Lab · Fictional demo",
+                "sourceKey": "youtube:video:DEMO1234abc",
+                "fetchedAt": "2026-10-20T09:20:00.000Z",
+                "contentBlocks": [
+                  {
+                    "type": "text",
+                    "text": "![Pixel character and platforms: fictional tutorial artwork](https://postrove-demo.example/pixel-game.png)\n\n## Make one character move\n\n[00:00 · Set up the scene](https://www.youtube.com/watch?v=DEMO1234abc&t=0s)　 [02:14 · Move and jump](https://www.youtube.com/watch?v=DEMO1234abc&t=134s)　 [05:32 · Platform collisions](https://www.youtube.com/watch?v=DEMO1234abc&t=332s)\n\nBegin with a tiny scene: move left and right, press space to jump, and land on a platform. Run each small change and observe what happens.\n\n```text\nCharacter: move left/right → press space to jump\nScene: one platform → check landing collisions\n```\n\n**Ask AI next:** “Break a character jump into three small steps and explain each one.”\n\n*Fictional demo material and placeholder sources illustrate the reading workflow.*"
+                  }
+                ],
+                "images": [
+                  {
+                    "imageId": "pixel-scene",
+                    "url": "https://postrove-demo.example/pixel-game.png",
+                    "alt": "Pixel Lab · Fictional demo",
+                    "cachedUrl": "postrove-image://c40febaf61d6ef5a6b6b8b4b6b2a667e29460949636d17f28c0108e631711c36"
+                  }
+                ],
+                "completeness": "complete",
+                "completenessNote": "Fictional demo source · Placeholder link"
+              },
+              "chunks": [
+                {
+                  "index": 0,
+                  "original": "![Pixel character and platforms: fictional tutorial artwork](https://postrove-demo.example/pixel-game.png)\n\n## Make one character move\n\n[00:00 · Set up the scene](https://www.youtube.com/watch?v=DEMO1234abc&t=0s)　 [02:14 · Move and jump](https://www.youtube.com/watch?v=DEMO1234abc&t=134s)　 [05:32 · Platform collisions](https://www.youtube.com/watch?v=DEMO1234abc&t=332s)\n\nBegin with a tiny scene: move left and right, press space to jump, and land on a platform. Run each small change and observe what happens.\n\n```text\nCharacter: move left/right → press space to jump\nScene: one platform → check landing collisions\n```\n\n**Ask AI next:** “Break a character jump into three small steps and explain each one.”\n\n*Fictional demo material and placeholder sources illustrate the reading workflow.*",
+                  "translated": "![像素角色与平台：虚构教程示意图](https://postrove-demo.example/pixel-game.png)\n\n## 先让一个角色动起来\n\n[00:00 · 创建角色与场景](https://www.youtube.com/watch?v=DEMO1234abc&t=0s)　 [02:14 · 移动与跳跃](https://www.youtube.com/watch?v=DEMO1234abc&t=134s)　 [05:32 · 平台碰撞](https://www.youtube.com/watch?v=DEMO1234abc&t=332s)\n\n从一个小场景开始：左右移动、按空格跳跃、落回平台。每完成一步，就运行一次并观察结果。\n\n```text\n角色：左右移动 → 空格跳跃\n场景：一块平台 → 检查落地碰撞\n```\n\n**给 AI 的下一问：**“请把角色跳跃拆成三个小步骤，并解释每一步。”\n\n*虚构演示材料与占位来源，用于展示阅读流程。*",
+                  "complete": true
+                }
+              ],
+              "summary": "先做一个角色、一块平台和一次跳跃。跟着示例教程，逐步理解移动、跳跃和碰撞，再让 AI 帮你拆解下一步。",
+              "state": "completed"
+            }
+          ],
+          "source": {
+            "sourceUrl": "https://www.youtube.com/watch?v=DEMO1234abc",
+            "markdown": "![Pixel character and platforms: fictional tutorial artwork](https://postrove-demo.example/pixel-game.png)\n\n## Make one character move\n\n[00:00 · Set up the scene](https://www.youtube.com/watch?v=DEMO1234abc&t=0s)　 [02:14 · Move and jump](https://www.youtube.com/watch?v=DEMO1234abc&t=134s)　 [05:32 · Platform collisions](https://www.youtube.com/watch?v=DEMO1234abc&t=332s)\n\nBegin with a tiny scene: move left and right, press space to jump, and land on a platform. Run each small change and observe what happens.\n\n```text\nCharacter: move left/right → press space to jump\nScene: one platform → check landing collisions\n```\n\n**Ask AI next:** “Break a character jump into three small steps and explain each one.”\n\n*Fictional demo material and placeholder sources illustrate the reading workflow.*",
+            "platform": "youtube",
+            "title": "Your first pixel game with AI",
+            "sourceIdentity": "Pixel Lab · Fictional demo",
+            "sourceKey": "youtube:video:DEMO1234abc",
+            "fetchedAt": "2026-10-20T09:20:00.000Z",
+            "contentBlocks": [
+              {
+                "type": "text",
+                "text": "![Pixel character and platforms: fictional tutorial artwork](https://postrove-demo.example/pixel-game.png)\n\n## Make one character move\n\n[00:00 · Set up the scene](https://www.youtube.com/watch?v=DEMO1234abc&t=0s)　 [02:14 · Move and jump](https://www.youtube.com/watch?v=DEMO1234abc&t=134s)　 [05:32 · Platform collisions](https://www.youtube.com/watch?v=DEMO1234abc&t=332s)\n\nBegin with a tiny scene: move left and right, press space to jump, and land on a platform. Run each small change and observe what happens.\n\n```text\nCharacter: move left/right → press space to jump\nScene: one platform → check landing collisions\n```\n\n**Ask AI next:** “Break a character jump into three small steps and explain each one.”\n\n*Fictional demo material and placeholder sources illustrate the reading workflow.*"
+              }
+            ],
+            "images": [
+              {
+                "imageId": "pixel-scene",
+                "url": "https://postrove-demo.example/pixel-game.png",
+                "alt": "Pixel Lab · Fictional demo",
+                "cachedUrl": "postrove-image://c40febaf61d6ef5a6b6b8b4b6b2a667e29460949636d17f28c0108e631711c36"
+              }
+            ],
+            "completeness": "complete",
+            "completenessNote": "Fictional demo source · Placeholder link"
+          },
+          "outputLanguage": "zh-CN"
+        },
+        "createdAt": "2026-10-20T09:20:00.000Z",
+        "finishedAt": "2026-10-20T09:20:00.000Z",
+        "updatedAt": "2026-10-20T09:20:00.000Z"
+      }
+    ]
+  }
+}

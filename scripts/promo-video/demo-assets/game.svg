@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="430" viewBox="0 0 1200 430">
+<rect width="1200" height="430" rx="24" fill="#15213B"/>
+<g opacity=".18" stroke="#9BAED2"><path d="M0 0v430"/><path d="M40 0v430"/><path d="M80 0v430"/><path d="M120 0v430"/><path d="M160 0v430"/><path d="M200 0v430"/><path d="M240 0v430"/><path d="M280 0v430"/><path d="M320 0v430"/><path d="M360 0v430"/><path d="M400 0v430"/><path d="M440 0v430"/><path d="M480 0v430"/><path d="M520 0v430"/><path d="M560 0v430"/><path d="M600 0v430"/><path d="M640 0v430"/><path d="M680 0v430"/><path d="M720 0v430"/><path d="M760 0v430"/><path d="M800 0v430"/><path d="M840 0v430"/><path d="M880 0v430"/><path d="M920 0v430"/><path d="M960 0v430"/><path d="M1000 0v430"/><path d="M1040 0v430"/><path d="M1080 0v430"/><path d="M1120 0v430"/><path d="M1160 0v430"/><path d="M0 0h1200"/><path d="M0 40h1200"/><path d="M0 80h1200"/><path d="M0 120h1200"/><path d="M0 160h1200"/><path d="M0 200h1200"/><path d="M0 240h1200"/><path d="M0 280h1200"/><path d="M0 320h1200"/><path d="M0 360h1200"/><path d="M0 400h1200"/></g>
+<g fill="#AFEDC8"><path d="M0 370h340v60H0zM430 310h230v35H430zM750 245h220v35H750zM1040 180h160v35h-160z"/></g>
+<g fill="#668978"><path d="M0 392h340v38H0zM430 332h230v13H430zM750 267h220v13H750zM1040 202h160v13h-160z"/></g>
+<g fill="#E7FF96"><path d="M500 201h12v-12h12v12h12v12h-12v12h-12v-12h-12zM815 136h12v-12h12v12h12v12h-12v12h-12v-12h-12z"/></g>
+<path d="M260 280q75-145 200-30" stroke="#8C9BF5" stroke-width="5" stroke-dasharray="10 12" fill="none"/>
+<g shape-rendering="crispEdges"><path d="M195 264h60v12h12v60h-12v12h-12v22h-18v-22h-18v22h-18v-34h-12v-48h18z" fill="#AFA0FF"/><path d="M195 288h60v24h-60z" fill="#DBD4FF"/><path d="M208 288h7v12h-7zM238 288h7v12h-7z" fill="#17213B"/><path d="M195 264h60v12h-60z" fill="#D0C7FF"/></g>
+<g font-family="Arial,sans-serif" fill="#C5D0E8"><text x="48" y="58" font-size="17" letter-spacing="3">PIXEL LAB / FICTIONAL DEMO</text><text x="820" y="385" font-size="18">MOVE → JUMP → COLLIDE</text></g>
+<rect x="65" y="300" width="50" height="42" rx="8" fill="#FFFFFF14"/><path d="M100 321H80m0 0 7-7m-7 7 7 7" stroke="#D8E0F4" stroke-width="3" fill="none"/>
+</svg>

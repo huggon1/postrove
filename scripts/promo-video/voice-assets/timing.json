@@ -1,0 +1,53 @@
+{
+  "duration": 48,
+  "sampleRate": 48000,
+  "provider": "Microsoft Edge online Neural TTS through edge-tts 7.3.1",
+  "languages": {
+    "zh-CN": [
+      {
+        "start": 11,
+        "end": 17.2,
+        "text": "各平台的 AI 分别查找内容。你可以在同一个话题里查看回复和来源。",
+        "voice": "zh-CN-YunxiNeural",
+        "playbackRate": 1
+      },
+      {
+        "start": 35,
+        "end": 38.987,
+        "text": "把内容收藏到阅读库，可以查看原文和中文翻译。",
+        "voice": "zh-CN-YunxiNeural",
+        "playbackRate": 1
+      },
+      {
+        "start": 43.5,
+        "end": 46.309,
+        "text": "Postrove，跨平台提问和阅读。",
+        "voice": "zh-CN-YunxiNeural",
+        "playbackRate": 1
+      }
+    ],
+    "en": [
+      {
+        "start": 11,
+        "end": 18.221,
+        "text": "Each platform’s AI searches for relevant content. View the replies and source links together in one topic.",
+        "voice": "en-US-GuyNeural",
+        "playbackRate": 1
+      },
+      {
+        "start": 35,
+        "end": 40.171,
+        "text": "Save sources to Reading. View the original text or the reading version.",
+        "voice": "en-US-GuyNeural",
+        "playbackRate": 1
+      },
+      {
+        "start": 43.5,
+        "end": 47.274,
+        "text": "Postrove. Ask, save, and read.",
+        "voice": "en-US-GuyNeural",
+        "playbackRate": 1
+      }
+    ]
+  }
+}

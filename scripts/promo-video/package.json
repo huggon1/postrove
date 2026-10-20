@@ -1,0 +1,27 @@
+{
+  "name": "postrove-promo-film",
+  "private": true,
+  "version": "4.0.0",
+  "type": "module",
+  "scripts": {
+    "prepare:assets": "node prepare.mjs",
+    "stills": "node prepare.mjs && node render.mjs --stills",
+    "render": "node audio.mjs && node narration.mjs && node render.mjs",
+    "verify": "node verify.mjs",
+    "typecheck": "tsc --noEmit",
+    "audio": "node audio.mjs && node narration.mjs"
+  },
+  "dependencies": {
+    "@remotion/bundler": "4.0.529",
+    "@remotion/cli": "4.0.529",
+    "@remotion/renderer": "4.0.529",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "remotion": "4.0.529"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.0",
+    "@types/react-dom": "19.2.0",
+    "typescript": "5.9.3"
+  }
+}

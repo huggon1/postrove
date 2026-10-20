@@ -1,3 +1,5 @@
+https://github.com/user-attachments/assets/68523301-c407-418a-9cd6-417462881ec2
+
 <p align="center"><img src="assets/postrove-icon.svg" width="112" alt="Postrove 应用图标"></p>
 
 # Postrove
