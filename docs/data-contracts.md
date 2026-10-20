@@ -17,6 +17,8 @@ The [architecture](architecture-overview.md#runtime-boundaries-and-data-ownershi
 
 Timestamps use ISO strings with timezone information. The interface displays local time. Saved follow snapshots keep reports readable after configuration edits or deletion.
 
+Preferences and reading-task commits replace their JSON files atomically before publishing in-memory state. On Windows, a transient `EPERM`, `EBUSY`, or `EACCES` during replacement retries for up to two seconds. An exhausted retry returns the write error and retains the previously committed file and state.
+
 ## Search conditions, follows, and reports
 
 `StartFocusSearch` accepts `question`, unique selected `advisorIds`, and matching unique `platforms`. The service trims outer question whitespace. New sends use `period: all`; historical period values remain readable. An advisor is one supported platform AI plus query language. `x-grok-zh` and `x-grok-en` share `connectionId: x-grok`; `xiaohongshu-diandian-zh` uses `xiaohongshu-diandian`. `advisors.json` stores the enabled IDs. Legacy callers and historical sections map X to English and Xiaohongshu to Chinese. Interface, query, and reading languages are independent. `preferences.json` stores interface language, reading language (`app`, `zh-CN`, `en`), and browser visibility.

@@ -1,5 +1,6 @@
-import { readFile, mkdir, writeFile, rename } from "node:fs/promises";
+import { readFile, mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { renameWithRetry } from "../storage/rename-with-retry";
 import {
   initialLanguage,
   languageSchema,
@@ -70,7 +71,7 @@ export class Preferences {
       await writeFile(path + ".tmp", JSON.stringify(value), {
         mode: 0o600,
       });
-      await rename(path + ".tmp", path);
+      await renameWithRetry(path + ".tmp", path);
       this.language = value.language;
       this.readingLanguage = value.readingLanguage;
       this.taskBrowserVisible = value.taskBrowserVisible;
