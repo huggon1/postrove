@@ -37,7 +37,11 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 24
-      - run: node --check website/main.js
+      - run: |
+          node --check website/main.js
+          node --check website/content.js
+          node --check website/cards.js
+          node --check website/videos.js
       - run: npm run homepage:build
       - uses: actions/upload-pages-artifact@v4
         with:

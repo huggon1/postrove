@@ -43,6 +43,8 @@ const mimeTypes = {
   ".ico": "image/x-icon",
   ".woff": "font/woff",
   ".woff2": "font/woff2",
+  ".vtt": "text/vtt; charset=utf-8",
+  ".zip": "application/zip",
 };
 
 function isContained(root, candidate) {
