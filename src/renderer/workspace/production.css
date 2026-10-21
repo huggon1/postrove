@@ -25,6 +25,9 @@ svg {
 button {
   touch-action: manipulation;
 }
+button[aria-expanded="true"] > .disclosure-caret {
+  transform: rotate(180deg);
+}
 input,
 textarea,
 select {

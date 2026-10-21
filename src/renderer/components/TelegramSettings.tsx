@@ -301,7 +301,7 @@ export function TelegramSettings(props: TelegramSettingsProps) {
                 }}
               >
                 {t("查看阅读内容")}
-                <ArrowUpRight />
+                <ArrowRight />
               </button>
             </div>
           )}

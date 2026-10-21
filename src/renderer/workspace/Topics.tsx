@@ -2,7 +2,6 @@ import { sourceProfiles } from "../../shared/source-profiles";
 import { useState } from "react";
 import {
   ArrowRight,
-  ArrowUpRight,
   At,
   BookmarkSimple,
   CaretDown,
@@ -438,7 +437,7 @@ export function TopicThread({
           onClick={() => setReceipts(!receipts)}
         >
           {t("成员回执")}
-          <CaretDown />
+          <CaretDown className="disclosure-caret" />
         </button>
       </ModalHeader>
       <div className="thread-scroll">
@@ -687,7 +686,7 @@ export function TopicThread({
                       }
                     >
                       {t("实际提问")}
-                      <CaretDown />
+                      <CaretDown className="disclosure-caret" />
                     </button>
                   </div>
                   {prompt.has(section.sectionId) && (

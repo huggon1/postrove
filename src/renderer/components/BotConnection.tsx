@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import {
-  ArrowUpRight,
+  ArrowRight,
   CheckCircle,
   PaperPlaneTilt,
   ShieldCheck,
@@ -55,7 +55,7 @@ export function BotConnectionCard({
       {identity && <span className="inbox-identity">{identity}</span>}
       <span className="inbox-card-bottom">
         <span>{t(configured ? "管理连接" : "开始配置")}</span>
-        <ArrowUpRight />
+        <ArrowRight />
       </span>
     </button>
   );

@@ -1,8 +1,7 @@
 import { useState } from "react";
 import {
-  CaretRight,
+  ArrowRight,
   Plus,
-  ArrowUpRight,
   Desktop,
   GearSix,
   Globe,
@@ -80,7 +79,6 @@ export function Settings({
           >
             <Icon weight={section === id ? "fill" : "regular"} />
             {t(label)}
-            <CaretRight />
           </button>
         ))}
       </nav>
@@ -172,7 +170,7 @@ export function Settings({
                             : "待连接",
                       )}
                     </span>
-                    <CaretRight />
+                    <ArrowRight />
                   </button>
                 ))}
               <button className="add-member-card" onClick={() => onMember()}>
@@ -180,7 +178,7 @@ export function Settings({
                   <Plus />
                 </span>
                 <strong>{t("连接平台 AI")}</strong>
-                <ArrowUpRight />
+                <ArrowRight />
               </button>
             </div>
           </>

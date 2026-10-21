@@ -235,7 +235,7 @@ export function Members({
                       ? "管理配置"
                       : "连接平台",
                   )}
-                  <ArrowUpRight />
+                  <ArrowRight />
                 </button>
               </header>
               {choices(connection)}
