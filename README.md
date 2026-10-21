@@ -10,9 +10,9 @@ Your AI members find the posts. Postrove helps you turn them into something wort
 
 Ask a question across platforms, compare independent replies, and save useful sources in one reading library. Automatic translation lets you ask and read in your own language.
 
-[Download for macOS](https://github.com/huggon1/postrove/releases/latest) · [Download for Windows](https://github.com/huggon1/postrove/releases/latest) · [Getting started](#installation-and-use)
+[Website](https://huggon1.github.io/postrove/) · [Download for macOS](https://github.com/huggon1/postrove/releases/latest) · [Download for Windows](https://github.com/huggon1/postrove/releases/latest) · [Getting started](#installation-and-use)
 
-![Topics with independent replies from platform AI members](assets/screenshots/topics-en.png)
+![Ask how to make a first pixel game with AI](assets/screenshots/topics-en.png)
 
 _Screenshots show the current source interface with fictional questions, replies, sources, and reading material. Published packages follow their release notes._
 
@@ -22,7 +22,7 @@ _Screenshots show the current source interface with fictional questions, replies
 
 Start a topic and choose its members. Each member answers independently with its platform's posts and sources. Open the topic to read its replies, inspect member receipts, and collect individual, selected, or all sources into Reading.
 
-![A topic with member replies and sources ready to collect](assets/screenshots/topic-en.png)
+![Read independent replies and collect a pixel-game tutorial](assets/screenshots/topic-en.png)
 
 | Content platform | Platform AI            | Sign in to                        | Expert language  | Status       |
 | ---------------- | ---------------------- | --------------------------------- | ---------------- | ------------ |
@@ -47,9 +47,9 @@ Choose your reading language separately from the app language. Replies and colle
 
 Collect posts and articles from different platforms in one place. Read their text, images, and summaries in your chosen language.
 
-For example, when you find a long technical article you want to read later, forward its link to your configured Telegram or Feishu app bot. Postrove retrieves the content and prepares a summary, so you can skim the summary first and read the article later in the app. You can also add links directly.
+For example, ask “I want to make a pixel game with AI. Where do I start?” Compare the members' replies, then collect a useful tutorial into Reading. You can also add its link directly or forward it to your configured Telegram or Feishu app bot. Postrove retrieves the available content and prepares a summary for later reading.
 
-![A saved article with a translated reading version, summary, and original-text switch](assets/screenshots/reading-en.png)
+![Read a saved pixel-game tutorial with its summary, illustration, and original-text switch](assets/screenshots/reading-en.png)
 
 Reading rules define the content to capture. The Agent loads the relevant Skill for the observed page. Other pages use the general web rule, with the Agent identifying the main content and how to read it.
 

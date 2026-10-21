@@ -1,0 +1,61 @@
+name: Homepage
+
+on:
+  pull_request:
+    paths:
+      - website/**
+      - scripts/homepage/**
+      - assets/screenshots/**
+      - assets/postrove-*.svg
+      - package.json
+      - .github/workflows/pages.yml
+  push:
+    branches: [main]
+    paths:
+      - website/**
+      - scripts/homepage/**
+      - assets/screenshots/**
+      - assets/postrove-*.svg
+      - package.json
+      - .github/workflows/pages.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: homepage-${{ github.event.pull_request.number || 'production' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    name: Build homepage
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: node --check website/main.js
+      - run: npm run homepage:build
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist/homepage
+
+  deploy:
+    name: Deploy homepage
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

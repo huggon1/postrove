@@ -10,9 +10,9 @@ https://github.com/user-attachments/assets/68523301-c407-418a-9cd6-417462881ec2
 
 向不同平台的 AI 成员提出同一个问题，看看各自的回答，再把有用的来源收进阅读库。自动翻译让你用自己的语言提问，也用自己的语言阅读。
 
-[下载 macOS 版](https://github.com/huggon1/postrove/releases/latest) · [下载 Windows 版](https://github.com/huggon1/postrove/releases/latest) · [开始使用](#安装与使用)
+[官网](https://huggon1.github.io/postrove/?lang=zh-CN) · [下载 macOS 版](https://github.com/huggon1/postrove/releases/latest) · [下载 Windows 版](https://github.com/huggon1/postrove/releases/latest) · [开始使用](#安装与使用)
 
-![话题首页：查看不同平台 AI 成员的独立回复](assets/screenshots/topics-zh-CN.png)
+![发起话题：我想用 AI 做一个像素小游戏，应该从哪里开始？](assets/screenshots/topics-zh-CN.png)
 
 _截图使用虚构的问题、回答、来源和阅读材料，展示当前源码界面。安装包功能以对应版本说明为准。_
 
@@ -22,7 +22,7 @@ _截图使用虚构的问题、回答、来源和阅读材料，展示当前源�
 
 发起一个话题，选择本次回答的成员。各成员独立回答，并附上平台帖子和来源。打开话题后，可以阅读回复、查看成员回执，按单条、选中或全部收集来源。
 
-![话题详情：阅读成员回答，将有用的来源收进阅读库](assets/screenshots/topic-zh-CN.png)
+![话题详情：阅读成员回答，将像素小游戏教程收进阅读库](assets/screenshots/topic-zh-CN.png)
 
 | 内容平台 | 平台 AI               | 登录站点                      | 专家语言   | 状态   |
 | -------- | --------------------- | ----------------------------- | ---------- | ------ |
@@ -47,9 +47,9 @@ _截图使用虚构的问题、回答、来源和阅读材料，展示当前源�
 
 将各平台看到的感兴趣帖子和文章统一收集到 Postrove，以你选择的语言查看正文、图片和摘要。
 
-比如看到一篇很长的技术文章，想留到以后读，可以把链接转发给配置好的 Telegram 或飞书应用机器人。Postrove 会读取内容并生成摘要，之后你就可以在应用中先看摘要，再阅读正文。链接也可以直接在应用中添加。
+比如提问“我想用 AI 做一个像素小游戏，应该从哪里开始？”，看看各成员的回答，再把有用的教程收进阅读库。也可以直接添加教程链接，或转发给配置好的 Telegram 或飞书应用机器人。Postrove 会读取可访问的内容并生成摘要，方便稍后阅读。
 
-![阅读页：查看译文、摘要和配图，随时切回原文](assets/screenshots/reading-zh-CN.png)
+![阅读页：查看像素小游戏教程的译文、摘要和配图，随时切回原文](assets/screenshots/reading-zh-CN.png)
 
 读取规则明确要采集的内容。Agent 按实际页面加载对应 Skill。其他页面使用通用网页规则，由 Agent 识别正文并选择读取方式。
 
