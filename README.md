@@ -10,7 +10,7 @@ Your AI members find the posts. Postrove helps you turn them into something wort
 
 Ask a question across platforms, compare independent replies, and save useful sources in one reading library. Automatic translation lets you ask and read in your own language.
 
-[Download for macOS](https://github.com/huggon1/postrove/releases/latest) · [Download for Windows](https://github.com/huggon1/postrove/releases/latest) · [Getting started](#installation-and-use)
+[Website](https://huggon1.github.io/postrove/) · [Download for macOS](https://github.com/huggon1/postrove/releases/latest) · [Download for Windows](https://github.com/huggon1/postrove/releases/latest) · [Getting started](#installation-and-use)
 
 ![Ask how to make a first pixel game with AI](assets/screenshots/topics-en.png)
 
