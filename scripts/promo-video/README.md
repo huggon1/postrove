@@ -1,70 +1,73 @@
 # Postrove promotional film
 
-This separate authoring package creates a 48-second Postrove film in Simplified Chinese and English. Each version renders at 1920 × 1080 and 60 fps.
+This authoring package creates a 58-second Postrove film in Simplified Chinese and English. Each version renders at 1920 × 1080 and 60 fps. [story.json](story.json) owns the scene boundaries, duration, frame rate, and bilingual narration.
 
-The opening introduces Postrove as a tool for finding content through platform AIs. One fictional example then drives the story: “I want to make a pixel game with AI. Where do I start?” The example uses X/Grok, Xiaohongshu/Diandian, Gemini/YouTube, and Reddit/Ask. Platform content appears before each answer and its source links. A YouTube tutorial then enters the reading library. The Chinese edition shows the original text and Chinese translation; the English edition shows the original and reading versions. The final scene names cross-platform questions and reading. Gemini/YouTube and Reddit/Ask retain their Preview status from the root README.
+A three-second title card introduces Postrove and its purpose before the first problem. The film then follows two research problems: repeated manual searches across apps and social posts that AI web search can miss. Concrete examples of Grok searching X and Diandian searching RedNote explain why someone would ask these advisors together. Postrove then sends one question to selected advisors and shows their independent replies and source links. A pixel-game question appears as an example inside this workflow.
 
-## Render
+The second story starts with long posts saved across separate bookmarks. Forwarding to a configured Feishu or Telegram bot brings the same material into Reading. The film ends with Postrove's summaries, article text, original-source access, and saved materials that the user's own agent can read.
+
+Phone bookmark actions stay inside the source application. Sending, bot acknowledgement, and the matching library record mark the forwarding sequence. Repeated covers and titles retain source identity. Procedural device scenes use perspective, lighting, and a stable desk; readable screens face the camera.
+
+## Build and render
 
 Run these commands on an Apple Silicon Mac from the repository root:
 
 ```sh
 cd scripts/promo-video
 npm ci
+node capture-demo.mjs
 node audio.mjs
 node narration.mjs
 node render.mjs
 node render.mjs --english
 ```
 
-The root [English README](../../README.md) and [Chinese README](../../README.zh-CN.md) each begin with their corresponding film, hosted as a GitHub video attachment.
+The capture command uses application dependencies from this checkout or the primary Git checkout. `POSTROVE_CAPTURE_NODE_MODULES` selects another application dependency directory. The renderer uses installed macOS Google Chrome; `POSTROVE_RENDER_CHROME` selects another executable.
 
-Generate review frames separately:
+Generate review frames with:
 
 ```sh
 node render.mjs --stills
 node render.mjs --stills --english
 ```
 
-The renderer uses installed macOS Google Chrome by default. Set `POSTROVE_RENDER_CHROME` to select another Chrome executable. Rendering uses a single browser tab for the visual track, then combines that track with the selected narration and music mix.
+Use `node render.mjs --draft --skip-stills` for a 960 × 540, 30 fps motion draft. Final renders retain 1920 × 1080 at 60 fps.
 
-## Audio
-
-```sh
-node audio.mjs
-node narration.mjs
-```
-
-The score uses deterministic tonal synthesis at 48 kHz in stereo: sustained chords, keyboard notes, bass, and sine-based kicks. Fixed mastering gain preserves the arrangement's levels. Neural narration uses Chinese Yunxi and English Guy voices at a fixed synthesis rate. Cached sources play at 1× speed. Six source MP3 files and the actual cue times remain in `voice-assets/`; the mixer uses those cached sources for offline regeneration. Missing or changed source files trigger bounded requests through `uvx` and pinned `edge-tts` 7.3.1. Music stays below its source level between spoken passages and drops further during speech. The mixer restores the background level gradually after each cue. Mix reports record duration, sample rate, RMS, and peak levels.
+The renderer creates the visual track first, then combines it with the corresponding language mix. Rebuilding the score and narration before final rendering updates the audio and its timing manifest together.
 
 ## Application captures
 
-[Demo assets](demo-assets/) contain bilingual captures of the real Electron interface with isolated fictional records. [capture-demo.mjs](capture-demo.mjs) rebuilds the interface into a local temporary runtime, validates saved fixtures, and captures the topic, sources, reading version, original version, and reading code. The capture tool finds installed application dependencies from this checkout or the primary Git checkout. Network requests stay blocked during capture.
+[capture-demo.mjs](capture-demo.mjs) opens the current Electron interface with isolated, schema-validated fictional records. It captures the topic, replies and source links, reading list, original text, and reading version into [demo-assets](demo-assets/). Capture evidence records the application revision, image dimensions, and checks. The capture profile and its authored records belong to the film task.
 
-The same named YouTube tutorial and game illustration appear in discovery, source collection, and reading. Placeholder source addresses belong to the fictional demo records. Captures preserve actual product labels and controls.
+[Film.tsx](src/Film.tsx) creates the phone scenes, repeated searches, animated messages, visible state changes, and camera movement with deterministic code. Those illustrated phone scenes explain the workflow. Current desktop-interface captures show the product itself. Distinct source colors and repeated titles connect the same material across discovery, forwarding, and reading. The records, replies, and source addresses are authored examples.
 
-Both language editions use an English tutorial as the original source. The Chinese edition opens its translated Chinese reading version. The English edition keeps its post titles, source text, and reading text in English. Capture checks inspect every English scene for Chinese text and record the real Chinese expert's identity marks separately.
+Both editions use their corresponding interface language. The English film and capture text use RedNote as the display name for Xiaohongshu; capture evidence records this presentation alias. Repeated titles and covers identify the forwarded article in Reading. Answer cards fade from the original replies into their reading-language text. The reader scene aligns both versions at the article cover, then reveals the translation across actual interface captures: the Chinese edition translates the English X article, and the English edition translates the Chinese Xiaohongshu article. The Original and Reading version controls show the selected state.
+
+## Audio
+
+[audio.mjs](audio.mjs) creates an original score at 48 kHz in stereo. Rounded keyboard plucks, soft tonal taps, bass, sustained harmony, and sine-based kicks follow the scene timing. The two stories share a four-chord motif, with lighter percussion during the unread-bookmarks and reading scenes. A final envelope brings the score to silence at the story boundary.
+
+[narration.mjs](narration.mjs) synthesizes the eight narration cues in each language with pinned `edge-tts` 7.3.1 and caches the source MP3 files in [voice-assets](voice-assets/). Chinese uses Yunxi; English uses Guy. Synthesis uses the natural voice rate and playback stays at 1×. A cue can supply `spokenText` for pronunciation while `text` supplies its subtitle. Chinese AI cues join the acronym to its surrounding sentence in speech input. Localized `speechEdits` shorten the AI word spans with pitch-preserving processing and short audio crossfades. The rest of each sentence retains its natural pace. Each edit is tied to the cached source audio hash; changing that source requires a new timing review. The cache checks both forms before reusing a voice file. The mixer checks each spoken cue against its window in `story.json`. A cue that exceeds its window reports its duration so the wording or scene timing can be revised.
+
+The narration timing manifest records the actual start and end of each spoken cue. Subtitles use this manifest. Music stays at a steady background level between phrases, drops smoothly under speech, and recovers over 0.8 seconds. Mix reports record duration, sample rate, RMS, and peak levels. Cached voices support offline regeneration of the final mixes.
 
 ## Verify
 
 ```sh
+npm run typecheck
 node verify.mjs
 node verify.mjs --english
 ```
 
-Verification checks dimensions, frame rate, all 2,880 frames, stereo AAC audio, the 48-second duration, narration cue bounds, and complete media decoding. Reports record the selected mix's RMS and peak levels.
+Verification derives duration, frame count, cue count, and cue boundaries from `story.json`. It checks H.264 video, stereo AAC audio, complete frame and audio decoding, and narration at 1× inside the declared windows. It also compares decoded MP4 audio with the current source mix, which catches a stale or mismatched audio track.
+
+Review covers key frames in both languages, phone and desktop text at playback size, platform and source identity, narration pronunciation, subtitle placement, and the encoded MP4. Audio review includes the search sequence, each scene arrival, speech-to-music transitions, and the final fade. GitHub delivery review checks the inline README players and compares downloaded attachment hashes with the verified local files.
 
 Generated deliverables stay in the ignored `output/` directory:
 
 - `postrove-zh-CN-1080p.mp4` and `postrove-en-1080p.mp4`
 - `soundtrack.wav`, `narration-*.wav`, and `mix-*.wav`
-- `stills-v4-zh-CN/` and `stills-v4-en/` review frames
-- `render-*.json`, `verification-*.json`, and audio verification reports
+- Key-frame PNGs and rendering reports
+- `verification-*.json`, narration timing, and audio reports
 
-## Copy and review evidence
-
-[Film.tsx](src/Film.tsx) owns animation, timing, and bilingual captions. [prepare.mjs](prepare.mjs) copies artwork, game-demo captures, and audio into the local render assets. [audio.mjs](audio.mjs) owns the original procedural score; [narration.mjs](narration.mjs) owns timed speech and music mixing.
-
-The user's approved revision covers the content-search opening, the game example, platform AI routes selected for this example, English material in the English edition, source links, translated reading, short narration with subtitles, and the “Ask across platforms. Save and read.” finish. Functional headings state the action or displayed result: asking, searching, viewing replies and sources, saving, and reading. The reading narration names the original text and Chinese translation in Chinese; English narration names the original and reading versions. Example labels scope the visible platform routes to this film's scenario. Product labels reuse existing interface copy. The Preview labels reflect the current root README platform table. The user approved placing each film at the start of its corresponding root README.
-
-Key-frame review covers both languages, readable text, source identity, original/reading transitions, platform status, and the approved functional copy. Audio review compares the reported 20-second, transition, and later passages against V3, checks the reduced high-frequency content, and measures cue boundaries and music recovery. Playback review covers the final encoded MP4 files in both languages. README review checks each language attachment and its inline player. Review artifacts belong to this video task and can be regenerated after each film edit.
+The root [English README](../../README.md) and [Chinese README](../../README.zh-CN.md) contain their corresponding GitHub video attachments. Animation source, fixtures, cached narration, and render scripts remain in this package for later revisions.

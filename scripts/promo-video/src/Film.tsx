@@ -1,5 +1,4 @@
-import React from "react";
-import narration from "../voice-assets/timing.json";
+import React, { type CSSProperties, type ReactNode } from "react";
 import {
   AbsoluteFill,
   Audio,
@@ -8,120 +7,73 @@ import {
   staticFile,
   useCurrentFrame,
 } from "remotion";
-
-export const FPS = 60;
-export const DURATION = 48 * FPS;
+import story from "../story.json";
+import narration from "../voice-assets/timing.json";
+import {
+  ArticleCover,
+  BotMessages,
+  PhoneFrame,
+  Pointer,
+  SocialFeed,
+  TapRipple,
+} from "./StoryArt";
+export const FPS = story.fps;
+export const DURATION = story.seconds * FPS;
 export type Language = "zh-CN" | "en";
 export type FilmProps = { language: Language; sound: boolean };
 const C = {
-  paper: "#F4F5F1",
-  ink: "#172032",
-  blue: "#426FE1",
-  deep: "#10182B",
-  muted: "#778298",
-  line: "#D9DFEA",
-  lime: "#DFF4A1",
+  paper: "#F6F4EE",
+  ink: "#1F293D",
+  blue: "#5375EA",
+  coral: "#EA8B75",
+  yellow: "#EFCB76",
+  muted: "#878B94",
+  deep: "#172136",
 };
 const FONT = '"Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif';
-const p = (l: Language, zh: string, en: string) => (l === "zh-CN" ? zh : en);
-const r = (t: number, a: number, b: number) =>
-  Math.max(0, Math.min(1, (t - a) / (b - a)));
-const ease = (x: number) => 1 - (1 - x) ** 4;
-const move = (t: number, a: number, b: number, x: number, y: number) =>
-  x + (y - x) * ease(r(t, a, b));
-const q = (l: Language) =>
-  p(
+const tr = (l: Language, zh: string, en: string) => (l === "zh-CN" ? zh : en);
+const clamp = (v: number) => Math.max(0, Math.min(1, v));
+const prog = (t: number, a: number, b: number) => clamp((t - a) / (b - a));
+const ease = (v: number) => 1 - Math.pow(1 - clamp(v), 4);
+const tween = (t: number, a: number, b: number, x: number, y: number) =>
+  x + (y - x) * ease(prog(t, a, b));
+const pop = (t: number, at: number) => {
+  const p = prog(t, at, at + 0.65);
+  return 1 - Math.exp(-8 * p) * Math.cos(p * 8);
+};
+const fade = (t: number, a: number, b: number) =>
+  prog(t, a, a + 0.22) * (1 - prog(t, b - 0.22, b));
+const useTime = () => useCurrentFrame() / FPS;
+const question = (l: Language) =>
+  tr(
     l,
-    "我想用 AI 做一个像素小游戏，应该从哪里开始？",
-    "I want to make a pixel game with AI. Where do I start?",
+    "我想用 AI 做个像素游戏。找一些开发记录、教程和踩坑经验。",
+    "I want to make a pixel game with AI. Find devlogs, tutorials, and practical lessons.",
   );
-const title = (l: Language) =>
-  p(l, "用 AI 做第一个像素小游戏", "Your first pixel game with AI");
-const routes = [
-  {
-    id: "x",
-    platform: "X",
-    ai: "Grok",
-    mark: "𝕏",
-    color: "#BAC4D7",
-    sample: ["从一个可玩的原型开始", "Start with one playable prototype"],
-    kind: ["开发记录", "DEV LOG"],
-    finding: [
-      "先做移动，再加跳跃与碰撞。",
-      "Movement first. Then jumping and collision.",
-    ],
-    source: ["我的第一个 AI 游戏原型", "My first AI game prototype"],
-  },
-  {
-    id: "xhs",
-    platform: "小红书",
-    ai: "点点",
-    mark: "小",
-    color: "#FA7586",
-    sample: ["新手的第一份制作笔记", "A beginner’s build journal"],
-    kind: ["入门笔记", "BEGINNER NOTES"],
-    finding: [
-      "把第一个关卡，缩小到一个场景。",
-      "Keep the first level to a single scene.",
-    ],
-    source: [
-      "零基础做像素小游戏的第一周",
-      "My first week building a pixel game",
-    ],
-  },
-  {
-    id: "youtube",
-    platform: "YouTube",
-    ai: "Gemini",
-    mark: "▶",
-    color: "#FA8F80",
-    sample: [
-      "跟着视频，搭出第一个场景",
-      "Build your first scene, step by step",
-    ],
-    kind: ["视频教程", "VIDEO TUTORIAL"],
-    finding: [
-      "教程从角色移动讲起，附视频来源。",
-      "A movement tutorial, with the original video.",
-    ],
-    source: ["用 AI 做第一个像素小游戏", "Your first pixel game with AI"],
-  },
-  {
-    id: "reddit",
-    platform: "Reddit",
-    ai: "Ask",
-    mark: "r/",
-    color: "#FDBA81",
-    sample: ["先看开发者踩过的坑", "Learn from other developers’ mistakes"],
-    kind: ["社区讨论", "COMMUNITY THREAD"],
-    finding: [
-      "先验证玩法，再扩展工具和功能。",
-      "Test the game loop before adding features.",
-    ],
-    source: [
-      "第一次用 AI 做游戏，我学到了什么",
-      "What I learned making my first AI game",
-    ],
-  },
-];
-type Route = (typeof routes)[number];
-const tr = (l: Language, v: string[]) => v[l === "zh-CN" ? 0 : 1];
-
-const Arrow = ({ size = 24 }: { size?: number }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.8"
-  >
-    <path d="M4 12h16m-6-6 6 6-6 6" />
-  </svg>
+const article = (l: Language, blue = false) =>
+  blue
+    ? tr(l, "先把角色移动和跳跃做出来", "Start with movement and jumping")
+    : tr(l, "我用 AI 做了一个像素小游戏", "My first pixel game with AI");
+const Box = ({
+  children,
+  style,
+}: {
+  children?: ReactNode;
+  style?: CSSProperties;
+}) => <div style={{ position: "absolute", ...style }}>{children}</div>;
+const Texture = () => (
+  <AbsoluteFill
+    style={{
+      pointerEvents: "none",
+      opacity: 0.21,
+      backgroundImage: "radial-gradient(#7D7C6C38 .65px, transparent .8px)",
+      backgroundSize: "5px 5px",
+    }}
+  />
 );
-const Mark = ({
+const Brand = ({
   dark = false,
-  size = 34,
+  size = 38,
 }: {
   dark?: boolean;
   size?: number;
@@ -130,8 +82,8 @@ const Mark = ({
     style={{
       display: "flex",
       alignItems: "center",
-      gap: 12,
-      color: dark ? "#fff" : C.ink,
+      gap: 13,
+      color: dark ? "#FFF" : C.ink,
     }}
   >
     <Img
@@ -143,1693 +95,1763 @@ const Mark = ({
       }}
     />
     <span
-      style={{ fontSize: size * 0.66, fontWeight: 650, letterSpacing: -0.8 }}
+      style={{ fontSize: size * 0.76, fontWeight: 700, letterSpacing: -1.1 }}
     >
       Postrove
     </span>
   </div>
 );
-const Rail = ({
-  l,
-  n,
-  dark = false,
-}: {
-  l: Language;
-  n: number;
-  dark?: boolean;
-}) => (
-  <div
-    style={{
-      position: "absolute",
-      left: 96,
-      right: 96,
-      top: 48,
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      zIndex: 3,
-    }}
-  >
-    <Mark dark={dark} />
-    <div
-      style={{
-        fontSize: 14,
-        letterSpacing: 2,
-        color: dark ? "#AAB8D2" : C.muted,
-      }}
-    >
-      {p(l, "提问、收藏和阅读", "ASK, SAVE AND READ")}
-      <span style={{ marginLeft: 34, opacity: 0.6 }}>0{n} / 06</span>
-    </div>
-  </div>
-);
-const Demo = ({ l, dark = false }: { l: Language; dark?: boolean }) => (
-  <div
-    style={{
-      position: "absolute",
-      left: 96,
-      bottom: 21,
-      fontSize: 14,
-      color: dark ? "#8090AC" : "#8690A1",
-      letterSpacing: 0.3,
-    }}
-  >
-    {p(
-      l,
-      "虚构演示问题、回复与材料",
-      "Fictional demo question, replies and materials",
-    )}
-  </div>
-);
-const Grid = ({ dark = false }: { dark?: boolean }) => (
-  <AbsoluteFill
-    style={{
-      backgroundImage: `radial-gradient(${dark ? "#55698740" : "#9AA8C238"} 1px,transparent 1px)`,
-      backgroundSize: "38px 38px",
-      maskImage: "linear-gradient(90deg,transparent,#000 50%,transparent)",
-      pointerEvents: "none",
-    }}
-  />
-);
-const Scene = ({
+const Chip = ({
   children,
-  bg = C.paper,
-  seconds,
-}: {
-  children: React.ReactNode;
-  bg?: string;
-  seconds: number;
-}) => {
-  const t = useCurrentFrame() / FPS;
-  return (
-    <AbsoluteFill
-      style={{
-        background: bg,
-        overflow: "hidden",
-        opacity: Math.min(r(t, 0, 0.25), 1 - r(t, seconds - 0.28, seconds)),
-      }}
-    >
-      {children}
-    </AbsoluteFill>
-  );
-};
-const Reveal = ({
-  children,
-  at = 0.2,
-}: {
-  children: React.ReactNode;
-  at?: number;
-}) => {
-  const t = useCurrentFrame() / FPS;
-  return (
-    <div style={{ overflow: "hidden", paddingBottom: 8, marginBottom: -8 }}>
-      <div
-        style={{
-          transform: `translateY(${move(t, at, at + 0.7, 110, 0)}%)`,
-          opacity: r(t, at, at + 0.2),
-        }}
-      >
-        {children}
-      </div>
-    </div>
-  );
-};
-const Trial = ({ l, dark = false }: { l: Language; dark?: boolean }) => (
-  <span
-    style={{
-      fontSize: 13,
-      fontWeight: 500,
-      color: dark ? "#C1CBE0" : "#7B879F",
-      border: `1px solid ${dark ? "#FFFFFF35" : "#CAD4E7"}`,
-      padding: "3px 7px",
-      borderRadius: 5,
-    }}
-  >
-    {p(l, "试用", "Preview")}
-  </span>
-);
-const AIName = ({
-  route,
-  l,
-  dark = false,
-  compact = false,
-}: {
-  route: Route;
-  l: Language;
-  dark?: boolean;
-  compact?: boolean;
-}) => (
-  <div
-    style={{ display: "flex", alignItems: "center", gap: compact ? 10 : 14 }}
-  >
-    <div
-      style={{
-        width: compact ? 38 : 48,
-        height: compact ? 38 : 48,
-        borderRadius: 12,
-        background: dark ? "#FFFFFF12" : "#EDF1F8",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        color: route.id === "x" && !dark ? C.ink : route.color,
-        fontWeight: 700,
-        fontSize: route.id === "reddit" ? 22 : 25,
-      }}
-    >
-      {route.id === "xhs" ? p(l, "小", "D") : route.mark}
-    </div>
-    <div>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          color: dark ? "white" : C.ink,
-          fontSize: compact ? 21 : 26,
-          fontWeight: 600,
-        }}
-      >
-        {route.id === "xhs" ? p(l, "小红书", "Xiaohongshu") : route.platform}
-        {(route.id === "youtube" || route.id === "reddit") && (
-          <Trial l={l} dark={dark} />
-        )}
-      </div>
-      <div
-        style={{
-          marginTop: 4,
-          color: dark ? "#ADBEDD" : C.muted,
-          fontSize: compact ? 15 : 18,
-        }}
-      >
-        {route.id === "xhs" ? p(l, "点点", "Diandian") : route.ai}
-        {route.id === "youtube"
-          ? p(l, " · 搜视频", " · video search")
-          : p(l, " · 平台 AI", " · platform AI")}
-      </div>
-    </div>
-  </div>
-);
-
-const GameArt = ({ t = 0 }: { t?: number }) => {
-  const jump = Math.max(0, Math.sin(t * 2.5)) * 42;
-  return (
-    <svg
-      viewBox="0 0 480 280"
-      style={{
-        width: "100%",
-        height: "100%",
-        display: "block",
-        imageRendering: "pixelated",
-      }}
-      shapeRendering="crispEdges"
-    >
-      <rect width="480" height="280" fill="#E6EDF9" />
-      <rect y="210" width="480" height="70" fill="#C7DABF" />
-      <path d="M0 211h480M0 231h480" stroke="#9FBC9A" strokeWidth="4" />
-      <rect x="310" y="152" width="110" height="16" rx="1" fill="#99B5D8" />
-      <rect x="326" y="168" width="78" height="44" fill="#C1CFE1" />
-      <rect x="50" y="80" width="78" height="12" fill="#F7FAFE" />
-      <rect x="72" y="68" width="42" height="12" fill="#F7FAFE" />
-      <rect x="349" y="44" width="18" height="18" fill="#EACD72" />
-      <path
-        d="M238 169q36-82 76-23"
-        fill="none"
-        stroke="#426FE177"
-        strokeWidth="3"
-        strokeDasharray="7 7"
-      />
-      <g transform={`translate(184 ${148 - jump})`}>
-        <rect x="8" width="36" height="10" fill="#426FE1" />
-        <rect y="10" width="52" height="38" fill="#426FE1" />
-        <rect x="9" y="48" width="11" height="14" fill="#172032" />
-        <rect x="34" y="48" width="11" height="14" fill="#172032" />
-        <rect x="29" y="18" width="8" height="8" fill="white" />
-        <rect x="34" y="19" width="4" height="6" fill="#172032" />
-        <rect x="7" y="33" width="15" height="6" fill="#ABC1FF" />
-      </g>
-      <rect x="425" y="106" width="4" height="105" fill="#8797B0" />
-      <path d="M429 107h29l-9 12 9 12h-29z" fill="#F19587" />
-      <path d="M35 265h87M132 265h40" stroke="#94AA94" strokeWidth="3" />
-    </svg>
-  );
-};
-const Thumb = ({ video = false }: { video?: boolean }) => (
-  <div
-    style={{
-      position: "relative",
-      width: "100%",
-      height: "100%",
-      overflow: "hidden",
-      borderRadius: 10,
-    }}
-  >
-    <Img
-      src={staticFile("demo-game.png")}
-      style={{ width: "100%", height: "100%", objectFit: "cover" }}
-    />
-    {video && (
-      <div
-        style={{
-          position: "absolute",
-          left: "44%",
-          top: "34%",
-          width: 43,
-          height: 43,
-          borderRadius: "50%",
-          background: "#172032CC",
-          color: "white",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: 19,
-        }}
-      >
-        ▶
-      </div>
-    )}
-  </div>
-);
-const ContentPreview = ({ route, l }: { route: Route; l: Language }) => {
-  if (route.id === "youtube") return <Thumb video />;
-  if (route.id === "xhs")
-    return (
-      <div style={{ height: "100%", position: "relative" }}>
-        <Thumb />
-        <div
-          style={{
-            position: "absolute",
-            bottom: 10,
-            left: 10,
-            padding: "6px 10px",
-            fontSize: 14,
-            fontWeight: 600,
-            color: "#FFFFFF",
-            background: "#CC5267DD",
-            borderRadius: 6,
-          }}
-        >
-          {p(l, "我的像素游戏制作手记", "MY PIXEL GAME JOURNAL")}
-        </div>
-      </div>
-    );
-  if (route.id === "reddit")
-    return (
-      <div
-        style={{
-          height: "100%",
-          boxSizing: "border-box",
-          background: "#F7F5F1",
-          padding: 17,
-          color: C.ink,
-        }}
-      >
-        <div style={{ color: "#D17735", fontSize: 13, marginBottom: 12 }}>
-          r/gamedev · {p(l, "示例讨论", "DEMO DISCUSSION")}
-        </div>
-        <div style={{ fontSize: 19, fontWeight: 600 }}>
-          {p(l, "第一个游戏，该做多大？", "How small should my first game be?")}
-        </div>
-        <div
-          style={{
-            marginTop: 14,
-            borderLeft: "2px solid #D5CFC8",
-            paddingLeft: 13,
-            fontSize: 15,
-            color: "#727A89",
-            lineHeight: 1.6,
-          }}
-        >
-          <div>
-            {p(l, "先验证一个核心玩法。", "Start with one core mechanic.")}
-          </div>
-          <div>
-            {p(l, "做完一个小场景，再继续。", "Finish a small scene first.")}
-          </div>
-        </div>
-      </div>
-    );
-  return (
-    <div
-      style={{
-        height: "100%",
-        boxSizing: "border-box",
-        background: "#F4F6FB",
-        padding: 17,
-        color: C.ink,
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 9,
-          fontSize: 13,
-          color: C.muted,
-        }}
-      >
-        <span
-          style={{
-            background: C.blue,
-            color: "white",
-            borderRadius: 20,
-            width: 23,
-            height: 23,
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-        >
-          p
-        </span>
-        pixel_builder · {p(l, "演示帖子", "DEMO POST")}
-      </div>
-      <div
-        style={{
-          marginTop: 13,
-          fontSize: 20,
-          fontWeight: 500,
-          lineHeight: 1.4,
-        }}
-      >
-        {p(
-          l,
-          "第 1 天：角色终于动起来了。",
-          "Day 1: the character finally moves.",
-        )}
-      </div>
-      <div style={{ marginTop: 9, fontSize: 15, color: "#7D8A9F" }}>
-        move → jump → collide
-      </div>
-      <div style={{ marginTop: 11, color: C.blue, fontSize: 14 }}>
-        #gamedev #AI
-      </div>
-    </div>
-  );
-};
-const SourceCard = ({
-  l,
-  width = 580,
-  selected = false,
-}: {
-  l: Language;
-  width?: number;
-  selected?: boolean;
-}) => (
-  <div
-    style={{
-      width,
-      minHeight: 132,
-      display: "flex",
-      alignItems: "center",
-      gap: 22,
-      padding: 18,
-      boxSizing: "border-box",
-      background: "white",
-      border: `2px solid ${selected ? C.blue : "#D8E0EE"}`,
-      borderRadius: 18,
-      boxShadow: selected ? "0 18px 70px #426FE133" : "0 12px 40px #17203216",
-    }}
-  >
-    <div style={{ width: 156, height: 98, flexShrink: 0 }}>
-      <Thumb video />
-    </div>
-    <div style={{ flex: 1, minWidth: 0 }}>
-      <div
-        style={{
-          color: "#E76B5E",
-          fontSize: 15,
-          letterSpacing: 1,
-          marginBottom: 8,
-        }}
-      >
-        YouTube · {p(l, "视频教程", "VIDEO TUTORIAL")}
-      </div>
-      <div
-        style={{
-          color: C.ink,
-          fontSize: width < 580 ? 23 : 26,
-          lineHeight: 1.35,
-          fontWeight: 600,
-        }}
-      >
-        {title(l)}
-      </div>
-      <div style={{ color: C.muted, fontSize: 14, marginTop: 8 }}>
-        {p(l, "原视频链接", "Original video link")}
-      </div>
-    </div>
-    {selected && (
-      <div style={{ color: C.blue, fontSize: 25, marginRight: 4 }}>✓</div>
-    )}
-  </div>
-);
-
-const Opening = ({ l }: { l: Language }) => {
-  const t = useCurrentFrame() / FPS;
-  return (
-    <Scene seconds={5.3}>
-      <Grid />
-      <Rail l={l} n={1} />
-      <div style={{ position: "absolute", left: 105, top: 257, width: 890 }}>
-        <div
-          style={{
-            color: C.blue,
-            fontSize: 18,
-            letterSpacing: 4,
-            marginBottom: 28,
-          }}
-        >
-          {p(l, "POSTROVE · 跨平台内容搜索", "POSTROVE · CONTENT SEARCH")}
-        </div>
-        <div
-          style={{
-            fontSize: l === "en" ? 86 : 94,
-            lineHeight: 1.22,
-            fontWeight: 650,
-            letterSpacing: -4,
-            color: C.ink,
-          }}
-        >
-          <Reveal>{p(l, "用平台 AI", "Ask platform AIs")}</Reveal>
-          <Reveal at={0.45}>{p(l, "查找内容。", "to find content.")}</Reveal>
-        </div>
-        <div
-          style={{
-            color: C.muted,
-            fontSize: 30,
-            marginTop: 38,
-            opacity: r(t, 1.2, 1.8),
-          }}
-        >
-          {p(
-            l,
-            "在一个话题里查看各平台的回复和来源。",
-            "View platform replies and sources in one topic.",
-          )}
-        </div>
-      </div>
-      <div
-        style={{
-          position: "absolute",
-          left: 1080,
-          top: 235,
-          width: 700,
-          height: 568,
-          borderRadius: 27,
-          background: "white",
-          border: "1px solid #D4DDED",
-          boxShadow: "0 30px 80px #17203215",
-          padding: 30,
-          boxSizing: "border-box",
-          transform: `translateY(${move(t, 0.25, 1.5, 80, 0)}px) rotate(${move(t, 0.25, 1.5, 3, -1)}deg)`,
-          opacity: r(t, 0.2, 0.8),
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            color: C.muted,
-            fontSize: 16,
-            marginBottom: 28,
-          }}
-        >
-          <span>{p(l, "内容与来源", "CONTENT + SOURCES")}</span>
-          <span>↗</span>
-        </div>
-        {[
-          {
-            mark: "≡",
-            label: p(l, "帖子与笔记", "Posts & notes"),
-            source: p(l, "例如 X · 小红书", "e.g. X · Xiaohongshu"),
-            color: "#E8EEF9",
-          },
-          {
-            mark: "▶",
-            label: p(l, "视频教程", "Video tutorials"),
-            source: "YouTube",
-            color: "#FCE8E4",
-          },
-          {
-            mark: "r/",
-            label: p(l, "社区讨论", "Community discussions"),
-            source: "Reddit",
-            color: "#FFF0DF",
-          },
-        ].map((item, i) => (
-          <div
-            key={item.label}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 20,
-              padding: "20px 22px",
-              marginBottom: 14,
-              border: "1px solid #E1E6EF",
-              borderRadius: 15,
-              opacity: r(t, 0.6 + i * 0.24, 1.1 + i * 0.24),
-              transform: `translateX(${move(t, 0.6 + i * 0.24, 1.4 + i * 0.24, 35, 0)}px)`,
-            }}
-          >
-            <div
-              style={{
-                width: 64,
-                height: 64,
-                borderRadius: 12,
-                background: item.color,
-                color: C.blue,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 29,
-                fontWeight: 600,
-              }}
-            >
-              {item.mark}
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 27, fontWeight: 550, color: C.ink }}>
-                {item.label}
-              </div>
-              <div style={{ marginTop: 8, fontSize: 17, color: C.muted }}>
-                {item.source}
-              </div>
-            </div>
-            <span style={{ fontSize: 24, color: C.blue }}>↗</span>
-          </div>
-        ))}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            color: C.blue,
-            fontSize: 20,
-            marginTop: 23,
-            opacity: r(t, 1.7, 2.3),
-          }}
-        >
-          <Mark size={32} />
-          <span>{p(l, "提问 · 收藏 · 阅读", "Ask · Save · Read")}</span>
-        </div>
-      </div>
-      <Demo l={l} />
-    </Scene>
-  );
-};
-const Dispatch = ({ l }: { l: Language }) => {
-  const t = useCurrentFrame() / FPS;
-  const typed = q(l).slice(0, Math.floor(move(t, 0.4, 1.65, 0, q(l).length)));
-  return (
-    <Scene seconds={5.5}>
-      <Grid />
-      <Rail l={l} n={2} />
-      <div
-        style={{
-          position: "absolute",
-          top: 148,
-          width: "100%",
-          textAlign: "center",
-          fontSize: 66,
-          color: C.ink,
-          fontWeight: 600,
-          letterSpacing: -2,
-        }}
-      >
-        <Reveal>
-          {p(
-            l,
-            "同一个问题，发给不同平台的 AI。",
-            "Send the same question to different platform AIs.",
-          )}
-        </Reveal>
-      </div>
-      <div
-        style={{
-          position: "absolute",
-          left: 300,
-          top: 314,
-          width: 1320,
-          padding: "39px 44px",
-          boxSizing: "border-box",
-          border: "1px solid #CDD8EE",
-          borderRadius: 24,
-          boxShadow: "0 28px 80px #426FE116",
-          background: "white",
-          transform: `translateY(${move(t, 0.1, 0.9, 35, 0)}px)`,
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 15,
-            color: C.blue,
-            fontSize: 16,
-            marginBottom: 22,
-          }}
-        >
-          <Img src={staticFile("postrove-mark.svg")} style={{ width: 24 }} />
-          <span>
-            {p(
-              l,
-              "例如 · 一个游戏创作问题",
-              "EXAMPLE · A GAME-MAKING QUESTION",
-            )}
-          </span>
-        </div>
-        <div
-          style={{
-            color: C.ink,
-            fontSize: l === "en" ? 34 : 39,
-            fontWeight: 500,
-            letterSpacing: -0.6,
-            minHeight: 60,
-          }}
-        >
-          {typed}
-          <span style={{ color: C.blue, opacity: t < 1.9 ? 1 : 0 }}>|</span>
-        </div>
-        <div
-          style={{
-            marginTop: 19,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            fontSize: 18,
-            color: C.muted,
-          }}
-        >
-          <span>
-            {p(
-              l,
-              "同一个问题 · 各平台独立回答",
-              "ONE QUESTION · INDEPENDENT PLATFORM REPLIES",
-            )}
-          </span>
-          <div
-            style={{
-              padding: "12px 20px",
-              borderRadius: 12,
-              background: C.blue,
-              color: "white",
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-            }}
-          >
-            {p(l, "发送", "Send")}
-            <Arrow size={21} />
-          </div>
-        </div>
-      </div>
-      <svg
-        width="1920"
-        height="1080"
-        style={{ position: "absolute", inset: 0 }}
-      >
-        <path
-          d="M960 558v45M310 654v-23q0-28 28-28h1244q28 0 28 28v23M745 603v51M1175 603v51"
-          stroke="#7998DD"
-          strokeWidth="2"
-          fill="none"
-          pathLength="1"
-          strokeDasharray="1"
-          strokeDashoffset={1 - ease(r(t, 1.9, 3.1))}
-        />
-        {[310, 745, 1175, 1610].map((x, i) => (
-          <circle
-            key={x}
-            cx={x}
-            cy={move(t, 2.3 + i * 0.12, 3.4 + i * 0.12, 603, 660)}
-            r={6}
-            fill={C.blue}
-            opacity={r(t, 2.2 + i * 0.12, 2.5 + i * 0.12)}
-          />
-        ))}
-      </svg>
-      {routes.map((route, i) => (
-        <div
-          key={route.id}
-          style={{
-            position: "absolute",
-            left: 115 + i * 435,
-            top: 654,
-            width: 385,
-            height: 177,
-            padding: 27,
-            boxSizing: "border-box",
-            borderRadius: 20,
-            background: "white",
-            border: "1px solid #D4DDEE",
-            opacity: r(t, 2.4 + i * 0.12, 2.9 + i * 0.12),
-            transform: `translateY(${move(t, 2.4 + i * 0.12, 3.2 + i * 0.12, 25, 0)}px)`,
-          }}
-        >
-          <AIName route={route} l={l} />
-          <div
-            style={{
-              fontSize: 16,
-              color: C.blue,
-              marginTop: 22,
-              display: "flex",
-              gap: 9,
-            }}
-          >
-            <span>✓</span>
-            {p(l, "接收同一个问题", "Receives the same question")}
-          </div>
-        </div>
-      ))}
-      <div
-        style={{
-          position: "absolute",
-          top: 884,
-          left: 115,
-          right: 115,
-          display: "flex",
-          alignItems: "center",
-          gap: 22,
-          fontSize: 18,
-          color: C.muted,
-          opacity: r(t, 3.2, 3.8),
-        }}
-      >
-        <span>
-          {p(l, "本次演示中的平台 AI", "PLATFORM AIs IN THIS EXAMPLE")}
-        </span>
-        <div style={{ flex: 1, borderTop: "1px dashed #B6C5DF" }} />
-        <span style={{ fontSize: 31, letterSpacing: 6 }}>···</span>
-      </div>
-      <Demo l={l} />
-    </Scene>
-  );
-};
-
-const DiscoveryLane = ({
-  route,
-  i,
-  l,
-  t,
-  ready,
-}: {
-  route: Route;
-  i: number;
-  l: Language;
-  t: number;
-  ready: boolean;
-}) => {
-  const a = r(t, 0.5 + i * 0.13, 1.3 + i * 0.13);
-  return (
-    <div
-      style={{
-        position: "absolute",
-        left: 100 + i * 435,
-        top: 300,
-        width: 405,
-        height: 588,
-        padding: 25,
-        boxSizing: "border-box",
-        background: "#1A253B",
-        border: "1px solid #FFFFFF21",
-        borderRadius: 23,
-        transform: `translateY(${(1 - ease(a)) * 45}px)`,
-        opacity: a,
-      }}
-    >
-      <AIName route={route} l={l} dark />
-      <div
-        style={{
-          marginTop: 24,
-          padding: "13px 15px",
-          color: "#AABAD6",
-          background: "#10192D",
-          borderRadius: 10,
-          fontSize: 17,
-          lineHeight: 1.45,
-        }}
-      >
-        {p(
-          l,
-          "用 AI 做像素小游戏，从哪开始？",
-          "A pixel game with AI. Where do I start?",
-        )}
-      </div>
-      <div
-        style={{
-          color: route.color,
-          marginTop: 23,
-          marginBottom: 13,
-          fontSize: 15,
-          letterSpacing: 1,
-        }}
-      >
-        {ready
-          ? p(l, "✓ 已找到相关来源", "✓ SOURCES FOUND")
-          : p(l, "正在查找相关内容", "FINDING RELEVANT CONTENT")}
-      </div>
-      <div
-        style={{
-          height: 157,
-          borderRadius: 13,
-          overflow: "hidden",
-          opacity: r(t, 1.25 + i * 0.12, 2 + i * 0.12),
-          position: "relative",
-        }}
-      >
-        <ContentPreview route={route} l={l} />
-        <div
-          style={{
-            position: "absolute",
-            right: 9,
-            bottom: 8,
-            background: "#172032D9",
-            borderRadius: 5,
-            color: "white",
-            fontSize: 12,
-            padding: "4px 8px",
-          }}
-        >
-          {tr(l, route.kind)}
-        </div>
-      </div>
-      <div
-        style={{
-          color: "#F2F5FC",
-          fontWeight: 500,
-          fontSize: 24,
-          lineHeight: 1.35,
-          marginTop: 18,
-        }}
-      >
-        {tr(l, route.source)}
-      </div>
-      <div
-        style={{
-          color: "#AABAD6",
-          fontSize: 17,
-          lineHeight: 1.5,
-          marginTop: 14,
-        }}
-      >
-        {ready ? tr(l, route.finding) : tr(l, route.sample)}
-      </div>
-      <div
-        style={{
-          position: "absolute",
-          bottom: 24,
-          fontSize: 15,
-          color: "#ABC1F5",
-        }}
-      >
-        ↗ {p(l, "保留原始链接", "Original link retained")}
-      </div>
-    </div>
-  );
-};
-const Search = ({ l }: { l: Language }) => {
-  const t = useCurrentFrame() / FPS;
-  const focus = r(t, 3.0, 3.65) * (1 - r(t, 10.5, 11.2));
-  const overview = Math.max(1 - r(t, 2.8, 3.5), r(t, 10.8, 11.5));
-  const source = ease(r(t, 5.2, 7.1));
-  return (
-    <Scene seconds={15.6} bg={C.deep}>
-      <Grid dark />
-      <Rail l={l} n={3} dark />
-      <div
-        style={{
-          position: "absolute",
-          top: 147,
-          width: "100%",
-          textAlign: "center",
-          color: "white",
-          fontSize: l === "en" ? 62 : 70,
-          fontWeight: 600,
-          letterSpacing: -2,
-        }}
-      >
-        <Reveal>
-          {p(
-            l,
-            "各平台 AI 分别查找内容。",
-            "Each platform AI searches for relevant content.",
-          )}
-        </Reveal>
-      </div>
-      <div style={{ opacity: overview }}>
-        <div
-          style={{
-            position: "absolute",
-            top: 250,
-            width: "100%",
-            textAlign: "center",
-            fontSize: 16,
-            color: "#ADBEDD",
-            letterSpacing: 1.5,
-          }}
-        >
-          {p(
-            l,
-            "本次示例 · 各平台独立寻找",
-            "IN THIS EXAMPLE · EACH PLATFORM SEARCHES INDEPENDENTLY",
-          )}
-        </div>
-        {routes.map((route, i) => (
-          <DiscoveryLane
-            key={route.id}
-            route={route}
-            i={i}
-            l={l}
-            t={t}
-            ready={t > 10}
-          />
-        ))}
-      </div>
-      <div
-        style={{
-          opacity: focus,
-          transform: `translateY(${(1 - focus) * 25}px)`,
-        }}
-      >
-        <div
-          style={{
-            position: "absolute",
-            left: 100,
-            top: 306,
-            width: 775,
-            height: 573,
-            borderRadius: 24,
-            background: "#1A253B",
-            border: "1px solid #FFFFFF24",
-            padding: 30,
-            boxSizing: "border-box",
-          }}
-        >
-          <AIName route={routes[2]} l={l} dark />
-          <div
-            style={{
-              marginTop: 25,
-              fontSize: 17,
-              color: "#A8B8D3",
-              lineHeight: 1.5,
-              padding: "14px 18px",
-              background: "#10192D",
-              borderRadius: 12,
-            }}
-          >
-            {q(l)}
-          </div>
-          <div
-            style={{
-              marginTop: 23,
-              fontSize: 23,
-              fontWeight: 500,
-              color: "#EFF4FF",
-            }}
-          >
-            {p(
-              l,
-              "Gemini 正在搜索 YouTube 视频",
-              "Gemini searches YouTube videos",
-            )}
-          </div>
-          <div style={{ display: "flex", gap: 18, marginTop: 22 }}>
-            {[0, 1].map((i) => (
-              <div
-                key={i}
-                style={{
-                  width: 338,
-                  opacity: r(t, 3.8 + i * 0.35, 4.6 + i * 0.35),
-                  transform: `translateY(${move(t, 3.8 + i * 0.35, 4.8 + i * 0.35, 25, 0)}px)`,
-                }}
-              >
-                <div style={{ height: 168 }}>
-                  <Thumb video />
-                </div>
-                <div
-                  style={{
-                    fontSize: 21,
-                    lineHeight: 1.4,
-                    color: "white",
-                    fontWeight: 500,
-                    marginTop: 13,
-                  }}
-                >
-                  {i === 0
-                    ? title(l)
-                    : p(
-                        l,
-                        "角色跳跃与碰撞，怎么做？",
-                        "Jumping and collision, explained",
-                      )}
-                </div>
-                <div style={{ fontSize: 14, color: "#93A5C2", marginTop: 9 }}>
-                  YouTube · {p(l, "演示材料", "Demo material")}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div
-          style={{
-            position: "absolute",
-            left: 906,
-            top: 535,
-            color: C.lime,
-            opacity: r(t, 5.1, 5.6),
-            transform: `translateX(${move(t, 5.1, 5.8, -15, 0)}px)`,
-          }}
-        >
-          <Arrow size={60} />
-        </div>
-        <div
-          style={{
-            position: "absolute",
-            left: 1010,
-            top: 306,
-            width: 810,
-            height: 573,
-            background: "#1B2942",
-            border: "1px solid #6E91DA60",
-            borderRadius: 24,
-            padding: 34,
-            boxSizing: "border-box",
-            opacity: r(t, 5.3, 6.1),
-            transform: `translateY(${move(t, 5.3, 6.4, 30, 0)}px)`,
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              gap: 12,
-              alignItems: "center",
-              color: "#C5D5F4",
-              fontSize: 18,
-            }}
-          >
-            <span style={{ color: C.lime }}>✦</span>Gemini ·{" "}
-            {p(l, "基于找到的视频回答", "ANSWER WITH VIDEO SOURCES")}
-          </div>
-          <div
-            style={{
-              color: "white",
-              fontSize: 36,
-              lineHeight: 1.45,
-              fontWeight: 500,
-              marginTop: 30,
-            }}
-          >
-            {p(
-              l,
-              "先搭一个场景，\n让角色动起来。",
-              "Start with one scene.\nMake the character move.",
-            )
-              .split("\n")
-              .map((x) => (
-                <div key={x}>{x}</div>
-              ))}
-          </div>
-          <div
-            style={{
-              marginTop: 24,
-              fontSize: 23,
-              color: "#B7C7E4",
-              lineHeight: 1.6,
-            }}
-          >
-            {p(
-              l,
-              "从移动、跳跃和碰撞开始，\n跟着教程完成第一个原型。",
-              "Begin with movement, jumping and collision.\nFollow the tutorial to build a first prototype.",
-            )
-              .split("\n")
-              .map((x) => (
-                <div key={x}>{x}</div>
-              ))}
-          </div>
-          <div
-            style={{
-              marginTop: 25,
-              transform: `translateX(${(1 - source) * -90}px)`,
-              opacity: source,
-            }}
-          >
-            <SourceCard l={l} width={738} />
-          </div>
-        </div>
-      </div>
-      <Demo l={l} dark />
-    </Scene>
-  );
-};
-
-const Capture = ({
-  src,
-  width,
-  crop = { x: 215, y: 80, w: 1770, h: 1190 },
-}: {
-  src: string;
-  width: number;
-  crop?: { x: number; y: number; w: number; h: number };
-}) => {
-  const z = width / crop.w;
-  return (
-    <div
-      style={{
-        position: "relative",
-        width,
-        height: crop.h * z,
-        overflow: "hidden",
-      }}
-    >
-      <Img
-        src={staticFile(src)}
-        style={{
-          position: "absolute",
-          width: 2200 * z,
-          height: 1520 * z,
-          maxWidth: "none",
-          left: -crop.x * z,
-          top: -crop.y * z,
-        }}
-      />
-    </div>
-  );
-};
-const Window = ({
-  children,
-  width,
-  height,
+  color = C.ink,
   style,
 }: {
-  children: React.ReactNode;
-  width: number;
-  height: number;
-  style?: React.CSSProperties;
+  children: ReactNode;
+  color?: string;
+  style?: CSSProperties;
 }) => (
   <div
     style={{
-      position: "absolute",
-      width,
-      height,
-      borderRadius: 23,
-      overflow: "hidden",
-      background: "white",
-      border: "1px solid #CCD7E9",
-      boxShadow: "0 32px 95px #17203222",
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 9,
+      padding: "12px 19px",
+      background: "#FFF",
+      border: "1px solid #E3E6EC",
+      borderRadius: 15,
+      fontSize: 20,
+      color,
+      boxShadow: "0 7px 15px #1F293D06",
       ...style,
     }}
   >
     {children}
   </div>
 );
-const Replies = ({ l }: { l: Language }) => {
-  const t = useCurrentFrame() / FPS;
+const Scene = ({
+  children,
+  bg = C.paper,
+  duration,
+}: {
+  children: ReactNode;
+  bg?: string;
+  duration: number;
+}) => {
+  const t = useTime();
   return (
-    <Scene seconds={9.5}>
-      <Grid />
-      <Rail l={l} n={4} />
-      <div style={{ position: "absolute", left: 100, top: 220, width: 555 }}>
-        <div
-          style={{
-            fontSize: 17,
-            color: C.blue,
-            letterSpacing: 2,
-            marginBottom: 26,
-          }}
-        >
-          04 — {p(l, "回复与来源", "REPLIES AND SOURCES")}
-        </div>
-        <div
-          style={{
-            fontSize: l === "en" ? 70 : 84,
-            lineHeight: 1.24,
-            color: C.ink,
-            fontWeight: 600,
-            letterSpacing: -3,
-          }}
-        >
-          <Reveal>{p(l, "查看回复", "View replies")}</Reveal>
-          <Reveal at={0.4}>{p(l, "和来源链接。", "and source links.")}</Reveal>
-        </div>
-        <div
-          style={{
-            fontSize: 26,
-            color: C.muted,
-            lineHeight: 1.65,
-            marginTop: 30,
-            maxWidth: 470,
-            opacity: r(t, 0.8, 1.5),
-          }}
-        >
-          {p(
-            l,
-            "回复和来源链接\n保存在同一个话题里。",
-            "Replies and source links\nare saved in the same topic.",
-          )
-            .split("\n")
-            .map((x) => (
-              <div key={x}>{x}</div>
-            ))}
-        </div>
-        <div
-          style={{
-            marginTop: 35,
-            display: "flex",
-            flexWrap: "wrap",
-            gap: 10,
-            opacity: r(t, 1.3, 2),
-          }}
-        >
-          {routes.map((x) => (
-            <div
-              key={x.id}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 9,
-                padding: "9px 13px",
-                background: "white",
-                border: "1px solid #DBE2EE",
-                borderRadius: 10,
-                color: C.ink,
-                fontSize: 18,
-              }}
-            >
-              <span style={{ color: x.id === "x" ? C.ink : x.color }}>
-                {x.id === "xhs" ? p(l, "小", "D") : x.mark}
-              </span>
-              {x.id === "xhs" ? p(l, "点点", "Diandian") : x.ai}
-            </div>
-          ))}
-        </div>
-      </div>
-      <Window
-        width={1120}
-        height={735}
-        style={{
-          left: 700,
-          top: 185,
-          transform: `translateY(${move(t, 0.1, 1.1, 80, 0)}px)`,
-          opacity: r(t, 0.1, 0.7),
-        }}
-      >
-        <Capture
-          src={`demo-topic-${l}.png`}
-          width={1120}
-          crop={{ x: 160, y: 260, w: 1880, h: 1234 }}
-        />
-      </Window>
-      <Demo l={l} />
-    </Scene>
+    <AbsoluteFill style={{ background: bg, overflow: "hidden", opacity: 1 }}>
+      <Texture />
+      {children}
+    </AbsoluteFill>
   );
 };
-const Reading = ({ l }: { l: Language }) => {
-  const t = useCurrentFrame() / FPS;
-  const translated = r(t, 4.1, 4.65);
-  const detail = r(t, 6.3, 6.85);
-  return (
-    <Scene seconds={9.5} bg="#EEF1F8">
-      <Grid />
-      <Rail l={l} n={5} />
-      <div style={{ position: "absolute", left: 100, top: 224, width: 550 }}>
-        <div
-          style={{
-            fontSize: 17,
-            color: C.blue,
-            letterSpacing: 2,
-            marginBottom: 27,
-          }}
-        >
-          05 — {p(l, "阅读与翻译", "SAVED CONTENT")}
-        </div>
-        <div
-          style={{
-            fontSize: l === "en" ? 76 : 78,
-            lineHeight: 1.26,
-            color: C.ink,
-            fontWeight: 600,
-            letterSpacing: -3,
-          }}
-        >
-          <Reveal>{p(l, "收藏到阅读库", "Save sources")}</Reveal>
-          {l === "en" && <Reveal at={0.4}>to Reading.</Reveal>}
-        </div>
-        <div
-          style={{
-            fontSize: 25,
-            color: C.muted,
-            lineHeight: 1.65,
-            marginTop: 30,
-            maxWidth: 470,
-            opacity: r(t, 0.8, 1.6),
-          }}
-        >
-          {p(
-            l,
-            "查看摘要和正文。\n可切换原文和中文翻译。",
-            "View the summary and text.\nSwitch between the original\nand reading version.",
-          )
-            .split("\n")
-            .map((x) => (
-              <div key={x}>{x}</div>
-            ))}
-        </div>
-        <div
-          style={{
-            display: "flex",
-            gap: 13,
-            marginTop: 38,
-            opacity: r(t, 3.2, 3.7),
-          }}
-        >
-          {[p(l, "原文", "Original"), p(l, "阅读版本", "Reading version")].map(
-            (x, i) => (
-              <div
-                key={x}
-                style={{
-                  padding: "13px 19px",
-                  fontSize: 20,
-                  borderRadius: 11,
-                  border: "1px solid #CDDAEF",
-                  background: translated > 0.5 === (i === 1) ? C.blue : "white",
-                  color: translated > 0.5 === (i === 1) ? "white" : C.muted,
-                }}
-              >
-                {x}
-              </div>
-            ),
-          )}
-        </div>
-        <div
-          style={{
-            marginTop: 31,
-            color: C.blue,
-            fontSize: 19,
-            opacity: r(t, 5.0, 5.5),
-          }}
-        >
-          ↗ {p(l, "保留原始链接", "Original source link retained")}
-        </div>
-      </div>
-      <Window
-        width={1120}
-        height={775}
-        style={{
-          left: 700,
-          top: 180,
-          opacity: r(t, 0.8, 2.2),
-          transform: `translateY(${move(t, 0.5, 2.2, 65, 0)}px)`,
-        }}
-      >
-        <div style={{ position: "absolute", inset: 0 }}>
-          <Capture
-            src={`demo-reading-original-${l}.png`}
-            width={1120}
-            crop={{ x: 260, y: 48, w: 1680, h: 1160 }}
-          />
-        </div>
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            opacity: 1 - detail,
-            clipPath: `inset(0 ${(1 - translated) * 100}% 0 0)`,
-          }}
-        >
-          <Capture
-            src={`demo-reading-${l}.png`}
-            width={1120}
-            crop={{ x: 260, y: 48, w: 1680, h: 1160 }}
-          />
-        </div>
-        <div style={{ position: "absolute", inset: 0, opacity: detail }}>
-          <Capture
-            src={`demo-reading-code-${l}.png`}
-            width={1120}
-            crop={{ x: 260, y: 48, w: 1680, h: 1160 }}
-          />
-        </div>
-      </Window>
-      <Demo l={l} />
-    </Scene>
-  );
-};
-const SourceJourney = ({ l }: { l: Language }) => {
-  const t = useCurrentFrame() / FPS;
-  if (t < 29.2 || t > 36.4) return null;
-  const transfer = r(t, 32.1, 34.15);
-  const enter = r(t, 34.8, 36.2);
-  const x = 1120 + (105 - 1120) * ease(transfer) + (1050 - 105) * ease(enter);
-  const y = 716 + (716 - 716) * ease(transfer) + (345 - 716) * ease(enter);
-  const width = 600 + (525 - 600) * ease(transfer) + (585 - 525) * ease(enter);
-  return (
+const Reveal = ({
+  children,
+  t,
+  at = 0,
+  style,
+}: {
+  children: ReactNode;
+  t: number;
+  at?: number;
+  style?: CSSProperties;
+}) => (
+  <div
+    style={{
+      opacity: prog(t, at, at + 0.3),
+      transform: `translateY(${tween(t, at, at + 0.7, 32, 0)}px)`,
+      ...style,
+    }}
+  >
+    {children}
+  </div>
+);
+const Head = ({
+  children,
+  style,
+}: {
+  children: ReactNode;
+  style?: CSSProperties;
+}) => (
+  <div
+    style={{
+      whiteSpace: "pre-line",
+      fontSize: 68,
+      lineHeight: 1.15,
+      letterSpacing: -2.7,
+      fontWeight: 720,
+      ...style,
+    }}
+  >
+    {children}
+  </div>
+);
+const Scribble = ({
+  width = 270,
+  color = C.coral,
+  progress = 1,
+}: {
+  width?: number;
+  color?: string;
+  progress?: number;
+}) => (
+  <svg
+    width={width}
+    height={26}
+    viewBox="0 0 270 26"
+    style={{ overflow: "visible" }}
+  >
+    <path
+      d="M3 17Q74 2 132 10T264 8M34 22q112-15 194-8"
+      fill="none"
+      stroke={color}
+      strokeWidth="5"
+      strokeLinecap="round"
+      pathLength="1"
+      strokeDasharray="1"
+      strokeDashoffset={1 - progress}
+    />
+  </svg>
+);
+const Magnify = ({ size = 25 }: { size?: number }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    fill="none"
+  >
+    <circle cx="10" cy="10" r="6.5" />
+    <path d="m15 15 6 6" />
+  </svg>
+);
+const Bookmark = ({
+  size = 26,
+  fill = false,
+}: {
+  size?: number;
+  fill?: boolean;
+}) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+    strokeWidth="1.6"
+    fill={fill ? "currentColor" : "none"}
+  >
+    <path d="M6 3h12v18l-6-4-6 4Z" />
+  </svg>
+);
+const Window = ({
+  children,
+  title = "Postrove",
+  width = 1200,
+  height = 800,
+  style,
+}: {
+  children: ReactNode;
+  title?: string;
+  width?: number;
+  height?: number;
+  style?: CSSProperties;
+}) => (
+  <div
+    style={{
+      position: "relative",
+      width,
+      height,
+      background: "#FFF",
+      border: "1px solid #FFFFFF",
+      borderRadius: 20,
+      overflow: "hidden",
+      boxShadow: "0 48px 100px -32px #1F293D4A, 0 5px 15px #1F293D0A",
+      ...style,
+    }}
+  >
     <div
       style={{
-        position: "absolute",
-        left: x,
-        top: y,
-        zIndex: 8,
-        opacity: r(t, 29.2, 29.7) * (1 - r(t, 35.5, 36.4)),
-        transform: `scale(${1 + 0.025 * Math.sin(r(t, 31.7, 32.3) * Math.PI)})`,
+        height: 39,
+        background: "#F2F3F5",
+        borderBottom: "1px solid #E4E7ED",
+        display: "flex",
+        alignItems: "center",
+        padding: "0 15px",
+        gap: 7,
       }}
     >
-      <SourceCard l={l} width={width} selected={t > 31.5} />
-      {t > 31.5 && t < 34.8 && (
-        <div
-          style={{
-            marginTop: 13,
-            color: C.blue,
-            fontSize: 20,
-            display: "flex",
-            alignItems: "center",
-            gap: 9,
-            paddingLeft: 15,
-          }}
-        >
-          ✓ {p(l, "已收藏到阅读库", "Saved to Reading")}
-        </div>
-      )}
-    </div>
-  );
-};
-const Finale = ({ l }: { l: Language }) => {
-  const t = useCurrentFrame() / FPS;
-  return (
-    <AbsoluteFill
-      style={{ background: C.blue, opacity: r(t, 0, 0.45), overflow: "hidden" }}
-    >
-      {[0, 1, 2].map((i) => (
-        <div
-          key={i}
-          style={{
-            position: "absolute",
-            left: 960 - 500 - i * 170,
-            top: 540 - 500 - i * 170,
-            width: 1000 + i * 340,
-            height: 1000 + i * 340,
-            border: "1px solid #FFFFFF15",
-            borderRadius: "50%",
-            transform: `scale(${move(t, 0, 5.2, 0.8, 1.03)})`,
-          }}
+      {["#EE9B91", "#E9C46B", "#A8BE95"].map((c) => (
+        <i
+          key={c}
+          style={{ width: 8, height: 8, borderRadius: 5, background: c }}
         />
       ))}
-      <div
+      <span
         style={{
           position: "absolute",
           left: 0,
           right: 0,
-          top: 170,
-          display: "flex",
-          alignItems: "center",
-          flexDirection: "column",
+          textAlign: "center",
+          fontSize: 12,
+          color: "#8B909A",
         }}
       >
-        <Img
-          src={staticFile("postrove-icon.svg")}
-          style={{
-            width: 100,
-            height: 100,
-            borderRadius: 24,
-            boxShadow: "0 15px 50px #17203230",
-            marginBottom: 24,
-          }}
-        />
-        <div
-          style={{
-            fontSize: 133,
-            fontWeight: 600,
-            letterSpacing: -6,
-            color: "white",
-            lineHeight: 1.1,
-          }}
-        >
-          <Reveal at={0.2}>
-            Postrove<span style={{ color: C.lime }}>.</span>
-          </Reveal>
-        </div>
-        <div
-          style={{
-            fontSize: l === "en" ? 48 : 52,
-            letterSpacing: -1,
-            color: "#F2F6FF",
-            marginTop: 31,
-            fontWeight: 450,
-          }}
-        >
-          <Reveal at={0.5}>
-            {p(l, "跨平台提问和阅读。", "Ask across platforms. Save and read.")}
-          </Reveal>
-        </div>
-        <div
-          style={{
-            display: "flex",
-            gap: 14,
-            marginTop: 40,
-            opacity: r(t, 0.8, 1.4),
-          }}
-        >
-          {[
-            p(l, "教程", "Tutorials"),
-            p(l, "制作经验", "Build journals"),
-            p(l, "踩坑记录", "Lessons learned"),
-          ].map((x) => (
-            <div
-              key={x}
-              style={{
-                fontSize: 20,
-                color: "#F5F8FF",
-                padding: "10px 19px",
-                border: "1px solid #FFFFFF55",
-                borderRadius: 10,
-              }}
-            >
-              {x}
-            </div>
-          ))}
-        </div>
-        <div
-          style={{
-            marginTop: 38,
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            fontSize: 20,
-            color: "#E1E9FF",
-            opacity: r(t, 1.3, 1.9),
-          }}
-        >
-          <span style={{ fontSize: 14, letterSpacing: 1, color: "#C2D2F8" }}>
-            {p(l, "例如", "E.G.")}
-          </span>
-          <span>X · Grok</span>
-          <span style={{ opacity: 0.4 }}> / </span>
-          <span>{p(l, "小红书 · 点点", "Xiaohongshu · Diandian")}</span>
-          <span style={{ opacity: 0.4 }}> / </span>
-          <span>
-            Gemini → YouTube <Trial l={l} dark />
-          </span>
-          <span style={{ opacity: 0.4 }}> / </span>
-          <span>
-            Reddit · Ask <Trial l={l} dark />
-          </span>
-          <span style={{ letterSpacing: 3 }}>···</span>
-        </div>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            marginTop: 40,
-            color: "white",
-            fontSize: 23,
-            opacity: r(t, 1.6, 2.2),
-          }}
-        >
-          github.com/huggon1/postrove
-          <Arrow size={25} />
-        </div>
-        <div
-          style={{
-            marginTop: 22,
-            color: "#C2D2F8",
-            fontSize: 17,
-            opacity: r(t, 1.8, 2.5),
-          }}
-        >
-          macOS · Windows
-        </div>
-      </div>
-    </AbsoluteFill>
-  );
-};
-const Subtitles = ({ l }: { l: Language }) => {
-  const t = useCurrentFrame() / FPS;
-  const active = narration.languages[l].find(
-    (x) => t >= x.start && t < Math.min(47.95, x.end + 0.2),
-  );
-  if (!active) return null;
-  return (
+        {title}
+      </span>
+    </div>
     <div
       style={{
         position: "absolute",
-        left: 140,
-        right: 140,
-        bottom: 64,
-        zIndex: 20,
+        left: 0,
+        right: 0,
+        top: 39,
+        bottom: 0,
+        overflow: "hidden",
+      }}
+    >
+      {children}
+    </div>
+  </div>
+);
+const App = ({
+  l,
+  scene = "topic",
+  width = 1280,
+  style,
+}: {
+  l: Language;
+  scene?: string;
+  width?: number;
+  style?: CSSProperties;
+}) => (
+  <div
+    style={{
+      position: "relative",
+      width,
+      height: (width * 760) / 1100,
+      background: "#F8FAFE",
+      borderRadius: 17,
+      overflow: "hidden",
+      boxShadow: "0 42px 85px -26px #1821364A, 0 1px 3px #17213622",
+      border: "1px solid #FFFFFF",
+      ...style,
+    }}
+  >
+    <Img
+      src={staticFile(`demo-${scene}-${l}.png`)}
+      style={{ width: "100%", height: "100%", display: "block" }}
+    />
+  </div>
+);
+const SourceCard = ({
+  l,
+  blue = false,
+  style,
+  small = false,
+}: {
+  l: Language;
+  blue?: boolean;
+  style?: CSSProperties;
+  small?: boolean;
+}) => (
+  <div
+    style={{
+      width: small ? 260 : 340,
+      padding: small ? 14 : 18,
+      borderRadius: 20,
+      background: "#FFF",
+      border: "1px solid #E4E7EB",
+      boxShadow: "0 20px 35px -13px #29334525",
+      ...style,
+    }}
+  >
+    <ArticleCover
+      tone={blue ? "blue" : "yellow"}
+      style={{
+        height: small ? 125 : 175,
+        aspectRatio: undefined,
+        borderRadius: 12,
+      }}
+    />
+    <div
+      style={{
+        fontSize: small ? 18 : 23,
+        fontWeight: 650,
+        lineHeight: 1.45,
+        marginTop: 14,
+        letterSpacing: -0.4,
+      }}
+    >
+      {article(l, blue)}
+    </div>
+    <div style={{ color: C.muted, fontSize: small ? 13 : 15, marginTop: 12 }}>
+      {blue
+        ? "𝕏 · lin.dev"
+        : tr(
+            l,
+            "小红书 · 林同学的开发笔记",
+            "RedNote · Lin’s design notes",
+          )}
+    </div>
+  </div>
+);
+
+/* Scene components follow the research and saved-reading workflows. */
+function End({ l }: { l: Language }) {
+  const t = useTime();
+  return (
+    <Scene duration={5} bg={C.deep}>
+      <Box
+        style={{
+          left: -150,
+          top: 610,
+          width: 2250,
+          height: 600,
+          borderRadius: "50%",
+          background: "#223456",
+          transform: "rotate(-8deg)",
+        }}
+      />
+      <Box style={{ left: 100, top: 100, opacity: prog(t, 0, 0.4) }}>
+        <Brand dark size={50} />
+      </Box>
+      <Box style={{ left: 100, top: 276, width: 1400 }}>
+        <Reveal t={t} at={0.15}>
+          <Head
+            style={{
+              fontSize: l === "zh-CN" ? 83 : 73,
+              color: "#FFF",
+              lineHeight: 1.25,
+            }}
+          >
+            {tr(
+              l,
+              "Postrove 可以帮你查资料，",
+              "Postrove helps you research topics",
+            )}
+            <br />
+            {tr(
+              l,
+              "并整理转发来的帖子。",
+              "and organize the posts you forward.",
+            )}
+          </Head>
+        </Reveal>
+        <Scribble width={500} progress={prog(t, 0.6, 1.2)} />
+        <Reveal t={t} at={0.8}>
+          <div
+            style={{
+              fontSize: 31,
+              color: "#C5D2EE",
+              marginTop: 38,
+              fontWeight: 450,
+            }}
+          >
+            github.com/huggon1/postrove
+          </div>
+          <div style={{ fontSize: 23, color: "#92A3C5", marginTop: 24 }}>
+            {tr(
+              l,
+              "开源 · 欢迎反馈和 Issue",
+              "Open source · Feedback and issues welcome",
+            )}
+          </div>
+        </Reveal>
+      </Box>
+      <Box
+        style={{
+          left: 1575,
+          top: 660,
+          transform: `rotate(11deg) translateY(${tween(t, 0.3, 1.1, 50, 0)}px)`,
+          opacity: prog(t, 0.3, 0.8),
+        }}
+      >
+        <div
+          style={{
+            width: 210,
+            height: 210,
+            borderRadius: 45,
+            background: "#344C79",
+            display: "grid",
+            placeItems: "center",
+            boxShadow: "0 30px 60px #08132855",
+          }}
+        >
+          <Img
+            src={staticFile("postrove-mark.svg")}
+            style={{ width: 132, filter: "brightness(0) invert(1)" }}
+          />
+        </div>
+      </Box>
+    </Scene>
+  );
+}
+function Subtitles({ l }: { l: Language }) {
+  const t = useTime(),
+    cue = narration.languages[l].find((c) => t >= c.start && t < c.end);
+  if (!cue) return null;
+  const bits = cue.text.match(
+    l === "zh-CN" ? /[^。！？]+[。！？]?/g : /[^.!?]+[.!?]?/g,
+  ) || [cue.text];
+  const total = bits.reduce((n, s) => n + s.length, 0);
+  let acc = 0;
+  const normalized = prog(t, cue.start, cue.end) * total;
+  const text =
+    bits.find((s) => {
+      acc += s.length;
+      return normalized < acc;
+    }) || bits[bits.length - 1];
+  return (
+    <Box
+      style={{
+        bottom: 25,
+        left: 100,
+        right: 100,
         display: "flex",
         justifyContent: "center",
+        pointerEvents: "none",
       }}
     >
       <div
         style={{
-          fontSize: l === "en" ? 23 : 25,
+          padding: "12px 23px",
+          fontSize: l === "zh-CN" ? 25 : 24,
           lineHeight: 1.45,
+          color: "#FFF",
+          background: "#172136E8",
+          border: "1px solid #FFFFFF16",
+          borderRadius: 13,
+          boxShadow: "0 4px 14px #10182915",
+          maxWidth: 1620,
           textAlign: "center",
-          color: "#F6F8FE",
-          padding: "12px 25px",
-          borderRadius: 12,
-          background: "#10182BD9",
-          boxShadow: "0 6px 25px #10182B22",
-          opacity: Math.min(
-            r(t, active.start, active.start + 0.18),
-            1 - r(t, active.end, active.end + 0.2),
-          ),
+          letterSpacing: 0.1,
         }}
       >
-        {active.text}
+        {text.trim()}
+      </div>
+    </Box>
+  );
+}
+
+const advisors = [
+  {
+    name: "Grok",
+    platform: "X",
+    mark: "𝕏",
+    color: "#6585D7",
+    zh: "先做一个场景，测试角色移动和跳跃。",
+    en: "Start with one scene. Test movement and jumping.",
+    sourceZh: "先把角色移动和跳跃做出来",
+    sourceEn: "Start with movement and jumping",
+    typeZh: "帖子 · 开发记录",
+    typeEn: "Post · Devlog",
+  },
+  {
+    name: "点点",
+    platform: "小红书",
+    mark: "小",
+    color: "#D77878",
+    zh: "先用方块测试碰撞，再换像素素材。",
+    en: "Test collisions with blocks, then add pixel art.",
+    sourceZh: "我用 AI 做了一个像素小游戏",
+    sourceEn: "My first pixel game with AI",
+    typeZh: "笔记 · 使用过程",
+    typeEn: "Post · Practical notes",
+  },
+  {
+    name: "Gemini",
+    platform: "YouTube",
+    mark: "▶",
+    color: "#8A82BC",
+    zh: "跟着教程实现移动、跳跃和落地检测。",
+    en: "Follow a movement and collision tutorial.",
+    sourceZh: "像素游戏：移动、跳跃和碰撞",
+    sourceEn: "Pixel game movement, jumping, and collisions",
+    typeZh: "视频 · 操作教程",
+    typeEn: "Video · Walkthrough",
+  },
+  {
+    name: "Reddit AI",
+    platform: "Reddit",
+    mark: "r/",
+    color: "#C67D55",
+    zh: "先测试手感，再补地图和其他功能。",
+    en: "Test the controls before adding more features.",
+    sourceZh: "第一个像素游戏，该从哪开始？",
+    sourceEn: "Where should a first pixel game start?",
+    typeZh: "讨论 · 经验与建议",
+    typeEn: "Discussion · Practical advice",
+  },
+];
+const who = (i: number, l: Language) =>
+  i === 1 && l === "en" ? "Diandian" : advisors[i].name;
+const where = (i: number, l: Language) =>
+  i === 1 && l === "en" ? "RedNote" : advisors[i].platform;
+const Identity = ({
+  i,
+  l,
+  small = false,
+}: {
+  i: number;
+  l: Language;
+  small?: boolean;
+}) => (
+  <div style={{ display: "flex", alignItems: "center", gap: small ? 12 : 19 }}>
+    <div
+      style={{
+        width: small ? 43 : 65,
+        height: small ? 43 : 65,
+        borderRadius: small ? 14 : 20,
+        background: advisors[i].color,
+        color: "white",
+        display: "grid",
+        placeItems: "center",
+        fontSize: small ? 24 : 35,
+        fontWeight: 750,
+        boxShadow: `0 8px 16px ${advisors[i].color}30`,
+      }}
+    >
+      {advisors[i].mark}
+    </div>
+    <div>
+      <div style={{ fontSize: small ? 21 : 31, fontWeight: 700 }}>
+        {who(i, l)}
+      </div>
+      <div style={{ fontSize: small ? 14 : 18, color: C.muted, marginTop: 4 }}>
+        {where(i, l)}
+      </div>
+    </div>
+  </div>
+);
+const Chapter = ({ l, second = false }: { l: Language; second?: boolean }) => (
+  <div
+    style={{
+      display: "flex",
+      alignItems: "center",
+      gap: 13,
+      color: second ? "#637962" : C.blue,
+      fontSize: 20,
+      fontWeight: 650,
+      letterSpacing: 1,
+    }}
+  >
+    <span
+      style={{
+        width: 33,
+        height: 33,
+        borderRadius: 11,
+        background: second ? "#E2EADA" : "#E4EAF9",
+        display: "grid",
+        placeItems: "center",
+        fontSize: 17,
+      }}
+    >
+      {second ? "02" : "01"}
+    </span>
+    {second
+      ? tr(l, "整理收藏的内容", "Reading saved posts")
+      : tr(l, "跨平台查资料", "Searching across platforms")}
+  </div>
+);
+const Desk = ({ dark = false }: { dark?: boolean }) => (
+  <>
+    <Box
+      style={{
+        left: 120,
+        top: 770,
+        width: 1680,
+        height: 330,
+        borderRadius: 160,
+        background: dark
+          ? "radial-gradient(ellipse,#46608A70,transparent 68%)"
+          : "radial-gradient(ellipse,#7C7E7528,transparent 69%)",
+        filter: "blur(18px)",
+      }}
+    />
+    <Box
+      style={{
+        left: 130,
+        top: 760,
+        width: 1660,
+        height: 220,
+        borderRadius: 36,
+        background: dark
+          ? "linear-gradient(135deg,#2B3D5B,#18263F)"
+          : "linear-gradient(135deg,#F1EEE5,#DBDCD5)",
+        transform: "perspective(1100px) rotateX(62deg)",
+        boxShadow: dark
+          ? "0 18px 0 #122039,0 32px 50px #080F1D40"
+          : "0 17px 0 #CBCDCA,0 32px 50px #1F293D22",
+      }}
+    />
+  </>
+);
+function Intro({ l }: { l: Language }) {
+  const t = useTime();
+  return (
+    <Scene duration={3}>
+      <Box
+        style={{
+          left: 460,
+          top: 185,
+          width: 1000,
+          height: 710,
+          borderRadius: "50%",
+          background: "radial-gradient(ellipse, #DCE4F655 0%, transparent 68%)",
+        }}
+      />
+      <Box
+        style={{
+          inset: 0,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 44,
+          paddingBottom: 30,
+          opacity: 1 - prog(t, 2.75, 3),
+          transform: `translateY(${tween(t, 0, 0.8, 12, 0)}px)`,
+        }}
+      >
+        <Brand size={142} />
+        <div
+          style={{
+            fontSize: 36,
+            lineHeight: 1.5,
+            color: "#697488",
+            opacity: ease(prog(t, 0.15, 0.65)),
+          }}
+        >
+          {tr(
+            l,
+            "跨平台查资料，集中阅读保存的内容。",
+            "Search across platforms. Read saved posts.",
+          )}
+        </div>
+      </Box>
+    </Scene>
+  );
+}
+function Find({ l }: { l: Language }) {
+  const t = useTime();
+  const phase = t < 4 ? 1 : 2;
+  const q =
+    t < 2
+      ? tr(l, "AI 工具 使用体验", "AI tools user experience")
+      : tr(l, "AI 工具 踩坑", "AI tools practical lessons");
+  return (
+    <Scene duration={8}>
+      <Desk />
+      <Box style={{ left: 100, top: 65 }}>
+        <Chapter l={l} />
+      </Box>
+      <Box style={{ left: 100, top: 190, width: 700 }}>
+        <Head style={{ fontSize: l === "zh-CN" ? 64 : 60 }}>
+          {phase === 1
+            ? tr(
+                l,
+                "查资料，要换平台、\n试关键词。",
+                "I switch apps\nand try more keywords.",
+              )
+            : tr(
+                l,
+                "让 AI 搜，也可能漏掉\n平台里的帖子。",
+                "AI web search can miss\nposts inside these platforms.",
+              )}
+        </Head>
+        <div
+          style={{
+            marginTop: 35,
+            fontSize: 27,
+            lineHeight: 1.6,
+            color: C.muted,
+          }}
+        >
+          {phase === 1
+            ? tr(
+                l,
+                "小红书搜一次，再去 X 试一遍。",
+                "Try RedNote, then search again on X.",
+              )
+            : tr(
+                l,
+                "网页搜索能找到的，只是一部分内容。",
+                "Web search covers only part of what is there.",
+              )}
+        </div>
+      </Box>
+      {phase === 1 ? (
+        <>
+          <Box
+            style={{
+              left: 1000,
+              top: 124,
+              transform: "perspective(1800px) rotateY(-5deg)",
+            }}
+          >
+            <PhoneFrame width={390} height={790} time={t}>
+              <div
+                style={{
+                  padding: "27px 20px",
+                  background: "#FFF",
+                  height: "100%",
+                }}
+              >
+                <div
+                  style={{ fontSize: 27, fontWeight: 750, marginBottom: 24 }}
+                >
+                  {t < 2 ? tr(l, "小红书", "RedNote") : "𝕏"}
+                </div>
+                <div
+                  style={{
+                    background: "#F0F2F5",
+                    borderRadius: 15,
+                    padding: 15,
+                    fontSize: 18,
+                    minHeight: 55,
+                    display: "flex",
+                    gap: 9,
+                    alignItems: "center",
+                  }}
+                >
+                  <Magnify />
+                  {q}
+                </div>
+                {[
+                  tr(l, "我的使用记录", "My experience using it"),
+                  tr(l, "遇到的问题", "Problems I ran into"),
+                  tr(l, "教程和实际效果", "Tutorials and real results"),
+                ].map((title, i) => (
+                  <div
+                    key={title}
+                    style={{
+                      marginTop: 24,
+                      border: "1px solid #E3E7EE",
+                      padding: 19,
+                      borderRadius: 15,
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: 20,
+                        fontWeight: 650,
+                        marginBottom: 16,
+                      }}
+                    >
+                      {title}
+                    </div>
+                    {[100, 85, 94, 65].map((w, j) => (
+                      <div
+                        key={j}
+                        style={{
+                          height: 8,
+                          width: `${w}%`,
+                          background: j === 0 ? "#CDDAF0" : "#E7EBF0",
+                          borderRadius: 4,
+                          marginTop: 10,
+                        }}
+                      />
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </PhoneFrame>
+          </Box>
+          <Box
+            style={{
+              left: 1425,
+              top: 405,
+              width: 350,
+              transform: "rotate(4deg)",
+              color: C.muted,
+              fontSize: 22,
+              lineHeight: 1.8,
+            }}
+          >
+            <div
+              style={{
+                background: "#FFF",
+                padding: 25,
+                borderRadius: 18,
+                boxShadow: "0 20px 50px #283D5420",
+              }}
+            >
+              {tr(l, "换一种说法再搜", "Try another search")}
+              <div style={{ color: C.blue, marginTop: 12 }}>{q}</div>
+            </div>
+          </Box>
+        </>
+      ) : (
+        <>
+          <Box
+            style={{
+              left: 810,
+              top: 230,
+              transform: "perspective(1600px) rotateY(-4deg)",
+            }}
+          >
+            <Window
+              title={tr(l, "AI 网页搜索", "AI web search")}
+              width={1000}
+              height={565}
+            >
+              <div style={{ padding: 35 }}>
+                <div
+                  style={{
+                    fontSize: 25,
+                    fontWeight: 650,
+                    background: "#EDF1FA",
+                    padding: 22,
+                    borderRadius: 16,
+                  }}
+                >
+                  {tr(
+                    l,
+                    "找一些实际使用经验和讨论。",
+                    "Find practical experiences and discussions.",
+                  )}
+                </div>
+                <div
+                  style={{
+                    fontSize: 20,
+                    color: C.muted,
+                    margin: "25px 0 15px",
+                  }}
+                >
+                  {tr(l, "网页来源", "Web sources")}
+                </div>
+                {[
+                  tr(l, "入门文档", "Getting-started documentation"),
+                  tr(l, "工具使用指南", "A guide to using the tool"),
+                ].map((s, i) => (
+                  <div
+                    key={s}
+                    style={{
+                      padding: 20,
+                      border: "1px solid #E5E9EE",
+                      borderRadius: 13,
+                      marginBottom: 13,
+                      fontSize: 23,
+                      display: "flex",
+                      gap: 20,
+                    }}
+                  >
+                    <span style={{ color: C.blue }}>↗</span>
+                    {s}
+                    <span
+                      style={{
+                        marginLeft: "auto",
+                        color: C.muted,
+                        fontSize: 18,
+                      }}
+                    >
+                      0{i + 1}
+                    </span>
+                  </div>
+                ))}
+                <div style={{ fontSize: 20, color: C.muted, marginTop: 24 }}>
+                  {tr(
+                    l,
+                    "还想看平台里的实际经验和讨论。",
+                    "I also want the discussions inside these apps.",
+                  )}
+                </div>
+              </div>
+            </Window>
+          </Box>
+          <Box
+            style={{
+              left: 1280,
+              top: 745,
+              width: 470,
+              background: "#FFF",
+              padding: 25,
+              borderRadius: 19,
+              boxShadow: "0 16px 45px #273B5020",
+              transform: "rotate(3deg)",
+            }}
+          >
+            <div style={{ fontSize: 20, fontWeight: 650 }}>
+              {tr(l, "小红书 · X · Reddit", "RedNote · X · Reddit")}
+            </div>
+            <div style={{ fontSize: 19, color: C.muted, marginTop: 12 }}>
+              {tr(
+                l,
+                "开发记录 · 实际体验 · 评论",
+                "Devlogs · Experiences · Replies",
+              )}
+            </div>
+          </Box>
+        </>
+      )}
+    </Scene>
+  );
+}
+function Ask({ l }: { l: Language }) {
+  const t = useTime();
+  return (
+    <Scene duration={6}>
+      <Desk />
+      <Box style={{ left: 100, top: 65 }}>
+        <Brand size={46} />
+      </Box>
+      <Box style={{ left: 100, top: 155, width: 1720 }}>
+        <Head style={{ fontSize: l === "zh-CN" ? 65 : 60 }}>
+          {tr(
+            l,
+            "在 Postrove 里，把问题交给选中的顾问。",
+            "Ask your selected advisors in Postrove.",
+          )}
+        </Head>
+      </Box>
+      <Box
+        style={{
+          left: 310,
+          top: 310,
+          width: 1300,
+          padding: 34,
+          boxSizing: "border-box",
+          background: "#FFF",
+          borderRadius: 25,
+          boxShadow: "0 18px 55px #243E5C15",
+          transform: `translateY(${tween(t, 0, 0.5, 25, 0)}px)`,
+        }}
+      >
+        <div style={{ fontSize: 21, color: C.muted, marginBottom: 18 }}>
+          {tr(l, "例如，问一个问题", "For example, ask a question")}
+        </div>
+        <div
+          style={{
+            fontSize: 34,
+            fontWeight: 600,
+            lineHeight: 1.5,
+            paddingRight: 70,
+          }}
+        >
+          {question(l)}
+        </div>
+        <div
+          style={{
+            position: "absolute",
+            right: 27,
+            bottom: 35,
+            width: 50,
+            height: 50,
+            borderRadius: 15,
+            background: C.blue,
+            color: "#FFF",
+            display: "grid",
+            placeItems: "center",
+            fontSize: 30,
+          }}
+        >
+          ↑
+        </div>
+      </Box>
+      <svg
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width: 1920,
+          height: 1080,
+          pointerEvents: "none",
+        }}
+      >
+        {advisors.map((a, i) => {
+          const end = 295 + i * 440;
+          const d = `M960 495 C960 545 ${end} 530 ${end} 635`;
+          return (
+            <g key={a.name}>
+              <path d={d} fill="none" stroke="#C8D3E5" strokeWidth="3" />
+              <path
+                d={d}
+                fill="none"
+                stroke={a.color}
+                strokeWidth="4"
+                pathLength="1"
+                strokeDasharray="1"
+                strokeDashoffset={1 - prog(t, 0.9 + i * 0.15, 2.2 + i * 0.15)}
+              />
+            </g>
+          );
+        })}
+      </svg>
+      {advisors.map((a, i) => (
+        <Box
+          key={a.name}
+          style={{
+            left: 100 + i * 440,
+            top: 635,
+            width: 390,
+            height: 186,
+            padding: 27,
+            boxSizing: "border-box",
+            borderRadius: 23,
+            background: "#FFF",
+            boxShadow: "0 18px 45px #293E5015",
+            transform: `perspective(1200px) rotateY(${i < 2 ? 3 : -3}deg)`,
+          }}
+        >
+          <Identity i={i} l={l} />
+          <div
+            style={{
+              marginTop: 22,
+              fontSize: 20,
+              color:
+                prog(t, 2 + i * 0.15, 2.4 + i * 0.15) > 0 ? C.blue : C.muted,
+            }}
+          >
+            {t < 2 + i * 0.15
+              ? tr(l, "已选择", "Selected")
+              : tr(l, `搜索 ${where(i, l)} 的内容`, `Search ${where(i, l)}`)}
+          </div>
+        </Box>
+      ))}
+      <Box style={{ left: 100, top: 895, color: C.muted, fontSize: 24 }}>
+        {tr(
+          l,
+          "把同一个问题发给选中的顾问。",
+          "Send the same question to your selected advisors.",
+        )}
+      </Box>
+    </Scene>
+  );
+}
+function Compare({ l }: { l: Language }) {
+  const t = useTime();
+  const app = prog(t, 5.9, 6.4);
+  return (
+    <Scene duration={9}>
+      <Desk />
+      <Box style={{ left: 100, top: 65 }}>
+        <Chapter l={l} />
+      </Box>
+      <Box style={{ left: 100, top: 145 }}>
+        <Head style={{ fontSize: 63 }}>
+          {t < 3.0
+            ? tr(
+                l,
+                "一次提问，分别得到回答和来源。",
+                "One question. Separate answers and sources.",
+              )
+            : tr(
+                l,
+                "自动翻译成阅读语言，原文和来源保留。",
+                "Read the answers in your language. Keep the originals.",
+              )}
+        </Head>
+      </Box>
+      <Box style={{ inset: 0, opacity: 1 - app }}>
+        {advisors.map((a, i) => (
+          <Box
+            key={a.name}
+            style={{
+              left: 100 + (i % 2) * 880,
+              top: 275 + Math.floor(i / 2) * 315,
+              width: 840,
+              height: 295,
+              padding: "24px 28px",
+              boxSizing: "border-box",
+              borderRadius: 24,
+              background: "#FFF",
+              boxShadow: "0 12px 40px #293E5012",
+              opacity: prog(t, 0.1 + i * 0.42, 0.45 + i * 0.42),
+              transform: `translateY(${tween(t, 0.1 + i * 0.42, 0.7 + i * 0.42, 22, 0)}px)`,
+            }}
+          >
+            <Identity i={i} l={l} small />
+            <div
+              style={{
+                fontSize: 27,
+                fontWeight: 600,
+                lineHeight: 1.45,
+                marginTop: 19,
+              }}
+            >
+              <div style={{ position: "relative", minHeight: 79 }}>
+                <div
+                  style={{
+                    opacity:
+                      (l === "zh-CN") === (i === 1)
+                        ? 1
+                        : 1 - prog(t, 3 + i * 0.12, 3.22 + i * 0.12),
+                    transform: `translateY(${(l === "zh-CN") === (i === 1) ? 0 : -6 * prog(t, 3 + i * 0.12, 3.22 + i * 0.12)}px)`,
+                  }}
+                >
+                  {i === 1 ? a.zh : a.en}
+                </div>
+                {(l === "zh-CN") !== (i === 1) && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      opacity: prog(t, 3.24 + i * 0.12, 3.6 + i * 0.12),
+                      transform: `translateY(${6 * (1 - prog(t, 3.24 + i * 0.12, 3.6 + i * 0.12))}px)`,
+                    }}
+                  >
+                    {tr(l, a.zh, a.en)}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                gap: 12,
+                alignItems: "center",
+                borderTop: "1px solid #E6EAF0",
+                marginTop: 5,
+                paddingTop: 15,
+                fontSize: 21,
+                color: C.blue,
+                opacity: prog(t, 0.65 + i * 0.42, 1 + i * 0.42),
+              }}
+            >
+              <span>↗</span>
+              {tr(l, a.sourceZh, a.sourceEn)}
+            </div>
+          </Box>
+        ))}
+      </Box>
+      <Box
+        style={{
+          left: 100,
+          top: 270,
+          opacity: app,
+          transform: `perspective(1800px) rotateY(2deg) translateX(${30 * (1 - app)}px)`,
+        }}
+      >
+        <App l={l} scene="topic" width={1135} />
+      </Box>
+      <Box style={{ left: 1310, top: 300, width: 510, opacity: app }}>
+        <div style={{ fontSize: 19, color: C.muted, marginBottom: 17 }}>
+          {tr(l, "Grok · 原回答 · English", "Diandian · Original · 中文")}
+        </div>
+        <div style={{ fontSize: 25, lineHeight: 1.5, color: "#697488" }}>
+          {tr(
+            l,
+            "Start with one playable scene. Test movement and jumping first.",
+            "先用方块测试碰撞，再换像素素材。",
+          )}
+        </div>
+        <div style={{ height: 1, background: "#D9DFE6", margin: "26px 0" }} />
+        <div style={{ fontSize: 19, color: C.blue, marginBottom: 17 }}>
+          {tr(l, "中文阅读版本", "English reading version")}
+        </div>
+        <div style={{ fontSize: 30, lineHeight: 1.5, fontWeight: 600 }}>
+          {tr(
+            l,
+            "先做一个能玩的场景，测试移动和跳跃。",
+            "Test collisions with simple blocks, then add pixel art.",
+          )}
+        </div>
+        <div
+          style={{
+            marginTop: 35,
+            background: "#FFF",
+            borderRadius: 18,
+            padding: 18,
+            boxShadow: "0 12px 35px #243B5010",
+          }}
+        >
+          <ArticleCover
+            tone={l === "zh-CN" ? "blue" : "yellow"}
+            style={{ borderRadius: 12 }}
+          />
+          <div style={{ marginTop: 14, fontSize: 22, lineHeight: 1.4 }}>
+            {article(l, l === "zh-CN")}
+          </div>
+          <div style={{ fontSize: 18, color: C.blue, marginTop: 14 }}>
+            ↗ {tr(l, "查看原始来源", "Open original source")}
+          </div>
+        </div>
+      </Box>
+    </Scene>
+  );
+}
+function Bridge({ l }: { l: Language }) {
+  const t = useTime();
+  return (
+    <Scene duration={8}>
+      <Desk />
+      <Box style={{ left: 100, top: 65 }}>
+        <Chapter l={l} />
+      </Box>
+      <Box style={{ left: 100, top: 145, width: 1720 }}>
+        <Head style={{ fontSize: 62 }}>
+          {t < 4.3
+            ? tr(
+                l,
+                "有些 AI 能直接搜索这些平台。",
+                "Some AIs can search these platforms directly.",
+              )
+            : tr(
+                l,
+                "能不能把同一个问题，一起交给它们？",
+                "Could I send the same question to them?",
+              )}
+        </Head>
+      </Box>
+      {[0, 1].map((i) => (
+        <Box
+          key={i}
+          style={{
+            left: 100 + i * 900,
+            top: 310,
+            opacity: prog(t, i * 0.25, 0.5 + i * 0.25),
+            transform: `perspective(1700px) rotateY(${i === 0 ? 3 : -3}deg) translateY(${tween(t, i * 0.25, 0.8 + i * 0.25, 20, 0)}px)`,
+          }}
+        >
+          <Window
+            title={`${who(i, l)} · ${where(i, l)}`}
+            width={810}
+            height={530}
+          >
+            <div style={{ padding: "30px 35px" }}>
+              <Identity i={i} l={l} />
+              <div
+                style={{
+                  fontSize: 25,
+                  background: "#EEF2FA",
+                  padding: "20px 24px",
+                  borderRadius: 15,
+                  marginTop: 27,
+                }}
+              >
+                {tr(
+                  l,
+                  "找一些实际使用经验和讨论。",
+                  "Find practical experiences and discussions.",
+                )}
+              </div>
+              <div
+                style={{ fontSize: 22, color: C.muted, margin: "26px 0 16px" }}
+              >
+                {tr(
+                  l,
+                  `${where(i, l)} 中的相关帖子`,
+                  `Related posts from ${where(i, l)}`,
+                )}
+              </div>
+              {[
+                tr(l, "我的使用记录", "My experience using it"),
+                tr(l, "遇到的问题和解决方法", "Problems and what helped"),
+              ].map((title, j) => (
+                <div
+                  key={title}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 16,
+                    padding: "16px 0",
+                    borderTop: "1px solid #E3E8EE",
+                    fontSize: 24,
+                    opacity: prog(
+                      t,
+                      0.8 + i * 0.3 + j * 0.2,
+                      1.2 + i * 0.3 + j * 0.2,
+                    ),
+                  }}
+                >
+                  <span style={{ color: advisors[i].color }}>↗</span>
+                  {title}
+                </div>
+              ))}
+            </div>
+          </Window>
+        </Box>
+      ))}
+      <Box style={{ left: 100, top: 897, fontSize: 24, color: C.muted }}>
+        {tr(
+          l,
+          "例如 Grok 搜 X，点点搜小红书。",
+          "For example: Grok searches X; Diandian searches RedNote.",
+        )}
+      </Box>
+    </Scene>
+  );
+}
+function Use({ l }: { l: Language }) {
+  const t = useTime();
+  const translated = ease(prog(t, 1.65, 2.85));
+  const original =
+    l === "zh-CN" ? "reading-blue-focus-original" : "reading-focus-original";
+  const focused = l === "zh-CN" ? "reading-blue-focus" : "reading-focus";
+  const reading = l === "zh-CN" ? "reading-blue" : "reading";
+  return (
+    <Scene duration={6} bg="#F0F2EA">
+      <Desk />
+      <Box style={{ left: 100, top: 65 }}>
+        <Chapter l={l} second />
+      </Box>
+      <Box style={{ left: 100, top: 210, width: 510 }}>
+        <Head style={{ fontSize: l === "zh-CN" ? 60 : 57 }}>
+          {tr(
+            l,
+            "在阅读库里，\n看摘要和正文。",
+            "Read summaries\nand articles\nin one library.",
+          )}
+        </Head>
+        <div
+          style={{
+            fontSize: 25,
+            lineHeight: 1.7,
+            color: C.muted,
+            marginTop: 35,
+          }}
+        >
+          {tr(
+            l,
+            "可以切换原文和阅读版本，\n也能打开原始来源。",
+            "Switch between the original\nand your reading version.\nOpen the source when you need it.",
+          )}
+        </div>
+        <div style={{ display: "flex", gap: 12, marginTop: 30 }}>
+          {[
+            tr(l, "原文", "Original"),
+            tr(l, "阅读版本", "Reading version"),
+          ].map((label, i) => (
+            <div
+              key={label}
+              style={{
+                fontSize: 22,
+                padding: "14px 18px",
+                borderRadius: 12,
+                border: "1px solid #CFD9E9",
+                background: translated > 0.5 === (i === 1) ? C.blue : "#FFF",
+                color: translated > 0.5 === (i === 1) ? "#FFF" : C.muted,
+              }}
+            >
+              {label}
+            </div>
+          ))}
+        </div>
+        <div style={{ fontSize: 22, color: C.blue, marginTop: 25 }}>
+          {tr(l, "English → 中文", "中文 → English")}
+        </div>
+        <div
+          style={{
+            borderTop: "1px solid #D2DCCF",
+            paddingTop: 24,
+            marginTop: 35,
+            fontSize: 24,
+            lineHeight: 1.6,
+            color: "#61795E",
+            opacity: prog(t, 3.8, 4.3),
+          }}
+        >
+          {tr(
+            l,
+            "自己的 Agent 也能读取\n这些保存的资料。",
+            "Your own agent can also read\nthe materials you saved.",
+          )}
+        </div>
+      </Box>
+      <Box
+        style={{
+          left: 690,
+          top: 175,
+          width: 1150,
+          height: 795,
+          transform: "perspective(1800px) rotateY(-2deg)",
+        }}
+      >
+        <App l={l} scene={original} width={1150} />
+        <Box
+          style={{
+            inset: 0,
+            clipPath: `inset(0 ${(1 - translated) * 100}% 0 0)`,
+          }}
+        >
+          <App l={l} scene={focused} width={1150} />
+        </Box>
+        <Box style={{ inset: 0, opacity: prog(t, 3.2, 3.65) }}>
+          <App l={l} scene={reading} width={1150} />
+        </Box>
+        {translated > 0 && translated < 1 && (
+          <Box
+            style={{
+              left: 1150 * translated,
+              top: 10,
+              bottom: 10,
+              width: 3,
+              background: "#6E91EF",
+              boxShadow: "0 0 22px #6E91EF88",
+            }}
+          />
+        )}
+      </Box>
+    </Scene>
+  );
+}
+
+function SavedList({ l, x = false }: { l: Language; x?: boolean }) {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        background: "#FFF",
+        padding: "23px 18px",
+      }}
+    >
+      <div style={{ fontSize: 23, fontWeight: 750, marginBottom: 26 }}>
+        {x ? "𝕏" : "小"} {tr(l, "收藏", "Bookmarks")}
+      </div>
+      <div style={{ fontSize: 12, color: C.muted, marginBottom: 18 }}>
+        {tr(l, "上周保存", "Saved last week")}
+      </div>
+      {[0, 1, 2].map((i) => (
+        <div
+          key={i}
+          style={{
+            display: "flex",
+            gap: 12,
+            padding: "15px 0",
+            borderBottom: "1px solid #ECEEF1",
+          }}
+        >
+          <ArticleCover
+            tone={x ? "blue" : "yellow"}
+            style={{
+              width: 100,
+              height: 81,
+              aspectRatio: undefined,
+              flexShrink: 0,
+            }}
+          />
+          <div>
+            <div style={{ fontSize: 17, fontWeight: 650, lineHeight: 1.5 }}>
+              {i === 0
+                ? article(l, x)
+                : tr(
+                    l,
+                    ["", "像素游戏的碰撞检测", "用 AI 制作像素素材"][i],
+                    ["", "Pixel game collisions", "Making pixel art with AI"][
+                      i
+                    ],
+                  )}
+            </div>
+            <div style={{ fontSize: 11, color: C.muted, marginTop: 8 }}>
+              {tr(l, "7 天前", "7 days ago")}
+            </div>
+          </div>
+        </div>
+      ))}
+      <div style={{ marginTop: 30, color: C.muted, fontSize: 15 }}>
+        {tr(l, "这些帖子还没看完。", "I still have these posts to read.")}
       </div>
     </div>
   );
-};
-export const Film: React.FC<FilmProps> = ({ language: l, sound }) => (
-  <AbsoluteFill
-    style={{
-      fontFamily: FONT,
-      background: C.paper,
-      WebkitFontSmoothing: "antialiased",
-    }}
-  >
-    {sound && <Audio src={staticFile(`mix-${l}.wav`)} volume={1} />}
-    <Sequence from={0} durationInFrames={318}>
-      <Opening l={l} />
-    </Sequence>
-    <Sequence from={Math.round(4.9 * FPS)} durationInFrames={330}>
-      <Dispatch l={l} />
-    </Sequence>
-    <Sequence from={10 * FPS} durationInFrames={936}>
-      <Search l={l} />
-    </Sequence>
-    <Sequence from={25 * FPS} durationInFrames={570}>
-      <Replies l={l} />
-    </Sequence>
-    <Sequence from={34 * FPS} durationInFrames={570}>
-      <Reading l={l} />
-    </Sequence>
-    <Sequence from={43 * FPS} durationInFrames={300}>
-      <Finale l={l} />
-    </Sequence>
-    <SourceJourney l={l} />
-    <Subtitles l={l} />
-  </AbsoluteFill>
-);
+}
+function Browse({ l }: { l: Language }) {
+  const t = useTime();
+  const later = t >= 3.4;
+  const x = t >= 1.8 && t < 3.4;
+  const saved = x ? t >= 2.85 : t >= 1.05;
+  return (
+    <Scene duration={6} bg="#F0F2EA">
+      <Desk />
+      <Box style={{ left: 100, top: 65 }}>
+        <Chapter l={l} second />
+      </Box>
+      <Box style={{ left: 100, top: 155, width: 690 }}>
+        <Head style={{ fontSize: 64 }}>
+          {later
+            ? tr(
+                l,
+                "收藏了一周，\n我还没打开看。",
+                "A week later,\nI still haven’t read them.",
+              )
+                .split("\n")
+                .map((s, i) => (
+                  <React.Fragment key={s}>
+                    {i > 0 && <br />}
+                    {s}
+                  </React.Fragment>
+                ))
+            : tr(
+                l,
+                "刷到有用的长文，\n我会先收藏。",
+                "I bookmark long posts\nthat look useful.",
+              )
+                .split("\n")
+                .map((s, i) => (
+                  <React.Fragment key={s}>
+                    {i > 0 && <br />}
+                    {s}
+                  </React.Fragment>
+                ))}
+        </Head>
+        <div
+          style={{
+            fontSize: 29,
+            lineHeight: 1.05,
+            color: C.muted,
+            marginTop: 32,
+            width: 610,
+          }}
+        >
+          {later
+            ? tr(
+                l,
+                "内容散在几个 App 里，\n想读时还要挨个找。",
+                "The posts are saved across apps,\nso I have to find them again.",
+              )
+                .split("\n")
+                .map((s) => <div key={s}>{s}</div>)
+            : tr(
+                l,
+                "当时没空读完，\n想着以后再看。",
+                "I don’t have time to finish them,\nso I save them for later.",
+              )
+                .split("\n")
+                .map((s) => <div key={s}>{s}</div>)}
+        </div>
+        {later && (
+          <div style={{ marginTop: 65, display: "flex", gap: 18 }}>
+            <Chip>{tr(l, "小红书收藏", "RedNote saves")}</Chip>
+            <Chip>{tr(l, "X 书签", "X bookmarks")}</Chip>
+          </div>
+        )}
+      </Box>
+      <Box
+        style={{
+          left: later ? 930 : 1040,
+          top: 115,
+          transform: "perspective(1800px) rotateY(-4deg) rotateX(2deg)",
+        }}
+      >
+        <PhoneFrame width={380} height={780} time={t}>
+          {later ? (
+            <SavedList l={l} />
+          ) : (
+            <SocialFeed
+              language={l}
+              platform={x ? "x" : "xiaohongshu"}
+              scroll={
+                t < 1.8
+                  ? tween(t, 0.1, 0.8, 0, 100)
+                  : tween(t, 1.9, 2.65, 0, 100)
+              }
+              saved={saved}
+              saveAge={t - (x ? 2.85 : 1.05)}
+              time={t}
+            />
+          )}
+        </PhoneFrame>
+        {!later && (
+          <TapRipple
+            x={257}
+            y={718}
+            progress={prog(t, x ? 2.8 : 1.0, x ? 3.25 : 1.45)}
+          />
+        )}
+      </Box>
+      {later && (
+        <Box
+          style={{
+            left: 1360,
+            top: 170,
+            opacity: prog(t, 3.4, 4),
+            transform: `perspective(1800px) rotateY(-5deg) translateY(${tween(t, 3.4, 4.1, 40, 0)}px)`,
+          }}
+        >
+          <PhoneFrame width={350} height={720} time={t}>
+            <SavedList l={l} x />
+          </PhoneFrame>
+        </Box>
+      )}
+    </Scene>
+  );
+}
+function Forward({ l }: { l: Language }) {
+  const t = useTime();
+  const chat = t >= 2.1;
+  const arrived = t >= 5.7;
+  return (
+    <Scene duration={8} bg="#F0F2EA">
+      <Desk />
+      <Box style={{ left: 100, top: 65 }}>
+        <Chapter l={l} second />
+      </Box>
+      <Box style={{ left: 670, top: 150, width: 1140 }}>
+        <Head style={{ fontSize: l === "zh-CN" ? 62 : 57 }}>
+          {tr(
+            l,
+            "把想读的帖子转发给机器人。",
+            "Forward posts to a bot to read later.",
+          )}
+        </Head>
+        <div style={{ display: "flex", gap: 12, marginTop: 25 }}>
+          <Chip color={C.blue}>{tr(l, "飞书机器人", "Feishu bot")}</Chip>
+          <Chip>Telegram bot</Chip>
+        </div>
+      </Box>
+      <Box
+        style={{
+          left: 170,
+          top: 130,
+          transform: "perspective(1800px) rotateY(4deg)",
+        }}
+      >
+        <PhoneFrame width={380} height={780} time={t}>
+          {chat ? (
+            <BotMessages language={l} time={t - 2.1} />
+          ) : (
+            <SocialFeed
+              language={l}
+              platform="xiaohongshu"
+              scroll={0}
+              saved={false}
+              time={t}
+            />
+          )}
+          {!chat && t >= 1.4 && (
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                background: "#1D293D33",
+                zIndex: 10,
+                display: "flex",
+                alignItems: "flex-end",
+              }}
+            >
+              <div
+                style={{
+                  background: "#FFF",
+                  padding: "24px 22px 35px",
+                  width: "100%",
+                  borderRadius: "23px 23px 0 0",
+                  boxShadow: "0 -12px 35px #27364B17",
+                }}
+              >
+                <div
+                  style={{ fontSize: 19, fontWeight: 650, marginBottom: 22 }}
+                >
+                  {tr(l, "转发给", "Forward to")}
+                </div>
+                <div style={{ display: "flex", gap: 25 }}>
+                  {[tr(l, "飞书", "Feishu"), "Telegram"].map((name, i) => (
+                    <div
+                      key={name}
+                      style={{ fontSize: 13, textAlign: "center" }}
+                    >
+                      <div
+                        style={{
+                          width: 57,
+                          height: 57,
+                          borderRadius: 17,
+                          background: i === 0 ? "#5679DA" : "#5BADD8",
+                          color: "#FFF",
+                          display: "grid",
+                          placeItems: "center",
+                          fontSize: 29,
+                          marginBottom: 9,
+                        }}
+                      >
+                        ↗
+                      </div>
+                      {name}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </PhoneFrame>
+        {!chat && t >= 1.4 && (
+          <TapRipple x={65} y={665} progress={prog(t, 1.7, 2.05)} />
+        )}
+        {!chat && <TapRipple x={332} y={728} progress={prog(t, 1.0, 1.6)} />}
+        {chat && <TapRipple x={333} y={728} progress={prog(t, 2.3, 2.75)} />}
+      </Box>
+      <Box style={{ left: 682, top: 350, opacity: prog(t, 2.8, 3.3) }}>
+        <App l={l} width={1130} scene="library" />
+        <Box
+          style={{
+            left: 63,
+            top: 256,
+            width: 329,
+            height: 410,
+            background: "#F5F6F9",
+            borderRadius: 17,
+            opacity: 1 - prog(t, 5.7, 6.1),
+            display: "grid",
+            placeItems: "center",
+          }}
+        >
+          <div
+            style={{
+              padding: 32,
+              textAlign: "center",
+              fontSize: 22,
+              color: C.muted,
+            }}
+          >
+            {tr(l, "收到转发，正在整理…", "Forward received. Preparing…")}
+          </div>
+        </Box>
+      </Box>
+      <Box style={{ left: 645, top: 760, opacity: fade(t, 4.0, 5.7) }}>
+        <div style={{ width: 40, height: 2, background: C.blue }} />
+      </Box>
+      <Box style={{ left: 1010, top: 900, opacity: prog(t, 6.1, 6.5) }}>
+        <Chip color="#58725D" style={{ fontSize: 24 }}>
+          ✓{" "}
+          {tr(l, "这篇帖子已保存到阅读库。", "This post is saved in Reading.")}
+        </Chip>
+      </Box>
+      {!arrived && (
+        <Box
+          style={{
+            left: 680,
+            top: 859,
+            opacity: fade(t, 0.5, 3.2),
+            fontSize: 24,
+            color: C.muted,
+          }}
+        >
+          {tr(l, "发给配置好的机器人", "Forward to your configured bot")}
+        </Box>
+      )}
+    </Scene>
+  );
+}
+export function Film({ language: l, sound }: FilmProps) {
+  const shots = [
+    { key: "intro", node: <Intro l={l} /> },
+    { key: "find", node: <Find l={l} /> },
+    { key: "bridge", node: <Bridge l={l} /> },
+    { key: "ask", node: <Ask l={l} /> },
+
+    { key: "compare", node: <Compare l={l} /> },
+    { key: "browse", node: <Browse l={l} /> },
+    { key: "forward", node: <Forward l={l} /> },
+    { key: "use", node: <Use l={l} /> },
+    { key: "end", node: <End l={l} /> },
+  ] as const;
+  return (
+    <AbsoluteFill
+      style={{ fontFamily: FONT, color: C.ink, background: C.paper }}
+    >
+      {sound && <Audio src={staticFile(`mix-${l}.wav`)} />}{" "}
+      {shots.map((s) => {
+        const [start, end] = story.scenes[s.key];
+        return (
+          <Sequence
+            key={s.key}
+            from={start * FPS}
+            durationInFrames={(end - start) * FPS}
+          >
+            {s.node}
+          </Sequence>
+        );
+      })}
+      <Subtitles l={l} />
+    </AbsoluteFill>
+  );
+}

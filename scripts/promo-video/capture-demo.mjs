@@ -23,11 +23,15 @@ const folder = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.resolve(folder, "../..");
 const output = path.join(folder, "demo-assets");
 const runtime = path.join(output, ".runtime");
-const stamp = "2026-10-20T09:20:00.000Z";
+const stamp = "2026-10-21T09:20:00.000Z";
 const viewport = { width: 1100, height: 760 };
-const videoUrl = "https://www.youtube.com/watch?v=DEMO1234abc";
-const imageUrl = "https://postrove-demo.example/pixel-game.png";
+const articleUrl =
+  "https://www.xiaohongshu.com/explore/67f0a34b000000001a012345";
+const blueUrl = "https://x.com/lin_dev/status/9999999999999999999";
+const imageUrl = "https://postrove-demo.example/cover-yellow.png";
+const blueImageUrl = "https://postrove-demo.example/cover-blue.png";
 const imageId = createHash("sha256").update(imageUrl).digest("hex");
+const blueImageId = createHash("sha256").update(blueImageUrl).digest("hex");
 
 async function findModules() {
   const common = execFileSync(
@@ -147,94 +151,175 @@ await sharp(path.join(repo, "assets/postrove-icon.svg"))
   .png()
   .toFile(path.join(runtime, "dist/assets/postrove.png"));
 
-const game = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="430" viewBox="0 0 1200 430">
-<rect width="1200" height="430" rx="24" fill="#15213B"/>
-<g opacity=".18" stroke="#9BAED2">${Array.from({ length: 30 }, (_, i) => `<path d="M${i * 40} 0v430"/>`).join("")}${Array.from({ length: 11 }, (_, i) => `<path d="M0 ${i * 40}h1200"/>`).join("")}</g>
-<g fill="#AFEDC8"><path d="M0 370h340v60H0zM430 310h230v35H430zM750 245h220v35H750zM1040 180h160v35h-160z"/></g>
-<g fill="#668978"><path d="M0 392h340v38H0zM430 332h230v13H430zM750 267h220v13H750zM1040 202h160v13h-160z"/></g>
-<g fill="#E7FF96"><path d="M500 201h12v-12h12v12h12v12h-12v12h-12v-12h-12zM815 136h12v-12h12v12h12v12h-12v12h-12v-12h-12z"/></g>
-<path d="M260 280q75-145 200-30" stroke="#8C9BF5" stroke-width="5" stroke-dasharray="10 12" fill="none"/>
-<g shape-rendering="crispEdges"><path d="M195 264h60v12h12v60h-12v12h-12v22h-18v-22h-18v22h-18v-34h-12v-48h18z" fill="#AFA0FF"/><path d="M195 288h60v24h-60z" fill="#DBD4FF"/><path d="M208 288h7v12h-7zM238 288h7v12h-7z" fill="#17213B"/><path d="M195 264h60v12h-60z" fill="#D0C7FF"/></g>
-<g font-family="Arial,sans-serif" fill="#C5D0E8"><text x="48" y="58" font-size="17" letter-spacing="3">PIXEL LAB / FICTIONAL DEMO</text><text x="820" y="385" font-size="18">MOVE → JUMP → COLLIDE</text></g>
-<rect x="65" y="300" width="50" height="42" rx="8" fill="#FFFFFF14"/><path d="M100 321H80m0 0 7-7m-7 7 7 7" stroke="#D8E0F4" stroke-width="3" fill="none"/>
-</svg>`;
-await writeFile(path.join(output, "game.svg"), game);
-await sharp(Buffer.from(game)).png().toFile(path.join(output, "game.png"));
+function coverSvg(kind) {
+  const yellow = kind === "yellow";
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="430" viewBox="0 0 1200 430">
+  <rect width="1200" height="430" rx="26" fill="${yellow ? "#EFCB76" : "#9DB3EF"}"/>
+  <rect x="235" y="34" width="744" height="366" rx="20" fill="#26374B" opacity=".15"/>
+  <rect x="225" y="24" width="744" height="366" rx="20" fill="#FFFFFF"/>
+  <text x="515" y="53" font-family="Arial" font-size="13" letter-spacing="2" fill="#68778B">PIXEL GAME NOTES</text>
+  <g transform="translate(245 70)" shape-rendering="crispEdges"><rect width="704" height="300" fill="#BBDADD"/>
+  <rect x="535" y="30" width="44" height="44" fill="#FFF1C2"/>
+  <path d="M0 230V160H80V120H150V170H245V132H330V180H440V140H540V190H620V130H704V300H0Z" fill="#8DB9A4"/>
+  <path d="M0 250V220H100V185H230V220H360V200H470V230H580V190H704V300H0Z" fill="#6F9A85"/>
+  <rect y="252" width="704" height="12" fill="#D2DF9F"/><rect y="264" width="704" height="36" fill="#546857"/>
+  <rect x="315" y="198" width="108" height="12" fill="#E0D5A0"/><rect x="315" y="210" width="108" height="12" fill="#6B7360"/>
+  <rect x="362" y="148" width="19" height="27" fill="#F7D96E"/>
+  <g transform="translate(${yellow ? 160 : 310} ${yellow ? 202 : 148})"><rect x="4" width="28" height="9" fill="#3A4660"/><rect y="9" width="36" height="20" fill="#E6BA91"/><rect x="26" y="14" width="5" height="5" fill="#263144"/><rect x="4" y="29" width="28" height="16" fill="#5679BB"/><rect y="45" width="13" height="8" fill="#33415A"/><rect x="23" y="45" width="13" height="8" fill="#33415A"/></g>
+  <rect x="633" y="170" width="7" height="82" fill="#E5EDD3"/><rect x="640" y="170" width="42" height="28" fill="#D88770"/>
+  </g></svg>`;
+}
+for (const kind of ["yellow", "blue"]) {
+  const svg = coverSvg(kind);
+  await writeFile(path.join(output, `cover-${kind}.svg`), svg);
+  await sharp(Buffer.from(svg))
+    .png()
+    .toFile(path.join(output, `cover-${kind}.png`));
+}
 
 const copy = {
   "zh-CN": {
-    question: "我想用 AI 做一个像素小游戏，应该从哪里开始？",
-    title: "用 AI 做第一个像素小游戏",
+    question: "我想用 AI 做个像素游戏。找一些开发记录、教程和踩坑经验。",
+    title: "我用 AI 做了一个像素小游戏",
+    blueTitle: "先把角色移动和跳跃做出来",
     summary:
-      "先做一个角色、一块平台和一次跳跃。跟着示例教程，逐步理解移动、跳跃和碰撞，再让 AI 帮你拆解下一步。",
-    body: `![像素角色与平台：虚构教程示意图](${imageUrl})\n\n## 先让一个角色动起来\n\n[00:00 · 创建角色与场景](${videoUrl}&t=0s)　 [02:14 · 移动与跳跃](${videoUrl}&t=134s)　 [05:32 · 平台碰撞](${videoUrl}&t=332s)\n\n从一个小场景开始：左右移动、按空格跳跃、落回平台。每完成一步，就运行一次并观察结果。\n\n\`\`\`text\n角色：左右移动 → 空格跳跃\n场景：一块平台 → 检查落地碰撞\n\`\`\`\n\n**给 AI 的下一问：**“请把角色跳跃拆成三个小步骤，并解释每一步。”\n\n*虚构演示材料与占位来源，用于展示阅读流程。*`,
+      "先做一个场景，让角色能移动、跳跃和收集金币。每加一个动作就运行一次，再调整速度和碰撞。",
+    blueSummary:
+      "记录角色移动、落地检测和跳跃的实现过程。先测试手感，再补地图和美术。",
     replies: {
-      x: "### 先做最小的可玩循环\n\n从一个角色、一块平台开始。先实现左右移动，再加跳跃和落地碰撞。每完成一步，就让 AI 解释代码。\n\n*虚构演示回复 · 示例来源*",
+      x: "### 先做一个能玩的场景\n\n这篇开发记录从角色移动和跳跃开始，再加金币。每次只加一个动作，运行后再让 Agent 修改。",
       xiaohongshu:
-        "### 先画一个简单的小世界\n\n用 16×16 的角色和两种颜色搭出场景。先完成一个能走、能跳的小房间，再逐步丰富画面。\n\n*虚构演示回复 · 示例来源*",
+        "### 看一遍从零开始的过程\n\n这篇笔记记录了用 AI 做像素小游戏的过程。建议先用简单方块测试移动和碰撞，再换成像素素材。",
       youtube:
-        "### 跟着一个短教程，逐步动手\n\n先看角色如何移动，再理解跳跃与平台碰撞。把教程拆成三个小练习，遇到问题时让 AI 帮你解释。\n\n*虚构演示回复 · 示例来源*",
+        "### 跟着移动和碰撞教程试\n\n找到一段演示角色移动、跳跃和落地检测的视频。可以先完成这几个动作，再设计关卡。",
       reddit:
-        "### 把第一作的范围收小\n\n只做一个房间和一个目标。先写下“能移动、能跳、能落地”，让 AI 帮你逐项调试。\n\n*虚构演示回复 · 示例来源*",
+        "### 先测试手感，再加功能\n\n讨论里建议先做一个很小的原型。让角色移动起来，测试跳跃距离和落地，再补其他功能。",
     },
     sources: {
-      x: "一个角色，也能开始做游戏",
-      xiaohongshu: "16×16 像素角色入门",
-      youtube: "用 AI 做第一个像素小游戏",
-      reddit: "第一款小游戏，先完成一个房间",
+      x: "先把角色移动和跳跃做出来",
+      xiaohongshu: "我用 AI 做了一个像素小游戏",
+      youtube: "像素游戏：移动、跳跃和碰撞",
+      reddit: "第一个像素游戏，该从哪开始？",
     },
-    demo: "虚构演示来源 · 占位链接",
+    sourceDescription: "开发记录、操作教程和实际经验",
     nav: "阅读",
     open: "打开话题",
     close: "关闭",
     original: "原文",
     reading: "阅读版本",
+    body: `![像素游戏开发记录](${imageUrl})
+
+## 先做一个能玩的场景
+
+我的目标是先让角色移动、跳跃，再收集一枚金币。地图只保留一块地面和一个平台，方便检查动作。
+
+## 每加一个动作就运行一次
+
+先用方块测试碰撞。确认角色能落地，再换上像素素材。把跳跃距离和速度分开调整。
+
+\`\`\`text
+第一步：移动与落地检测
+第二步：跳跃与平台碰撞
+第三步：金币与计数
+\`\`\`
+
+## 把问题说给 Agent
+
+记录角色在哪个位置卡住，以及预期的动作。每次修改后都运行一次，再决定下一个任务。
+
+[回到原始文章](${articleUrl})`,
+    blueBody: `![角色移动和跳跃的开发记录](${blueImageUrl})
+
+## 从移动和跳跃开始
+
+先做一个只有地面的小场景。让角色左右移动，检测是否落地，再加入跳跃。
+
+## 在小场景里测试手感
+
+调整速度和跳跃高度，确认角色落地后能继续移动。最后加入一枚金币和一个计数器。
+
+\`\`\`text
+移动：方向输入 → 水平速度
+跳跃：落地状态 → 向上速度
+金币：碰撞检测 → 数量加一
+\`\`\``,
   },
   en: {
-    question: "I want to make a pixel game with AI. Where do I start?",
-    title: "Your first pixel game with AI",
+    question:
+      "I want to make a pixel game with AI. Find devlogs, tutorials, and practical lessons.",
+    title: "My first pixel game with AI",
+    blueTitle: "Start with movement and jumping",
     summary:
-      "Start with one character, one platform, and one jump. Follow a sample tutorial through movement, jumping, and collisions, then ask AI to explain the next step.",
-    body: `![Pixel character and platforms: fictional tutorial artwork](${imageUrl})\n\n## Make one character move\n\n[00:00 · Set up the scene](${videoUrl}&t=0s)　 [02:14 · Move and jump](${videoUrl}&t=134s)　 [05:32 · Platform collisions](${videoUrl}&t=332s)\n\nBegin with a tiny scene: move left and right, press space to jump, and land on a platform. Run each small change and observe what happens.\n\n\`\`\`text\nCharacter: move left/right → press space to jump\nScene: one platform → check landing collisions\n\`\`\`\n\n**Ask AI next:** “Break a character jump into three small steps and explain each one.”\n\n*Fictional demo material and placeholder sources illustrate the reading workflow.*`,
+      "Build one scene with movement, jumping, and coins. Run it after each change, then tune speed and collisions.",
+    blueSummary:
+      "Notes on movement, ground checks, and jumping. Test the controls before adding a map and art.",
     replies: {
-      x: "### Build the smallest playable loop\n\nStart with one character and one platform. Add movement, then jumping and landing collisions. Ask AI to explain each small change.\n\n*Fictional demo reply · Sample sources*",
+      x: "### Start with one playable scene\n\nThis devlog starts with movement and jumping, then adds a coin. Add one action at a time, run it, and ask your agent to adjust it.",
       xiaohongshu:
-        "### Sketch one tiny world\n\nTry a 16×16 character and a two-color scene. Finish a single room where you can walk and jump, then develop the visual details.\n\n*Fictional demo reply · Sample sources*",
+        "### Follow the first build\n\nThese notes follow a first pixel game built with AI. Test movement and collisions with simple blocks, then add pixel art.",
       youtube:
-        "### Follow one short tutorial, step by step\n\nSee how movement works, then explore jumping and platform collisions. Treat each part as a small exercise and ask AI to explain what you observe.\n\n*Fictional demo reply · Sample sources*",
+        "### Follow a movement tutorial\n\nThis video demonstrates movement, jumping, and ground checks. Try these actions before designing a level.",
       reddit:
-        "### Keep the first game small\n\nMake one room with one goal. Write down “move, jump, land,” then use AI to help debug each part.\n\n*Fictional demo reply · Sample sources*",
+        "### Test the controls before adding features\n\nThe discussion recommends a small prototype. Test movement, jump distance, and landing before adding more features.",
     },
     sources: {
-      x: "One character is enough to begin",
-      xiaohongshu: "A first 16×16 pixel character",
-      youtube: "Your first pixel game with AI",
-      reddit: "For your first game, finish one room",
+      x: "Start with movement and jumping",
+      xiaohongshu: "My first pixel game with AI",
+      youtube: "Pixel game movement, jumping, and collisions",
+      reddit: "Where should a first pixel game start?",
     },
-    demo: "Fictional demo source · Placeholder link",
+    sourceDescription: "Devlogs, tutorials, and practical lessons",
     nav: "Reading",
     open: "Open topic",
     close: "Close",
     original: "Original",
     reading: "Reading version",
+    body: `![Pixel game development notes](${imageUrl})
+
+## Start with one playable scene
+
+I want the character to move, jump, and collect one coin. Keep one floor and one platform so each action is easy to test.
+
+## Run the game after each change
+
+Test collisions with simple blocks first. Add pixel art after landing works. Adjust jump distance and movement speed separately.
+
+\`\`\`text
+Step 1: movement and ground checks
+Step 2: jumping and platform collisions
+Step 3: coins and a counter
+\`\`\`
+
+## Give the agent a concrete problem
+
+Record where the character gets stuck and what should happen. Run the game after every change, then choose the next task.
+
+[Open the original article](${articleUrl})`,
+    blueBody: `![Movement and jumping notes](${blueImageUrl})
+
+## Start with movement and jumping
+
+Build a small scene with a floor. Move the character left and right, check the ground, then add jumping.
+
+## Test the controls in a small scene
+
+Adjust movement speed and jump height. Check that the character can move after landing. Finally, add one coin and a counter.
+
+\`\`\`text
+Move: direction input → horizontal speed
+Jump: grounded state → upward speed
+Coin: collision check → count plus one
+\`\`\``,
   },
 };
 const routes = [
-  {
-    platform: "youtube",
-    advisorId: "youtube-gemini-en",
-    connectionId: "gemini-web",
-    routeId: "youtube-gemini",
-    promptLanguage: "en",
-    url: videoUrl,
-  },
   {
     platform: "x",
     advisorId: "x-grok-en",
     connectionId: "x-grok",
     routeId: "x-grok",
     promptLanguage: "en",
-    url: "https://x.com/postrove_demo/status/9999999999999999999",
+    url: blueUrl,
   },
   {
     platform: "xiaohongshu",
@@ -242,7 +327,15 @@ const routes = [
     connectionId: "xiaohongshu-diandian",
     routeId: "xiaohongshu-diandian",
     promptLanguage: "zh-CN",
-    url: "https://www.xiaohongshu.com/explore/postrove_pixel_demo",
+    url: articleUrl,
+  },
+  {
+    platform: "youtube",
+    advisorId: "youtube-gemini-en",
+    connectionId: "gemini-web",
+    routeId: "youtube-gemini",
+    promptLanguage: "en",
+    url: "https://www.youtube.com/watch?v=DEMO1234abc",
   },
   {
     platform: "reddit",
@@ -250,37 +343,37 @@ const routes = [
     connectionId: "reddit-web",
     routeId: "reddit-ai",
     promptLanguage: "en",
-    url: "https://www.reddit.com/r/postrove_demo/comments/demopixel/",
+    url: "https://www.reddit.com/r/postrove_demo/comments/pixelgame/",
   },
 ];
 
 async function seed(profile, language) {
   const c = copy[language];
-  const original = copy.en.body;
+  const original = copy["zh-CN"].body;
   const material = {
-    id: "pixel-demo-main",
+    id: "interface-yellow-main",
     role: "main",
-    url: videoUrl,
+    url: articleUrl,
     title: c.title,
     source: {
-      platform: "youtube",
-      sourceUrl: videoUrl,
-      sourceKey: "youtube:video:DEMO1234abc",
-      sourceIdentity: "Pixel Lab · Fictional demo",
-      title: copy.en.title,
+      platform: "xiaohongshu",
+      sourceUrl: articleUrl,
+      sourceIdentity:
+        language === "zh-CN" ? "林同学的开发笔记" : "Lin’s game notes",
+      title: c.title,
       fetchedAt: stamp,
       markdown: original,
       contentBlocks: [{ type: "text", text: original }],
       images: [
         {
-          imageId: "pixel-scene",
+          imageId: "interface-yellow",
           url: imageUrl,
-          alt: "Pixel Lab · Fictional demo",
+          alt: "Pixel game notes",
           cachedUrl: `postrove-image://${imageId}`,
         },
       ],
       completeness: "complete",
-      completenessNote: copy.en.demo,
+      completenessNote: "Main article and illustration.",
     },
     chunks: [{ index: 0, original, translated: c.body, complete: true }],
     summary: c.summary,
@@ -290,7 +383,7 @@ async function seed(profile, language) {
     taskId: randomUUID(),
     resultId: randomUUID(),
     materialId: randomUUID(),
-    target: { entry: "app", sourceUrl: videoUrl },
+    target: { entry: "app", sourceUrl: articleUrl },
     state: "completed",
     phase: "已保存",
     outputLanguage: language,
@@ -337,7 +430,7 @@ async function seed(profile, language) {
           postKey: canonicalPost(route.platform, route.url).key,
           url: route.url,
           title: c.sources[route.platform],
-          description: c.demo,
+          description: c.sourceDescription,
         },
       ],
     })),
@@ -347,7 +440,56 @@ async function seed(profile, language) {
     reports: [report],
     follows: [],
   });
-  const forwarding = forwardingStateSchema.parse({ version: 1, tasks: [task] });
+  const blueMaterial = {
+    ...material,
+    id: "interface-blue-main",
+    url: blueUrl,
+    title: c.blueTitle,
+    source: {
+      ...material.source,
+      platform: "x",
+      sourceUrl: blueUrl,
+      sourceIdentity: "lin.dev",
+      title: c.blueTitle,
+      markdown: copy.en.blueBody,
+      contentBlocks: [{ type: "text", text: copy.en.blueBody }],
+      images: [
+        {
+          imageId: "interface-blue",
+          url: blueImageUrl,
+          alt: "Pixel game notes",
+          cachedUrl: `postrove-image://${blueImageId}`,
+        },
+      ],
+    },
+    chunks: [
+      {
+        index: 0,
+        original: copy.en.blueBody,
+        translated: c.blueBody,
+        complete: true,
+      },
+    ],
+    summary: c.blueSummary,
+  };
+  const blueTask = {
+    ...task,
+    taskId: randomUUID(),
+    resultId: randomUUID(),
+    materialId: randomUUID(),
+    target: { entry: "app", sourceUrl: blueUrl },
+    materials: [blueMaterial],
+    source: blueMaterial.source,
+    report: {
+      materials: [blueMaterial],
+      source: blueMaterial.source,
+      outputLanguage: language,
+    },
+  };
+  const forwarding = forwardingStateSchema.parse({
+    version: 1,
+    tasks: [task, blueTask],
+  });
   const files = {
     "business-generation.json": {
       generation: "search-follow-v1",
@@ -364,11 +506,19 @@ async function seed(profile, language) {
     });
   await mkdir(path.join(profile, "material-images"), { recursive: true });
   await copyFile(
-    path.join(output, "game.png"),
+    path.join(output, "cover-yellow.png"),
     path.join(profile, "material-images", imageId),
   );
   await writeFile(
     path.join(profile, "material-images", imageId + ".type"),
+    "image/png",
+  );
+  await copyFile(
+    path.join(output, "cover-blue.png"),
+    path.join(profile, "material-images", blueImageId),
+  );
+  await writeFile(
+    path.join(profile, "material-images", blueImageId + ".type"),
     "image/png",
   );
   await writeFile(
@@ -382,17 +532,19 @@ async function seed(profile, language) {
       2,
     ),
   );
-  return { report, task };
+  return { report, task, blueTask };
 }
 
 const captures = [],
   errors = [],
   httpRequests = [];
 for (const language of ["zh-CN", "en"]) {
-  const profile = await mkdtemp(path.join(tmpdir(), "postrove-pixel-promo-"));
+  const profile = await mkdtemp(
+    path.join(tmpdir(), "postrove-interface-promo-"),
+  );
   let app;
   try {
-    await seed(profile, language);
+    const fixture = await seed(profile, language);
     const env = {};
     for (const key of [
       "PATH",
@@ -464,9 +616,35 @@ for (const language of ["zh-CN", "en"]) {
           requestAnimationFrame(() => requestAnimationFrame(done)),
         );
       });
-      const visibleHanAudit =
+      // The English promotional film uses the requested public display name.
+      // Application behavior, platform keys, and source addresses retain their identity.
+      const displayAliases =
         language === "en"
           ? await page.evaluate(() => {
+              const walker = document.createTreeWalker(
+                document.body,
+                NodeFilter.SHOW_TEXT,
+              );
+              let count = 0;
+              while (walker.nextNode()) {
+                const node = walker.currentNode;
+                if (node.textContent.includes("Xiaohongshu")) {
+                  node.textContent = node.textContent.replaceAll(
+                    "Xiaohongshu",
+                    "RedNote",
+                  );
+                  count++;
+                }
+              }
+              return { Xiaohongshu: "RedNote", replacements: count };
+            })
+          : null;
+      await page.evaluate(
+        () => new Promise((done) => requestAnimationFrame(done)),
+      );
+      const visibleHanAudit =
+        language === "en"
+          ? await page.evaluate((allowChineseSource) => {
               const allowed = [],
                 forbidden = [],
                 identityExceptions = [],
@@ -512,6 +690,19 @@ for (const language of ["zh-CN", "en"]) {
                 });
                 if (!visible) continue;
                 if (
+                  allowChineseSource &&
+                  node.parentElement.closest(".reader-article .markdown")
+                ) {
+                  allowed.push(text);
+                  identityExceptions.push({
+                    text,
+                    selector: ".reader-article .markdown",
+                    meaning:
+                      "Chinese original source shown in the English reader",
+                  });
+                  continue;
+                }
+                if (
                   (text === "点" || text === "中") &&
                   node.parentElement.closest(".avatar.diandian")
                 ) {
@@ -546,7 +737,7 @@ for (const language of ["zh-CN", "en"]) {
                 ),
                 forbidden: [...new Set(forbidden)],
               };
-            })
+            }, ["reading-original", "reading-focus-original"].includes(scene))
           : null;
       if (visibleHanAudit)
         assert.deepEqual(
@@ -603,9 +794,34 @@ for (const language of ["zh-CN", "en"]) {
           .update(await readFile(path.join(output, file)))
           .digest("hex"),
         visibleHanAudit,
+        displayAliases,
         ...bounds,
       });
       console.log("Captured", file);
+    }
+    async function alignReaderCover(reader) {
+      await reader.locator(".markdown img").evaluate((img) => {
+        for (
+          let parent = img.parentElement;
+          parent;
+          parent = parent.parentElement
+        ) {
+          if (
+            /auto|scroll/.test(getComputedStyle(parent).overflowY) &&
+            parent.scrollHeight > parent.clientHeight
+          ) {
+            parent.scrollTop += img.getBoundingClientRect().top - 100;
+            break;
+          }
+        }
+      });
+      await expect
+        .poll(() =>
+          reader
+            .locator(".markdown img")
+            .evaluate((img) => Math.round(img.getBoundingClientRect().top)),
+        )
+        .toBe(100);
     }
     await expect(page.locator(".topic-card")).toHaveCount(1);
     await expect(page.locator(".avatar-stack .avatar")).toHaveCount(4);
@@ -626,7 +842,12 @@ for (const language of ["zh-CN", "en"]) {
       .getByRole("navigation")
       .getByRole("button", { name: c.nav, exact: true })
       .click();
-    await page.locator(".reading-card-title").click();
+    await expect(page.locator(".reading-card-title")).toHaveText([
+      c.title,
+      c.blueTitle,
+    ]);
+    await screenshot("library");
+    await page.locator(".reading-card-title").first().click();
     const reader = page.getByRole("dialog");
     await expect(reader.locator("h1")).toHaveText(c.title);
     await expect(reader.locator(".markdown img")).toBeVisible();
@@ -640,12 +861,50 @@ for (const language of ["zh-CN", "en"]) {
     await screenshot("reading");
     await reader.getByRole("button", { name: c.original, exact: true }).click();
     await expect(reader.locator(".markdown")).toContainText(
-      "Make one character move",
+      "先做一个能玩的场景",
     );
     await screenshot("reading-original");
+    await alignReaderCover(reader);
+    await screenshot("reading-focus-original");
     await reader.getByRole("button", { name: c.reading, exact: true }).click();
+    await alignReaderCover(reader);
+    await screenshot("reading-focus");
     await reader.locator(".markdown pre").scrollIntoViewIfNeeded();
     await screenshot("reading-code");
+    await reader.getByRole("button", { name: c.close, exact: true }).click();
+    const blueReadingId = fixture.blueTask.taskId;
+    assert.ok(blueReadingId && blueReadingId !== fixture.task.taskId);
+    await page
+      .locator(".reading-card-title")
+      .filter({ hasText: c.blueTitle })
+      .click();
+    const blueReader = page.getByRole("dialog");
+    await expect(blueReader.locator("h1")).toHaveText(c.blueTitle);
+    await expect(blueReader.locator(".markdown img")).toBeVisible();
+    await expect
+      .poll(() =>
+        blueReader
+          .locator(".markdown img")
+          .evaluate((img) => img.complete && img.naturalWidth === 1200),
+      )
+      .toBe(true);
+    await screenshot("reading-blue");
+    await blueReader
+      .getByRole("button", { name: c.original, exact: true })
+      .click();
+    await expect(blueReader.locator(".markdown")).toContainText(
+      "Start with movement and jumping",
+    );
+    await screenshot("reading-blue-original");
+    await alignReaderCover(blueReader);
+    await screenshot("reading-blue-focus-original");
+    await blueReader
+      .getByRole("button", { name: c.reading, exact: true })
+      .click();
+    await alignReaderCover(blueReader);
+    await screenshot("reading-blue-focus");
+    await blueReader.locator(".markdown pre").scrollIntoViewIfNeeded();
+    await screenshot("reading-blue-code");
     const files = await readdir(profile);
     for (const file of [
       "telegram-bot-token.json",
@@ -667,8 +926,10 @@ await writeFile(
     {
       scope:
         "Real current Electron UI, preload, IPC and schema-validated fictional stores. Completed authored replies and reading examples; no platform request. Fresh review profiles removed after capture.",
+      displayAliases: { en: { Xiaohongshu: "RedNote" } },
       build: identity,
-      originalUrl: videoUrl,
+      originalUrl: articleUrl,
+      linkedSourceUrl: blueUrl,
       viewport,
       checks: {
         schemaValidation: true,
@@ -676,9 +937,11 @@ await writeFile(
         rendererErrors: errors,
         rendererHttpRequests: httpRequests,
         cachedArtworkLoaded: true,
+        yellowBlueIdentityPreserved: true,
+        blueSourceReaderCaptured: true,
         allFourIndependentMembers: true,
         realOriginalTabSwitch: true,
-        sourceLanguage: "en",
+        sourceLanguage: { yellow: "zh-CN", blue: "en" },
         englishVisibleHanChecked: true,
       },
       captures,

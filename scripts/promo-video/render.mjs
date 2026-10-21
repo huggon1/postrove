@@ -19,6 +19,8 @@ const browserExecutable =
 const stillsOnly = process.argv.includes("--stills");
 const english = process.argv.includes("--english");
 const language = english ? "en" : "zh-CN";
+const draft = process.argv.includes("--draft");
+const reviewDir = `stills-v10-${language}`;
 await mkdir(out, { recursive: true });
 await copyFile(
   path.join(out, "soundtrack.wav"),
@@ -43,10 +45,17 @@ const composition = await selectComposition({
   chromeMode: "chrome-for-testing",
 });
 const samples = [
-  0.5, 1.8, 3.6, 5.4, 7.2, 9.2, 10.7, 12.3, 13.6, 15, 17, 19.5, 21.1, 22.8,
-  24.3, 25.7, 27.4, 29.7, 31.5, 33, 34.7, 36.5, 38.5, 41.4, 43.5, 45.5, 47.3,
+  0,
+  0.5,
+  1.5,
+  2.8,
+  3.2,
+  ...[
+    1.2, 2.8, 5.8, 9.5, 13.2, 17.5, 20, 23.5, 25, 25.2, 26.4, 28.5, 32.2, 34,
+    35.5, 38.7, 39.5, 41.2, 43.5, 45.8, 46.8, 47.6, 49.5, 53,
+  ].map((time) => time + 3),
 ];
-await mkdir(path.join(out, `stills-v4-${language}`), { recursive: true });
+await mkdir(path.join(out, reviewDir), { recursive: true });
 const requested = process.argv.find((x) => x.startsWith("--samples="));
 const reviewSamples = requested
   ? requested.split("=")[1].split(",").map(Number)
@@ -57,11 +66,7 @@ for (const s of process.argv.includes("--skip-stills") ? [] : reviewSamples) {
     composition,
     inputProps,
     frame: Math.round(s * composition.fps),
-    output: path.join(
-      out,
-      `stills-v4-${language}`,
-      `${String(s).padStart(4, "0")}.png`,
-    ),
+    output: path.join(out, reviewDir, `${String(s).padStart(4, "0")}.png`),
     browserExecutable,
     chromeMode: "chrome-for-testing",
     imageFormat: "png",
@@ -74,8 +79,14 @@ console.log(
     : `Rendered ${reviewSamples.length} review frames.`,
 );
 if (stillsOnly) process.exit(0);
-const output = path.join(out, `postrove-${language}-1080p.mp4`);
-const visuals = path.join(out, `postrove-${language}-visuals.mp4`);
+const output = path.join(
+  out,
+  `postrove-${language}-${draft ? "draft" : "1080p"}.mp4`,
+);
+const visuals = path.join(
+  out,
+  `postrove-${language}-${draft ? "draft-" : ""}visuals.mp4`,
+);
 let last = -1;
 await renderMedia({
   serveUrl,
@@ -90,11 +101,13 @@ await renderMedia({
   pixelFormat: "yuv420p",
   outputLocation: visuals,
   concurrency: 1,
+  scale: draft ? 0.5 : 1,
+  everyNthFrame: draft ? 2 : 1,
   timeoutInMilliseconds: 90000,
   onBrowserLog: (log) => {
     if (log.type === "error") console.log("Browser:", log.text);
   },
-  x264Preset: "medium",
+  x264Preset: draft ? "veryfast" : "medium",
   onProgress: ({ progress }) => {
     const pct = Math.floor((progress * 100) / 5) * 5;
     if (pct > last) {
@@ -134,18 +147,18 @@ execFileSync(
   { env: { ...process.env, DYLD_LIBRARY_PATH: binaries }, stdio: "inherit" },
 );
 await writeFile(
-  path.join(out, `render-${language}.json`),
+  path.join(out, `render-${language}${draft ? "-draft" : ""}.json`),
   JSON.stringify(
     {
       output,
       language,
-      width: composition.width,
-      height: composition.height,
-      fps: composition.fps,
-      frames: composition.durationInFrames,
+      width: composition.width * (draft ? 0.5 : 1),
+      height: composition.height * (draft ? 0.5 : 1),
+      fps: composition.fps / (draft ? 2 : 1),
+      frames: composition.durationInFrames / (draft ? 2 : 1),
       duration: composition.durationInFrames / composition.fps,
       sourceCaptures:
-        "Dedicated fictional game-demo captures from the real application",
+        "Current real application captures with fictional pixel-game development records; procedural phone narrative",
       renderedAt: new Date().toISOString(),
     },
     null,
@@ -153,3 +166,5 @@ await writeFile(
   ),
 );
 console.log(output);
+// All media and reports have been written. Retire CLI watcher handles.
+process.exit(0);

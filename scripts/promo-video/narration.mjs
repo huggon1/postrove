@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { createHash } from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
@@ -21,7 +22,10 @@ const binaries = path.dirname(
 );
 const ffmpeg = path.join(binaries, "ffmpeg");
 const RATE = 48_000;
-const SECONDS = 48;
+const story = JSON.parse(
+  fs.readFileSync(path.join(root, "story.json"), "utf8"),
+);
+const SECONDS = story.seconds;
 const FRAMES = RATE * SECONDS;
 const env = { ...process.env, DYLD_LIBRARY_PATH: binaries };
 fs.mkdirSync(sourceDir, { recursive: true });
@@ -29,48 +33,20 @@ const previousTiming = fs.existsSync(sourceTimingFile)
   ? JSON.parse(fs.readFileSync(sourceTimingFile, "utf8"))
   : { languages: {} };
 
-const tracks = {
-  "zh-CN": {
-    voice: "zh-CN-YunxiNeural",
-    cues: [
-      {
-        start: 11,
-        limit: 24.5,
-        text: "各平台的 AI 分别查找内容。你可以在同一个话题里查看回复和来源。",
-      },
-      {
-        start: 35,
-        limit: 42.6,
-        text: "把内容收藏到阅读库，可以查看原文和中文翻译。",
-      },
-      {
-        start: 43.5,
-        limit: 47.75,
-        text: "Postrove，跨平台提问和阅读。",
-      },
-    ],
-  },
-  en: {
-    voice: "en-US-GuyNeural",
-    cues: [
-      {
-        start: 11,
-        limit: 24.5,
-        text: "Each platform’s AI searches for relevant content. View the replies and source links together in one topic.",
-      },
-      {
-        start: 35,
-        limit: 42.6,
-        text: "Save sources to Reading. View the original text or the reading version.",
-      },
-      {
-        start: 43.5,
-        limit: 47.75,
-        text: "Postrove. Ask, save, and read.",
-      },
-    ],
-  },
-};
+const tracks = Object.fromEntries(
+  Object.entries(story.narration).map(([language, cues]) => [
+    language,
+    {
+      voice: language === "zh-CN" ? "zh-CN-YunxiNeural" : "en-US-GuyNeural",
+      cues: cues.map((cue) => ({
+        ...cue,
+        spokenText: cue.spokenText ?? cue.text,
+        limit: cue.end,
+      })),
+    },
+  ]),
+);
+const synthesisRate = "+0%";
 
 const smooth = (value) => {
   const x = Math.max(0, Math.min(1, value));
@@ -108,7 +84,7 @@ function readWav(file) {
     !pcm ||
     pcm.length !== FRAMES * 4
   )
-    throw new Error("Music must be 48-second 48 kHz stereo PCM16");
+    throw new Error(`Music must be ${SECONDS}-second 48 kHz stereo PCM16`);
   const l = new Float32Array(FRAMES);
   const r = new Float32Array(FRAMES);
   for (let i = 0; i < FRAMES; i++) {
@@ -170,7 +146,7 @@ function writeWav(file, left, right) {
   return report;
 }
 
-function decode(file) {
+function decodePcm(file, filter = "anull") {
   const buffer = execFileSync(
     ffmpeg,
     [
@@ -180,7 +156,7 @@ function decode(file) {
       file,
       "-vn",
       "-af",
-      "anull",
+      filter,
       "-ac",
       "1",
       "-ar",
@@ -210,6 +186,55 @@ function decode(file) {
   const samples = new Float32Array(pcm.length / 2);
   for (let i = 0; i < samples.length; i++)
     samples[i] = pcm.readInt16LE(i * 2) / 32768;
+  return samples;
+}
+
+function decode(file, edits = []) {
+  let samples;
+  if (edits.length) {
+    let cursor = 0;
+    const parts = [];
+    for (const edit of edits) {
+      if (!(
+        edit.start >= cursor &&
+        edit.end > edit.start &&
+        edit.rate >= 0.5 &&
+        edit.rate <= 2
+      ))
+        throw new Error("Invalid localized speech timing edit");
+      parts.push(
+        decodePcm(
+          file,
+          `atrim=start=${cursor}:end=${edit.start},asetpts=PTS-STARTPTS`,
+        ),
+      );
+      parts.push(
+        decodePcm(
+          file,
+          `atrim=start=${edit.start}:end=${edit.end},asetpts=PTS-STARTPTS,atempo=${edit.rate}`,
+        ),
+      );
+      cursor = edit.end;
+    }
+    parts.push(decodePcm(file, `atrim=start=${cursor},asetpts=PTS-STARTPTS`));
+    samples = parts[0];
+    for (const part of parts.slice(1)) {
+      const overlap = Math.min(
+        Math.round(RATE * 0.004),
+        samples.length,
+        part.length,
+      );
+      const joined = new Float32Array(samples.length + part.length - overlap);
+      joined.set(samples);
+      for (let i = 0; i < overlap; i++) {
+        const mix = (i + 1) / (overlap + 1);
+        joined[samples.length - overlap + i] =
+          samples[samples.length - overlap + i] * (1 - mix) + part[i] * mix;
+      }
+      joined.set(part.subarray(overlap), samples.length);
+      samples = joined;
+    }
+  } else samples = decodePcm(file);
   let from = 0;
   let to = samples.length;
   while (from < to && Math.abs(samples[from]) < 0.006) from++;
@@ -231,7 +256,9 @@ for (const [language, track] of Object.entries(tracks)) {
       !fs.existsSync(cue.source) ||
       fs.statSync(cue.source).size < 1000 ||
       previousCue?.text !== cue.text ||
-      previousCue?.voice !== track.voice
+      (previousCue?.spokenText ?? previousCue?.text) !== cue.spokenText ||
+      previousCue?.voice !== track.voice ||
+      previousTiming.synthesisRate !== synthesisRate
     ) {
       jobs.push(async () => {
         await run(
@@ -243,8 +270,8 @@ for (const [language, track] of Object.entries(tracks)) {
             "--voice",
             track.voice,
             "--text",
-            cue.text,
-            "--rate=-5%",
+            cue.spokenText,
+            `--rate=${synthesisRate}`,
             "--write-media",
             cue.source,
           ],
@@ -263,6 +290,8 @@ const reports = [];
 const timing = {
   duration: SECONDS,
   sampleRate: RATE,
+  synthesisRate,
+  storyVersion: story.version,
   provider: "Microsoft Edge online Neural TTS through edge-tts 7.3.1",
   languages: {},
 };
@@ -270,7 +299,15 @@ for (const [language, track] of Object.entries(tracks)) {
   const speech = new Float32Array(FRAMES);
   const timeline = [];
   for (const cue of track.cues) {
-    let samples = decode(cue.source);
+    if (
+      cue.speechEdits?.length &&
+      createHash("sha256").update(fs.readFileSync(cue.source)).digest("hex") !==
+        cue.speechEditSourceSha256
+    )
+      throw new Error(
+        "Localized speech timing needs review for the changed voice asset",
+      );
+    let samples = decode(cue.source, cue.speechEdits);
     const available = cue.limit - cue.start;
     const tempo = 1;
     if (samples.length / RATE > available) {
@@ -301,8 +338,11 @@ for (const [language, track] of Object.entries(tracks)) {
     }
     timeline.push({
       start: cue.start,
+      limit: cue.limit,
       end: Number((cue.start + samples.length / RATE).toFixed(3)),
       text: cue.text,
+      spokenText: cue.spokenText,
+      speechEdits: cue.speechEdits ?? [],
       voice: track.voice,
       playbackRate: Number(tempo.toFixed(4)),
     });
@@ -323,8 +363,8 @@ for (const [language, track] of Object.entries(tracks)) {
         smooth((time - cue.start + 0.18) / 0.18) *
           (1 - smooth((time - cue.end) / 0.8)),
       );
-    // A steady 0.55 bed opens gently after each phrase; speech uses 0.24.
-    const musicGain = 0.55 - duck * 0.31;
+    // The tonal bed opens gently after each phrase: 0.46 between cues, 0.21 under speech.
+    const musicGain = 0.46 - duck * 0.25;
     mixL[i] = limit(musicL[i] * musicGain + speech[i]);
     mixR[i] = limit(musicR[i] * musicGain + speech[i]);
   }
