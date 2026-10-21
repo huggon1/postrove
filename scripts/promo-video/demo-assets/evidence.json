@@ -1,13 +1,19 @@
 {
   "scope": "Real current Electron UI, preload, IPC and schema-validated fictional stores. Completed authored replies and reading examples; no platform request. Fresh review profiles removed after capture.",
+  "displayAliases": {
+    "en": {
+      "Xiaohongshu": "RedNote"
+    }
+  },
   "build": {
-    "revision": "ef6d49fd4371a0631bf4baef09935545827633d5",
+    "revision": "32e6960443832370bb4a1137a3e4b7009f6c03f4",
     "dirty": true,
     "version": "0.2.0",
     "platform": "darwin-arm64",
-    "builtAt": "2026-10-20T09:20:00.000Z"
+    "builtAt": "2026-10-21T09:20:00.000Z"
   },
-  "originalUrl": "https://www.youtube.com/watch?v=DEMO1234abc",
+  "originalUrl": "https://www.xiaohongshu.com/explore/67f0a34b000000001a012345",
+  "linkedSourceUrl": "https://x.com/lin_dev/status/9999999999999999999",
   "viewport": {
     "width": 1100,
     "height": 760
@@ -18,9 +24,14 @@
     "rendererErrors": [],
     "rendererHttpRequests": [],
     "cachedArtworkLoaded": true,
+    "yellowBlueIdentityPreserved": true,
+    "blueSourceReaderCaptured": true,
     "allFourIndependentMembers": true,
     "realOriginalTabSwitch": true,
-    "sourceLanguage": "en",
+    "sourceLanguage": {
+      "yellow": "zh-CN",
+      "blue": "en"
+    },
     "englishVisibleHanChecked": true
   },
   "captures": [
@@ -30,8 +41,9 @@
       "file": "topics-zh-CN.png",
       "width": 2200,
       "height": 1520,
-      "sha256": "f58e6b7b3b2010ed233248ac3f08ace38cbe12b6c1151120cea5e4a43f9779bc",
+      "sha256": "288e23641887d24aeeabc8bdffcabbd0827f002a69834b1a7efc509559368596",
       "visibleHanAudit": null,
+      "displayAliases": null,
       "devicePixelRatio": 1,
       "overflow": 0,
       "modal": [],
@@ -43,8 +55,9 @@
       "file": "topic-zh-CN.png",
       "width": 2200,
       "height": 1520,
-      "sha256": "f3683f3684db1f89e67fce411a1dbd6ce3bb95a73c48bccc87238eed4a9b29eb",
+      "sha256": "10ef29b840158bf506068cdc1ea1f3ac2779be2b2665e69e67d2a82f5a45eb74",
       "visibleHanAudit": null,
+      "displayAliases": null,
       "devicePixelRatio": 1,
       "overflow": 0,
       "modal": [
@@ -59,72 +72,72 @@
         {
           "className": "full-reply",
           "tag": "ARTICLE",
-          "text": "✦enGemini · YouTube · 英文YouTube · 10月20日 · 17:20阅读版本原文实际提问跟着一个短教程，逐步动手\n先看角色如何移动，",
+          "text": "GenGrok · 英文X · 10月21日 · 17:20阅读版本原文实际提问先做一个能玩的场景\n这篇开发记录从角色移动和跳跃开始，再加金币。每次只加一个动作",
           "x": 121,
           "y": 293.75,
           "w": 843,
-          "h": 422.828125
+          "h": 377.078125
         },
         {
           "className": "source-tile ",
           "tag": "DIV",
-          "text": "用 AI 做第一个像素小游戏虚构演示来源 · 占位链接收取",
+          "text": "先把角色移动和跳跃做出来开发记录、操作教程和实际经验收取",
           "x": 217,
-          "y": 625.5859375,
+          "y": 579.8359375,
           "w": 747,
           "h": 60.9921875
         },
         {
           "className": "full-reply",
           "tag": "ARTICLE",
-          "text": "GenGrok · 英文X · 10月20日 · 17:20阅读版本原文实际提问先做最小的可玩循环\n从一个角色、一块平台开始。先实现左右移动，再加跳跃和落地碰撞",
+          "text": "点中点点 · 中文小红书 · 10月21日 · 17:20阅读版本原文实际提问看一遍从零开始的过程\n这篇笔记记录了用 AI 做像素小游戏的过程。建议先用简单方块",
           "x": 121,
-          "y": 716.578125,
+          "y": 670.828125,
           "w": 843,
-          "h": 422.828125
+          "h": 377.078125
         },
         {
           "className": "source-tile ",
           "tag": "DIV",
-          "text": "一个角色，也能开始做游戏虚构演示来源 · 占位链接收取",
+          "text": "我用 AI 做了一个像素小游戏开发记录、操作教程和实际经验收取",
           "x": 217,
-          "y": 1048.4140625,
+          "y": 956.9140625,
           "w": 747,
           "h": 60.9921875
         },
         {
           "className": "full-reply",
           "tag": "ARTICLE",
-          "text": "点中点点 · 中文小红书 · 10月20日 · 17:20阅读版本原文实际提问先画一个简单的小世界\n用 16×16 的角色和两种颜色搭出场景。先完成一个能走、能",
+          "text": "✦enGemini · YouTube · 英文YouTube · 10月21日 · 17:20阅读版本原文实际提问跟着移动和碰撞教程试\n找到一段演示角色移动、",
           "x": 121,
-          "y": 1139.40625,
+          "y": 1047.90625,
           "w": 843,
-          "h": 422.828125
+          "h": 377.078125
         },
         {
           "className": "source-tile ",
           "tag": "DIV",
-          "text": "16×16 像素角色入门虚构演示来源 · 占位链接收取",
+          "text": "像素游戏：移动、跳跃和碰撞开发记录、操作教程和实际经验收取",
           "x": 217,
-          "y": 1471.2421875,
+          "y": 1333.9921875,
           "w": 747,
           "h": 60.9921875
         },
         {
           "className": "full-reply",
           "tag": "ARTICLE",
-          "text": "RenReddit AI · 英文Reddit · 10月20日 · 17:20阅读版本原文实际提问把第一作的范围收小\n只做一个房间和一个目标。先写下“能移动、",
+          "text": "RenReddit AI · 英文Reddit · 10月21日 · 17:20阅读版本原文实际提问先测试手感，再加功能\n讨论里建议先做一个很小的原型。让角色移",
           "x": 121,
-          "y": 1562.234375,
+          "y": 1424.984375,
           "w": 843,
-          "h": 421.828125
+          "h": 376.078125
         },
         {
           "className": "source-tile ",
           "tag": "DIV",
-          "text": "第一款小游戏，先完成一个房间虚构演示来源 · 占位链接收取",
+          "text": "第一个像素游戏，该从哪开始？开发记录、操作教程和实际经验收取",
           "x": 217,
-          "y": 1894.0703125,
+          "y": 1711.0703125,
           "w": 747,
           "h": 60.9921875
         }
@@ -136,8 +149,9 @@
       "file": "topic-source-zh-CN.png",
       "width": 2200,
       "height": 1520,
-      "sha256": "f3683f3684db1f89e67fce411a1dbd6ce3bb95a73c48bccc87238eed4a9b29eb",
+      "sha256": "10ef29b840158bf506068cdc1ea1f3ac2779be2b2665e69e67d2a82f5a45eb74",
       "visibleHanAudit": null,
+      "displayAliases": null,
       "devicePixelRatio": 1,
       "overflow": 0,
       "modal": [
@@ -152,72 +166,72 @@
         {
           "className": "full-reply",
           "tag": "ARTICLE",
-          "text": "✦enGemini · YouTube · 英文YouTube · 10月20日 · 17:20阅读版本原文实际提问跟着一个短教程，逐步动手\n先看角色如何移动，",
+          "text": "GenGrok · 英文X · 10月21日 · 17:20阅读版本原文实际提问先做一个能玩的场景\n这篇开发记录从角色移动和跳跃开始，再加金币。每次只加一个动作",
           "x": 121,
           "y": 293.75,
           "w": 843,
-          "h": 422.828125
+          "h": 377.078125
         },
         {
           "className": "source-tile ",
           "tag": "DIV",
-          "text": "用 AI 做第一个像素小游戏虚构演示来源 · 占位链接收取",
+          "text": "先把角色移动和跳跃做出来开发记录、操作教程和实际经验收取",
           "x": 217,
-          "y": 625.5859375,
+          "y": 579.8359375,
           "w": 747,
           "h": 60.9921875
         },
         {
           "className": "full-reply",
           "tag": "ARTICLE",
-          "text": "GenGrok · 英文X · 10月20日 · 17:20阅读版本原文实际提问先做最小的可玩循环\n从一个角色、一块平台开始。先实现左右移动，再加跳跃和落地碰撞",
+          "text": "点中点点 · 中文小红书 · 10月21日 · 17:20阅读版本原文实际提问看一遍从零开始的过程\n这篇笔记记录了用 AI 做像素小游戏的过程。建议先用简单方块",
           "x": 121,
-          "y": 716.578125,
+          "y": 670.828125,
           "w": 843,
-          "h": 422.828125
+          "h": 377.078125
         },
         {
           "className": "source-tile ",
           "tag": "DIV",
-          "text": "一个角色，也能开始做游戏虚构演示来源 · 占位链接收取",
+          "text": "我用 AI 做了一个像素小游戏开发记录、操作教程和实际经验收取",
           "x": 217,
-          "y": 1048.4140625,
+          "y": 956.9140625,
           "w": 747,
           "h": 60.9921875
         },
         {
           "className": "full-reply",
           "tag": "ARTICLE",
-          "text": "点中点点 · 中文小红书 · 10月20日 · 17:20阅读版本原文实际提问先画一个简单的小世界\n用 16×16 的角色和两种颜色搭出场景。先完成一个能走、能",
+          "text": "✦enGemini · YouTube · 英文YouTube · 10月21日 · 17:20阅读版本原文实际提问跟着移动和碰撞教程试\n找到一段演示角色移动、",
           "x": 121,
-          "y": 1139.40625,
+          "y": 1047.90625,
           "w": 843,
-          "h": 422.828125
+          "h": 377.078125
         },
         {
           "className": "source-tile ",
           "tag": "DIV",
-          "text": "16×16 像素角色入门虚构演示来源 · 占位链接收取",
+          "text": "像素游戏：移动、跳跃和碰撞开发记录、操作教程和实际经验收取",
           "x": 217,
-          "y": 1471.2421875,
+          "y": 1333.9921875,
           "w": 747,
           "h": 60.9921875
         },
         {
           "className": "full-reply",
           "tag": "ARTICLE",
-          "text": "RenReddit AI · 英文Reddit · 10月20日 · 17:20阅读版本原文实际提问把第一作的范围收小\n只做一个房间和一个目标。先写下“能移动、",
+          "text": "RenReddit AI · 英文Reddit · 10月21日 · 17:20阅读版本原文实际提问先测试手感，再加功能\n讨论里建议先做一个很小的原型。让角色移",
           "x": 121,
-          "y": 1562.234375,
+          "y": 1424.984375,
           "w": 843,
-          "h": 421.828125
+          "h": 376.078125
         },
         {
           "className": "source-tile ",
           "tag": "DIV",
-          "text": "第一款小游戏，先完成一个房间虚构演示来源 · 占位链接收取",
+          "text": "第一个像素游戏，该从哪开始？开发记录、操作教程和实际经验收取",
           "x": 217,
-          "y": 1894.0703125,
+          "y": 1711.0703125,
           "w": 747,
           "h": 60.9921875
         }
@@ -225,12 +239,27 @@
     },
     {
       "language": "zh-CN",
+      "scene": "library",
+      "file": "library-zh-CN.png",
+      "width": 2200,
+      "height": 1520,
+      "sha256": "5782da2770b3e885ad8121c6c14563c8f8b1c5e11e368c47a95d6f663dba1743",
+      "visibleHanAudit": null,
+      "displayAliases": null,
+      "devicePixelRatio": 1,
+      "overflow": 0,
+      "modal": [],
+      "elements": []
+    },
+    {
+      "language": "zh-CN",
       "scene": "reading",
       "file": "reading-zh-CN.png",
       "width": 2200,
       "height": 1520,
-      "sha256": "80f6d2bbeb035a0b563ad51ed0d182787ad4051e6ecabe04b01f961857c5a0ea",
+      "sha256": "76db8c953b3421ebae4fc7f79fe8d39264b437b602e76f4fb6b51fe2f6162987",
       "visibleHanAudit": null,
+      "displayAliases": null,
       "devicePixelRatio": 1,
       "overflow": 0,
       "modal": [
@@ -245,7 +274,7 @@
         {
           "className": "",
           "tag": "H1",
-          "text": "用 AI 做第一个像素小游戏",
+          "text": "我用 AI 做了一个像素小游戏",
           "x": 227.5,
           "y": 165,
           "w": 630,
@@ -263,7 +292,7 @@
         {
           "className": "reader-introduction",
           "tag": "P",
-          "text": "先做一个角色、一块平台和一次跳跃。跟着示例教程，逐步理解移动、跳跃和碰撞，再让 AI 帮你拆解下一步。",
+          "text": "先做一个场景，让角色能移动、跳跃和收集金币。每加一个动作就运行一次，再调整速度和碰撞。",
           "x": 227.5,
           "y": 284.296875,
           "w": 630,
@@ -272,11 +301,11 @@
         {
           "className": "markdown",
           "tag": "DIV",
-          "text": "\n先让一个角色动起来\n00:00 · 创建角色与场景　 02:14 · 移动与跳跃　 05:32 · 平台碰撞\n从一个小场景开始：左右移动、按空格跳跃、落回平台",
+          "text": "\n先做一个能玩的场景\n我的目标是先让角色移动、跳跃，再收集一枚金币。地图只保留一块地面和一个平台，方便检查动作。\n每加一个动作就运行一次\n先用方块测试碰撞。确认",
           "x": 227.5,
           "y": 404.296875,
           "w": 630,
-          "h": 601.7265625
+          "h": 754.3984375
         },
         {
           "className": "",
@@ -295,8 +324,9 @@
       "file": "reading-original-zh-CN.png",
       "width": 2200,
       "height": 1520,
-      "sha256": "c59f7134c9e7fc90b5ae3cae6bcd51dd8b109320b01ad019f98d093b2a7d234e",
+      "sha256": "741ebb2e3b83575dde807c72025b200bb50c7df706593a4703cce1a86e576237",
       "visibleHanAudit": null,
+      "displayAliases": null,
       "devicePixelRatio": 1,
       "overflow": 0,
       "modal": [
@@ -311,7 +341,7 @@
         {
           "className": "",
           "tag": "H1",
-          "text": "用 AI 做第一个像素小游戏",
+          "text": "我用 AI 做了一个像素小游戏",
           "x": 227.5,
           "y": 165,
           "w": 630,
@@ -329,11 +359,11 @@
         {
           "className": "markdown",
           "tag": "DIV",
-          "text": "\nMake one character move\n00:00 · Set up the scene　 02:14 · Move and jump　 05:32 ",
+          "text": "\n先做一个能玩的场景\n我的目标是先让角色移动、跳跃，再收集一枚金币。地图只保留一块地面和一个平台，方便检查动作。\n每加一个动作就运行一次\n先用方块测试碰撞。确认",
           "x": 227.5,
           "y": 284.296875,
           "w": 630,
-          "h": 601.7265625
+          "h": 754.3984375
         },
         {
           "className": "",
@@ -348,12 +378,13 @@
     },
     {
       "language": "zh-CN",
-      "scene": "reading-code",
-      "file": "reading-code-zh-CN.png",
+      "scene": "reading-focus-original",
+      "file": "reading-focus-original-zh-CN.png",
       "width": 2200,
       "height": 1520,
-      "sha256": "b970baa968b3eef86b04a19182b462bc4e44d09edbd2b1d51bb5f8c7769a0dac",
+      "sha256": "104bea6ba03ae66317a4dec72338269aabf5b8a6191f597e43ec6e6a16190c79",
       "visibleHanAudit": null,
+      "displayAliases": null,
       "devicePixelRatio": 1,
       "overflow": 0,
       "modal": [
@@ -368,9 +399,9 @@
         {
           "className": "",
           "tag": "H1",
-          "text": "用 AI 做第一个像素小游戏",
+          "text": "我用 AI 做了一个像素小游戏",
           "x": 227.5,
-          "y": -182.5,
+          "y": -19.5,
           "w": 630,
           "h": 40.296875
         },
@@ -379,34 +410,476 @@
           "tag": "DIV",
           "text": "阅读版本原文处理状态",
           "x": 227.5,
-          "y": -118.203125,
+          "y": 44.796875,
           "w": 630,
           "h": 31
         },
         {
-          "className": "reader-introduction",
-          "tag": "P",
-          "text": "先做一个角色、一块平台和一次跳跃。跟着示例教程，逐步理解移动、跳跃和碰撞，再让 AI 帮你拆解下一步。",
-          "x": 227.5,
-          "y": -63.203125,
-          "w": 630,
-          "h": 99
-        },
-        {
           "className": "markdown",
           "tag": "DIV",
-          "text": "\n先让一个角色动起来\n00:00 · 创建角色与场景　 02:14 · 移动与跳跃　 05:32 · 平台碰撞\n从一个小场景开始：左右移动、按空格跳跃、落回平台",
+          "text": "\n先做一个能玩的场景\n我的目标是先让角色移动、跳跃，再收集一枚金币。地图只保留一块地面和一个平台，方便检查动作。\n每加一个动作就运行一次\n先用方块测试碰撞。确认",
           "x": 227.5,
-          "y": 56.796875,
+          "y": 99.796875,
           "w": 630,
-          "h": 601.7265625
+          "h": 754.3984375
         },
         {
           "className": "",
           "tag": "IMG",
           "text": "",
           "x": 227.5,
-          "y": 56.796875,
+          "y": 99.796875,
+          "w": 630,
+          "h": 225.75
+        }
+      ]
+    },
+    {
+      "language": "zh-CN",
+      "scene": "reading-focus",
+      "file": "reading-focus-zh-CN.png",
+      "width": 2200,
+      "height": 1520,
+      "sha256": "104bea6ba03ae66317a4dec72338269aabf5b8a6191f597e43ec6e6a16190c79",
+      "visibleHanAudit": null,
+      "displayAliases": null,
+      "devicePixelRatio": 1,
+      "overflow": 0,
+      "modal": [
+        {
+          "x": 130,
+          "y": 24,
+          "w": 840,
+          "h": 712
+        }
+      ],
+      "elements": [
+        {
+          "className": "",
+          "tag": "H1",
+          "text": "我用 AI 做了一个像素小游戏",
+          "x": 227.5,
+          "y": -139.5,
+          "w": 630,
+          "h": 40.296875
+        },
+        {
+          "className": "reader-toolbar",
+          "tag": "DIV",
+          "text": "阅读版本原文处理状态",
+          "x": 227.5,
+          "y": -75.203125,
+          "w": 630,
+          "h": 31
+        },
+        {
+          "className": "reader-introduction",
+          "tag": "P",
+          "text": "先做一个场景，让角色能移动、跳跃和收集金币。每加一个动作就运行一次，再调整速度和碰撞。",
+          "x": 227.5,
+          "y": -20.203125,
+          "w": 630,
+          "h": 99
+        },
+        {
+          "className": "markdown",
+          "tag": "DIV",
+          "text": "\n先做一个能玩的场景\n我的目标是先让角色移动、跳跃，再收集一枚金币。地图只保留一块地面和一个平台，方便检查动作。\n每加一个动作就运行一次\n先用方块测试碰撞。确认",
+          "x": 227.5,
+          "y": 99.796875,
+          "w": 630,
+          "h": 754.3984375
+        },
+        {
+          "className": "",
+          "tag": "IMG",
+          "text": "",
+          "x": 227.5,
+          "y": 99.796875,
+          "w": 630,
+          "h": 225.75
+        }
+      ]
+    },
+    {
+      "language": "zh-CN",
+      "scene": "reading-code",
+      "file": "reading-code-zh-CN.png",
+      "width": 2200,
+      "height": 1520,
+      "sha256": "104bea6ba03ae66317a4dec72338269aabf5b8a6191f597e43ec6e6a16190c79",
+      "visibleHanAudit": null,
+      "displayAliases": null,
+      "devicePixelRatio": 1,
+      "overflow": 0,
+      "modal": [
+        {
+          "x": 130,
+          "y": 24,
+          "w": 840,
+          "h": 712
+        }
+      ],
+      "elements": [
+        {
+          "className": "",
+          "tag": "H1",
+          "text": "我用 AI 做了一个像素小游戏",
+          "x": 227.5,
+          "y": -139.5,
+          "w": 630,
+          "h": 40.296875
+        },
+        {
+          "className": "reader-toolbar",
+          "tag": "DIV",
+          "text": "阅读版本原文处理状态",
+          "x": 227.5,
+          "y": -75.203125,
+          "w": 630,
+          "h": 31
+        },
+        {
+          "className": "reader-introduction",
+          "tag": "P",
+          "text": "先做一个场景，让角色能移动、跳跃和收集金币。每加一个动作就运行一次，再调整速度和碰撞。",
+          "x": 227.5,
+          "y": -20.203125,
+          "w": 630,
+          "h": 99
+        },
+        {
+          "className": "markdown",
+          "tag": "DIV",
+          "text": "\n先做一个能玩的场景\n我的目标是先让角色移动、跳跃，再收集一枚金币。地图只保留一块地面和一个平台，方便检查动作。\n每加一个动作就运行一次\n先用方块测试碰撞。确认",
+          "x": 227.5,
+          "y": 99.796875,
+          "w": 630,
+          "h": 754.3984375
+        },
+        {
+          "className": "",
+          "tag": "IMG",
+          "text": "",
+          "x": 227.5,
+          "y": 99.796875,
+          "w": 630,
+          "h": 225.75
+        }
+      ]
+    },
+    {
+      "language": "zh-CN",
+      "scene": "reading-blue",
+      "file": "reading-blue-zh-CN.png",
+      "width": 2200,
+      "height": 1520,
+      "sha256": "9977fae70d1cadab97ef3e86671b60a5868b3b26715e1b27c6501e64006a594c",
+      "visibleHanAudit": null,
+      "displayAliases": null,
+      "devicePixelRatio": 1,
+      "overflow": 0,
+      "modal": [
+        {
+          "x": 130,
+          "y": 24,
+          "w": 840,
+          "h": 712
+        }
+      ],
+      "elements": [
+        {
+          "className": "",
+          "tag": "H1",
+          "text": "先把角色移动和跳跃做出来",
+          "x": 227.5,
+          "y": 165,
+          "w": 630,
+          "h": 40.296875
+        },
+        {
+          "className": "reader-toolbar",
+          "tag": "DIV",
+          "text": "阅读版本原文处理状态",
+          "x": 227.5,
+          "y": 229.296875,
+          "w": 630,
+          "h": 31
+        },
+        {
+          "className": "reader-introduction",
+          "tag": "P",
+          "text": "记录角色移动、落地检测和跳跃的实现过程。先测试手感，再补地图和美术。",
+          "x": 227.5,
+          "y": 284.296875,
+          "w": 630,
+          "h": 67.5
+        },
+        {
+          "className": "markdown",
+          "tag": "DIV",
+          "text": "\n从移动和跳跃开始\n先做一个只有地面的小场景。让角色左右移动，检测是否落地，再加入跳跃。\n在小场景里测试手感\n调整速度和跳跃高度，确认角色落地后能继续移动。最后",
+          "x": 227.5,
+          "y": 372.796875,
+          "w": 630,
+          "h": 563.609375
+        },
+        {
+          "className": "",
+          "tag": "IMG",
+          "text": "",
+          "x": 227.5,
+          "y": 372.796875,
+          "w": 630,
+          "h": 225.75
+        }
+      ]
+    },
+    {
+      "language": "zh-CN",
+      "scene": "reading-blue-original",
+      "file": "reading-blue-original-zh-CN.png",
+      "width": 2200,
+      "height": 1520,
+      "sha256": "e294f69aef082ce1e2123d9bf6c2f77f6e9e84a81f32a163230f2404563a9470",
+      "visibleHanAudit": null,
+      "displayAliases": null,
+      "devicePixelRatio": 1,
+      "overflow": 0,
+      "modal": [
+        {
+          "x": 130,
+          "y": 24,
+          "w": 840,
+          "h": 712
+        }
+      ],
+      "elements": [
+        {
+          "className": "",
+          "tag": "H1",
+          "text": "先把角色移动和跳跃做出来",
+          "x": 227.5,
+          "y": 165,
+          "w": 630,
+          "h": 40.296875
+        },
+        {
+          "className": "reader-toolbar",
+          "tag": "DIV",
+          "text": "阅读版本原文处理状态",
+          "x": 227.5,
+          "y": 229.296875,
+          "w": 630,
+          "h": 31
+        },
+        {
+          "className": "markdown",
+          "tag": "DIV",
+          "text": "\nStart with movement and jumping\nBuild a small scene with a floor. Move the char",
+          "x": 227.5,
+          "y": 284.296875,
+          "w": 630,
+          "h": 626.609375
+        },
+        {
+          "className": "",
+          "tag": "IMG",
+          "text": "",
+          "x": 227.5,
+          "y": 284.296875,
+          "w": 630,
+          "h": 225.75
+        }
+      ]
+    },
+    {
+      "language": "zh-CN",
+      "scene": "reading-blue-focus-original",
+      "file": "reading-blue-focus-original-zh-CN.png",
+      "width": 2200,
+      "height": 1520,
+      "sha256": "6da72169325ae81f5a7739b03013b853b2a825f247a8d9acb8915d169f5a5b2f",
+      "visibleHanAudit": null,
+      "displayAliases": null,
+      "devicePixelRatio": 1,
+      "overflow": 0,
+      "modal": [
+        {
+          "x": 130,
+          "y": 24,
+          "w": 840,
+          "h": 712
+        }
+      ],
+      "elements": [
+        {
+          "className": "",
+          "tag": "H1",
+          "text": "先把角色移动和跳跃做出来",
+          "x": 227.5,
+          "y": -19.5,
+          "w": 630,
+          "h": 40.296875
+        },
+        {
+          "className": "reader-toolbar",
+          "tag": "DIV",
+          "text": "阅读版本原文处理状态",
+          "x": 227.5,
+          "y": 44.796875,
+          "w": 630,
+          "h": 31
+        },
+        {
+          "className": "markdown",
+          "tag": "DIV",
+          "text": "\nStart with movement and jumping\nBuild a small scene with a floor. Move the char",
+          "x": 227.5,
+          "y": 99.796875,
+          "w": 630,
+          "h": 626.609375
+        },
+        {
+          "className": "",
+          "tag": "IMG",
+          "text": "",
+          "x": 227.5,
+          "y": 99.796875,
+          "w": 630,
+          "h": 225.75
+        }
+      ]
+    },
+    {
+      "language": "zh-CN",
+      "scene": "reading-blue-focus",
+      "file": "reading-blue-focus-zh-CN.png",
+      "width": 2200,
+      "height": 1520,
+      "sha256": "26a179192ce9ee115277a522d0cd7b325f39990598e69fb0e61ea637f81cfb65",
+      "visibleHanAudit": null,
+      "displayAliases": null,
+      "devicePixelRatio": 1,
+      "overflow": 0,
+      "modal": [
+        {
+          "x": 130,
+          "y": 24,
+          "w": 840,
+          "h": 712
+        }
+      ],
+      "elements": [
+        {
+          "className": "",
+          "tag": "H1",
+          "text": "先把角色移动和跳跃做出来",
+          "x": 227.5,
+          "y": -108,
+          "w": 630,
+          "h": 40.296875
+        },
+        {
+          "className": "reader-toolbar",
+          "tag": "DIV",
+          "text": "阅读版本原文处理状态",
+          "x": 227.5,
+          "y": -43.703125,
+          "w": 630,
+          "h": 31
+        },
+        {
+          "className": "reader-introduction",
+          "tag": "P",
+          "text": "记录角色移动、落地检测和跳跃的实现过程。先测试手感，再补地图和美术。",
+          "x": 227.5,
+          "y": 11.296875,
+          "w": 630,
+          "h": 67.5
+        },
+        {
+          "className": "markdown",
+          "tag": "DIV",
+          "text": "\n从移动和跳跃开始\n先做一个只有地面的小场景。让角色左右移动，检测是否落地，再加入跳跃。\n在小场景里测试手感\n调整速度和跳跃高度，确认角色落地后能继续移动。最后",
+          "x": 227.5,
+          "y": 99.796875,
+          "w": 630,
+          "h": 563.609375
+        },
+        {
+          "className": "",
+          "tag": "IMG",
+          "text": "",
+          "x": 227.5,
+          "y": 99.796875,
+          "w": 630,
+          "h": 225.75
+        }
+      ]
+    },
+    {
+      "language": "zh-CN",
+      "scene": "reading-blue-code",
+      "file": "reading-blue-code-zh-CN.png",
+      "width": 2200,
+      "height": 1520,
+      "sha256": "26a179192ce9ee115277a522d0cd7b325f39990598e69fb0e61ea637f81cfb65",
+      "visibleHanAudit": null,
+      "displayAliases": null,
+      "devicePixelRatio": 1,
+      "overflow": 0,
+      "modal": [
+        {
+          "x": 130,
+          "y": 24,
+          "w": 840,
+          "h": 712
+        }
+      ],
+      "elements": [
+        {
+          "className": "",
+          "tag": "H1",
+          "text": "先把角色移动和跳跃做出来",
+          "x": 227.5,
+          "y": -108,
+          "w": 630,
+          "h": 40.296875
+        },
+        {
+          "className": "reader-toolbar",
+          "tag": "DIV",
+          "text": "阅读版本原文处理状态",
+          "x": 227.5,
+          "y": -43.703125,
+          "w": 630,
+          "h": 31
+        },
+        {
+          "className": "reader-introduction",
+          "tag": "P",
+          "text": "记录角色移动、落地检测和跳跃的实现过程。先测试手感，再补地图和美术。",
+          "x": 227.5,
+          "y": 11.296875,
+          "w": 630,
+          "h": 67.5
+        },
+        {
+          "className": "markdown",
+          "tag": "DIV",
+          "text": "\n从移动和跳跃开始\n先做一个只有地面的小场景。让角色左右移动，检测是否落地，再加入跳跃。\n在小场景里测试手感\n调整速度和跳跃高度，确认角色落地后能继续移动。最后",
+          "x": 227.5,
+          "y": 99.796875,
+          "w": 630,
+          "h": 563.609375
+        },
+        {
+          "className": "",
+          "tag": "IMG",
+          "text": "",
+          "x": 227.5,
+          "y": 99.796875,
           "w": 630,
           "h": 225.75
         }
@@ -418,7 +891,7 @@
       "file": "topics-en.png",
       "width": 2200,
       "height": 1520,
-      "sha256": "f83c957ac748b41b1ad2c616323cf43acc9b03678a7735636a86b577cfba66dd",
+      "sha256": "87dfd1f45c0bc08ffef6c517f215cf1ddecd8073567fd9c0038d760e797cdf97",
       "visibleHanAudit": {
         "allowed": [
           "点",
@@ -438,8 +911,12 @@
         ],
         "forbidden": []
       },
+      "displayAliases": {
+        "Xiaohongshu": "RedNote",
+        "replacements": 1
+      },
       "devicePixelRatio": 1,
-      "overflow": 0,
+      "overflow": -15,
       "modal": [],
       "elements": []
     },
@@ -449,7 +926,7 @@
       "file": "topic-en.png",
       "width": 2200,
       "height": 1520,
-      "sha256": "00efe78631af1b8ce1ab2ac15c0bdaf4575a33d848e39060a5e3abef779732aa",
+      "sha256": "50d4d99335ce2bd2dd8c952e902299d00b353cca21b779c09c2ecc1b22203fcd",
       "visibleHanAudit": {
         "allowed": [
           "点",
@@ -468,6 +945,10 @@
           }
         ],
         "forbidden": []
+      },
+      "displayAliases": {
+        "Xiaohongshu": "RedNote",
+        "replacements": 1
       },
       "devicePixelRatio": 1,
       "overflow": 0,
@@ -483,72 +964,72 @@
         {
           "className": "full-reply",
           "tag": "ARTICLE",
-          "text": "✦enGemini · YouTube · EnglishYouTube · Oct 20 · 05:20 PMReading versionOriginalS",
+          "text": "GenGrok · EnglishX · Oct 21 · 05:20 PMReading versionOriginalSubmitted questionS",
           "x": 121,
-          "y": 293.75,
+          "y": 332.5,
           "w": 843,
-          "h": 450.078125
+          "h": 404.328125
         },
         {
           "className": "source-tile ",
           "tag": "DIV",
-          "text": "Your first pixel game with AIFictional demo source · Placeholder linkCollect",
+          "text": "Start with movement and jumpingDevlogs, tutorials, and practical lessonsCollect",
           "x": 217,
-          "y": 652.8359375,
+          "y": 645.8359375,
           "w": 747,
           "h": 60.9921875
         },
         {
           "className": "full-reply",
           "tag": "ARTICLE",
-          "text": "GenGrok · EnglishX · Oct 20 · 05:20 PMReading versionOriginalSubmitted questionB",
+          "text": "点中Diandian · ChineseRedNote · Oct 21 · 05:20 PMReading versionOriginalSubmitted ",
           "x": 121,
-          "y": 743.828125,
+          "y": 736.828125,
           "w": 843,
-          "h": 450.078125
+          "h": 404.328125
         },
         {
           "className": "source-tile ",
           "tag": "DIV",
-          "text": "One character is enough to beginFictional demo source · Placeholder linkCollect",
+          "text": "My first pixel game with AIDevlogs, tutorials, and practical lessonsCollect",
           "x": 217,
-          "y": 1102.9140625,
+          "y": 1050.1640625,
           "w": 747,
           "h": 60.9921875
         },
         {
           "className": "full-reply",
           "tag": "ARTICLE",
-          "text": "点中Diandian · ChineseXiaohongshu · Oct 20 · 05:20 PMReading versionOriginalSubmit",
+          "text": "✦enGemini · YouTube · EnglishYouTube · Oct 21 · 05:20 PMReading versionOriginalS",
           "x": 121,
-          "y": 1193.90625,
+          "y": 1141.15625,
           "w": 843,
-          "h": 450.078125
+          "h": 375.078125
         },
         {
           "className": "source-tile ",
           "tag": "DIV",
-          "text": "A first 16×16 pixel characterFictional demo source · Placeholder linkCollect",
+          "text": "Pixel game movement, jumping, and collisionsDevlogs, tutorials, and practical le",
           "x": 217,
-          "y": 1552.9921875,
+          "y": 1425.2421875,
           "w": 747,
           "h": 60.9921875
         },
         {
           "className": "full-reply",
           "tag": "ARTICLE",
-          "text": "RenReddit AI · EnglishReddit · Oct 20 · 05:20 PMReading versionOriginalSubmitted",
+          "text": "RenReddit AI · EnglishReddit · Oct 21 · 05:20 PMReading versionOriginalSubmitted",
           "x": 121,
-          "y": 1643.984375,
+          "y": 1516.234375,
           "w": 843,
-          "h": 419.828125
+          "h": 403.328125
         },
         {
           "className": "source-tile ",
           "tag": "DIV",
-          "text": "For your first game, finish one roomFictional demo source · Placeholder linkColl",
+          "text": "Where should a first pixel game start?Devlogs, tutorials, and practical lessonsC",
           "x": 217,
-          "y": 1973.8203125,
+          "y": 1829.5703125,
           "w": 747,
           "h": 60.9921875
         }
@@ -560,7 +1041,7 @@
       "file": "topic-source-en.png",
       "width": 2200,
       "height": 1520,
-      "sha256": "1e0880f71598f70f356ad3d176e740b961f492d9edd0307718b4c018900cfc6c",
+      "sha256": "d7ba5bcd73a42044dda892636c7d0cf57784083772fffce12ce1211a55c6363a",
       "visibleHanAudit": {
         "allowed": [
           "点",
@@ -580,6 +1061,10 @@
         ],
         "forbidden": []
       },
+      "displayAliases": {
+        "Xiaohongshu": "RedNote",
+        "replacements": 0
+      },
       "devicePixelRatio": 1,
       "overflow": 0,
       "modal": [
@@ -594,16 +1079,16 @@
         {
           "className": "full-reply",
           "tag": "ARTICLE",
-          "text": "✦enGemini · YouTube · EnglishYouTube · Oct 20 · 05:20 PMReading versionOriginalS",
+          "text": "GenGrok · EnglishX · Oct 21 · 05:20 PMReading versionOriginalSubmitted questionS",
           "x": 121,
-          "y": 284.75,
+          "y": 330.5,
           "w": 843,
-          "h": 450.078125
+          "h": 404.328125
         },
         {
           "className": "source-tile ",
           "tag": "DIV",
-          "text": "Your first pixel game with AIFictional demo source · Placeholder linkCollect",
+          "text": "Start with movement and jumpingDevlogs, tutorials, and practical lessonsCollect",
           "x": 217,
           "y": 643.8359375,
           "w": 747,
@@ -612,54 +1097,54 @@
         {
           "className": "full-reply",
           "tag": "ARTICLE",
-          "text": "GenGrok · EnglishX · Oct 20 · 05:20 PMReading versionOriginalSubmitted questionB",
+          "text": "点中Diandian · ChineseRedNote · Oct 21 · 05:20 PMReading versionOriginalSubmitted ",
           "x": 121,
           "y": 734.828125,
           "w": 843,
-          "h": 450.078125
+          "h": 404.328125
         },
         {
           "className": "source-tile ",
           "tag": "DIV",
-          "text": "One character is enough to beginFictional demo source · Placeholder linkCollect",
+          "text": "My first pixel game with AIDevlogs, tutorials, and practical lessonsCollect",
           "x": 217,
-          "y": 1093.9140625,
+          "y": 1048.1640625,
           "w": 747,
           "h": 60.9921875
         },
         {
           "className": "full-reply",
           "tag": "ARTICLE",
-          "text": "点中Diandian · ChineseXiaohongshu · Oct 20 · 05:20 PMReading versionOriginalSubmit",
+          "text": "✦enGemini · YouTube · EnglishYouTube · Oct 21 · 05:20 PMReading versionOriginalS",
           "x": 121,
-          "y": 1184.90625,
+          "y": 1139.15625,
           "w": 843,
-          "h": 450.078125
+          "h": 375.078125
         },
         {
           "className": "source-tile ",
           "tag": "DIV",
-          "text": "A first 16×16 pixel characterFictional demo source · Placeholder linkCollect",
+          "text": "Pixel game movement, jumping, and collisionsDevlogs, tutorials, and practical le",
           "x": 217,
-          "y": 1543.9921875,
+          "y": 1423.2421875,
           "w": 747,
           "h": 60.9921875
         },
         {
           "className": "full-reply",
           "tag": "ARTICLE",
-          "text": "RenReddit AI · EnglishReddit · Oct 20 · 05:20 PMReading versionOriginalSubmitted",
+          "text": "RenReddit AI · EnglishReddit · Oct 21 · 05:20 PMReading versionOriginalSubmitted",
           "x": 121,
-          "y": 1634.984375,
+          "y": 1514.234375,
           "w": 843,
-          "h": 419.828125
+          "h": 403.328125
         },
         {
           "className": "source-tile ",
           "tag": "DIV",
-          "text": "For your first game, finish one roomFictional demo source · Placeholder linkColl",
+          "text": "Where should a first pixel game start?Devlogs, tutorials, and practical lessonsC",
           "x": 217,
-          "y": 1964.8203125,
+          "y": 1827.5703125,
           "w": 747,
           "h": 60.9921875
         }
@@ -667,15 +1152,40 @@
     },
     {
       "language": "en",
-      "scene": "reading",
-      "file": "reading-en.png",
+      "scene": "library",
+      "file": "library-en.png",
       "width": 2200,
       "height": 1520,
-      "sha256": "30c0b6a496b473f29701a8488087fcbff7edccc6e3a1d3d2e9069e6e3746fe36",
+      "sha256": "f13e341c932ebfb633281ea910603e3cccbc613027a256ff7984693e1a47e420",
       "visibleHanAudit": {
         "allowed": [],
         "identityExceptions": [],
         "forbidden": []
+      },
+      "displayAliases": {
+        "Xiaohongshu": "RedNote",
+        "replacements": 1
+      },
+      "devicePixelRatio": 1,
+      "overflow": 0,
+      "modal": [],
+      "elements": []
+    },
+    {
+      "language": "en",
+      "scene": "reading",
+      "file": "reading-en.png",
+      "width": 2200,
+      "height": 1520,
+      "sha256": "66ba9d295bd2c3d302d31114e07cd08b62d001733f671da8b0f8a1e8b8b8b2a7",
+      "visibleHanAudit": {
+        "allowed": [],
+        "identityExceptions": [],
+        "forbidden": []
+      },
+      "displayAliases": {
+        "Xiaohongshu": "RedNote",
+        "replacements": 0
       },
       "devicePixelRatio": 1,
       "overflow": 0,
@@ -691,7 +1201,7 @@
         {
           "className": "",
           "tag": "H1",
-          "text": "Your first pixel game with AI",
+          "text": "My first pixel game with AI",
           "x": 227.5,
           "y": 163,
           "w": 630,
@@ -709,7 +1219,7 @@
         {
           "className": "reader-introduction",
           "tag": "P",
-          "text": "Start with one character, one platform, and one jump. Follow a sample tutorial t",
+          "text": "Build one scene with movement, jumping, and coins. Run it after each change, the",
           "x": 227.5,
           "y": 280.296875,
           "w": 630,
@@ -718,11 +1228,11 @@
         {
           "className": "markdown",
           "tag": "DIV",
-          "text": "\nMake one character move\n00:00 · Set up the scene　 02:14 · Move and jump　 05:32 ",
+          "text": "\nStart with one playable scene\nI want the character to move, jump, and collect o",
           "x": 227.5,
           "y": 400.296875,
           "w": 630,
-          "h": 601.7265625
+          "h": 817.3984375
         },
         {
           "className": "",
@@ -741,11 +1251,29 @@
       "file": "reading-original-en.png",
       "width": 2200,
       "height": 1520,
-      "sha256": "ad88c8087ed2b2e3c09645cb51ae896cdb6974825398a80d71878a5f8c16b1cd",
+      "sha256": "ee8e1c2159dd1fe7041cdb3ec80e125cdc54720752975a337c8534686a3ecc55",
       "visibleHanAudit": {
-        "allowed": [],
-        "identityExceptions": [],
+        "allowed": [
+          "先做一个能玩的场景",
+          "我的目标是先让角色移动、跳跃，再收集一枚金币。地图只保留一块地面和一个平台，方便检查动作。"
+        ],
+        "identityExceptions": [
+          {
+            "text": "先做一个能玩的场景",
+            "selector": ".reader-article .markdown",
+            "meaning": "Chinese original source shown in the English reader"
+          },
+          {
+            "text": "我的目标是先让角色移动、跳跃，再收集一枚金币。地图只保留一块地面和一个平台，方便检查动作。",
+            "selector": ".reader-article .markdown",
+            "meaning": "Chinese original source shown in the English reader"
+          }
+        ],
         "forbidden": []
+      },
+      "displayAliases": {
+        "Xiaohongshu": "RedNote",
+        "replacements": 0
       },
       "devicePixelRatio": 1,
       "overflow": 0,
@@ -761,7 +1289,7 @@
         {
           "className": "",
           "tag": "H1",
-          "text": "Your first pixel game with AI",
+          "text": "My first pixel game with AI",
           "x": 227.5,
           "y": 163,
           "w": 630,
@@ -779,11 +1307,11 @@
         {
           "className": "markdown",
           "tag": "DIV",
-          "text": "\nMake one character move\n00:00 · Set up the scene　 02:14 · Move and jump　 05:32 ",
+          "text": "\n先做一个能玩的场景\n我的目标是先让角色移动、跳跃，再收集一枚金币。地图只保留一块地面和一个平台，方便检查动作。\n每加一个动作就运行一次\n先用方块测试碰撞。确认",
           "x": 227.5,
           "y": 280.296875,
           "w": 630,
-          "h": 601.7265625
+          "h": 754.3984375
         },
         {
           "className": "",
@@ -798,15 +1326,51 @@
     },
     {
       "language": "en",
-      "scene": "reading-code",
-      "file": "reading-code-en.png",
+      "scene": "reading-focus-original",
+      "file": "reading-focus-original-en.png",
       "width": 2200,
       "height": 1520,
-      "sha256": "4ded73ba82ff3a279f9256f9bbf6420c2d2058494c39ce8d18b12cc222ee9841",
+      "sha256": "675744c48233beb4cb7676fd0dbc59573c671edfd9c96c5116125d8b0f468cfd",
       "visibleHanAudit": {
-        "allowed": [],
-        "identityExceptions": [],
+        "allowed": [
+          "先做一个能玩的场景",
+          "我的目标是先让角色移动、跳跃，再收集一枚金币。地图只保留一块地面和一个平台，方便检查动作。",
+          "每加一个动作就运行一次",
+          "先用方块测试碰撞。确认角色能落地，再换上像素素材。把跳跃距离和速度分开调整。",
+          "第一步：移动与落地检测\n第二步：跳跃与平台碰撞\n第三步：金币与计数"
+        ],
+        "identityExceptions": [
+          {
+            "text": "先做一个能玩的场景",
+            "selector": ".reader-article .markdown",
+            "meaning": "Chinese original source shown in the English reader"
+          },
+          {
+            "text": "我的目标是先让角色移动、跳跃，再收集一枚金币。地图只保留一块地面和一个平台，方便检查动作。",
+            "selector": ".reader-article .markdown",
+            "meaning": "Chinese original source shown in the English reader"
+          },
+          {
+            "text": "每加一个动作就运行一次",
+            "selector": ".reader-article .markdown",
+            "meaning": "Chinese original source shown in the English reader"
+          },
+          {
+            "text": "先用方块测试碰撞。确认角色能落地，再换上像素素材。把跳跃距离和速度分开调整。",
+            "selector": ".reader-article .markdown",
+            "meaning": "Chinese original source shown in the English reader"
+          },
+          {
+            "text": "第一步：移动与落地检测\n第二步：跳跃与平台碰撞\n第三步：金币与计数",
+            "selector": ".reader-article .markdown",
+            "meaning": "Chinese original source shown in the English reader"
+          }
+        ],
         "forbidden": []
+      },
+      "displayAliases": {
+        "Xiaohongshu": "RedNote",
+        "replacements": 0
       },
       "devicePixelRatio": 1,
       "overflow": 0,
@@ -822,9 +1386,9 @@
         {
           "className": "",
           "tag": "H1",
-          "text": "Your first pixel game with AI",
+          "text": "My first pixel game with AI",
           "x": 227.5,
-          "y": -180.5,
+          "y": -17.5,
           "w": 630,
           "h": 40.296875
         },
@@ -833,34 +1397,525 @@
           "tag": "DIV",
           "text": "Reading versionOriginalProcessing status",
           "x": 227.5,
-          "y": -116.203125,
+          "y": 46.796875,
           "w": 630,
           "h": 29
         },
         {
-          "className": "reader-introduction",
-          "tag": "P",
-          "text": "Start with one character, one platform, and one jump. Follow a sample tutorial t",
-          "x": 227.5,
-          "y": -63.203125,
-          "w": 630,
-          "h": 99
-        },
-        {
           "className": "markdown",
           "tag": "DIV",
-          "text": "\nMake one character move\n00:00 · Set up the scene　 02:14 · Move and jump　 05:32 ",
+          "text": "\n先做一个能玩的场景\n我的目标是先让角色移动、跳跃，再收集一枚金币。地图只保留一块地面和一个平台，方便检查动作。\n每加一个动作就运行一次\n先用方块测试碰撞。确认",
           "x": 227.5,
-          "y": 56.796875,
+          "y": 99.796875,
           "w": 630,
-          "h": 601.7265625
+          "h": 754.3984375
         },
         {
           "className": "",
           "tag": "IMG",
           "text": "",
           "x": 227.5,
-          "y": 56.796875,
+          "y": 99.796875,
+          "w": 630,
+          "h": 225.75
+        }
+      ]
+    },
+    {
+      "language": "en",
+      "scene": "reading-focus",
+      "file": "reading-focus-en.png",
+      "width": 2200,
+      "height": 1520,
+      "sha256": "4bd6ccb4635c7006f28c748ee9daf2e7ef9120013dee9ca1435951e28a458c3e",
+      "visibleHanAudit": {
+        "allowed": [],
+        "identityExceptions": [],
+        "forbidden": []
+      },
+      "displayAliases": {
+        "Xiaohongshu": "RedNote",
+        "replacements": 0
+      },
+      "devicePixelRatio": 1,
+      "overflow": 0,
+      "modal": [
+        {
+          "x": 130,
+          "y": 24,
+          "w": 840,
+          "h": 712
+        }
+      ],
+      "elements": [
+        {
+          "className": "",
+          "tag": "H1",
+          "text": "My first pixel game with AI",
+          "x": 227.5,
+          "y": -137.5,
+          "w": 630,
+          "h": 40.296875
+        },
+        {
+          "className": "reader-toolbar",
+          "tag": "DIV",
+          "text": "Reading versionOriginalProcessing status",
+          "x": 227.5,
+          "y": -73.203125,
+          "w": 630,
+          "h": 29
+        },
+        {
+          "className": "reader-introduction",
+          "tag": "P",
+          "text": "Build one scene with movement, jumping, and coins. Run it after each change, the",
+          "x": 227.5,
+          "y": -20.203125,
+          "w": 630,
+          "h": 99
+        },
+        {
+          "className": "markdown",
+          "tag": "DIV",
+          "text": "\nStart with one playable scene\nI want the character to move, jump, and collect o",
+          "x": 227.5,
+          "y": 99.796875,
+          "w": 630,
+          "h": 817.3984375
+        },
+        {
+          "className": "",
+          "tag": "IMG",
+          "text": "",
+          "x": 227.5,
+          "y": 99.796875,
+          "w": 630,
+          "h": 225.75
+        }
+      ]
+    },
+    {
+      "language": "en",
+      "scene": "reading-code",
+      "file": "reading-code-en.png",
+      "width": 2200,
+      "height": 1520,
+      "sha256": "4bd6ccb4635c7006f28c748ee9daf2e7ef9120013dee9ca1435951e28a458c3e",
+      "visibleHanAudit": {
+        "allowed": [],
+        "identityExceptions": [],
+        "forbidden": []
+      },
+      "displayAliases": {
+        "Xiaohongshu": "RedNote",
+        "replacements": 0
+      },
+      "devicePixelRatio": 1,
+      "overflow": 0,
+      "modal": [
+        {
+          "x": 130,
+          "y": 24,
+          "w": 840,
+          "h": 712
+        }
+      ],
+      "elements": [
+        {
+          "className": "",
+          "tag": "H1",
+          "text": "My first pixel game with AI",
+          "x": 227.5,
+          "y": -137.5,
+          "w": 630,
+          "h": 40.296875
+        },
+        {
+          "className": "reader-toolbar",
+          "tag": "DIV",
+          "text": "Reading versionOriginalProcessing status",
+          "x": 227.5,
+          "y": -73.203125,
+          "w": 630,
+          "h": 29
+        },
+        {
+          "className": "reader-introduction",
+          "tag": "P",
+          "text": "Build one scene with movement, jumping, and coins. Run it after each change, the",
+          "x": 227.5,
+          "y": -20.203125,
+          "w": 630,
+          "h": 99
+        },
+        {
+          "className": "markdown",
+          "tag": "DIV",
+          "text": "\nStart with one playable scene\nI want the character to move, jump, and collect o",
+          "x": 227.5,
+          "y": 99.796875,
+          "w": 630,
+          "h": 817.3984375
+        },
+        {
+          "className": "",
+          "tag": "IMG",
+          "text": "",
+          "x": 227.5,
+          "y": 99.796875,
+          "w": 630,
+          "h": 225.75
+        }
+      ]
+    },
+    {
+      "language": "en",
+      "scene": "reading-blue",
+      "file": "reading-blue-en.png",
+      "width": 2200,
+      "height": 1520,
+      "sha256": "346b2f17dff411c64b3368f077c0395de556c5b75059cc6922b7b559e55b1897",
+      "visibleHanAudit": {
+        "allowed": [],
+        "identityExceptions": [],
+        "forbidden": []
+      },
+      "displayAliases": {
+        "Xiaohongshu": "RedNote",
+        "replacements": 0
+      },
+      "devicePixelRatio": 1,
+      "overflow": 0,
+      "modal": [
+        {
+          "x": 130,
+          "y": 24,
+          "w": 840,
+          "h": 712
+        }
+      ],
+      "elements": [
+        {
+          "className": "",
+          "tag": "H1",
+          "text": "Start with movement and jumping",
+          "x": 227.5,
+          "y": 163,
+          "w": 630,
+          "h": 40.296875
+        },
+        {
+          "className": "reader-toolbar",
+          "tag": "DIV",
+          "text": "Reading versionOriginalProcessing status",
+          "x": 227.5,
+          "y": 227.296875,
+          "w": 630,
+          "h": 29
+        },
+        {
+          "className": "reader-introduction",
+          "tag": "P",
+          "text": "Notes on movement, ground checks, and jumping. Test the controls before adding a",
+          "x": 227.5,
+          "y": 280.296875,
+          "w": 630,
+          "h": 99
+        },
+        {
+          "className": "markdown",
+          "tag": "DIV",
+          "text": "\nStart with movement and jumping\nBuild a small scene with a floor. Move the char",
+          "x": 227.5,
+          "y": 400.296875,
+          "w": 630,
+          "h": 626.609375
+        },
+        {
+          "className": "",
+          "tag": "IMG",
+          "text": "",
+          "x": 227.5,
+          "y": 400.296875,
+          "w": 630,
+          "h": 225.75
+        }
+      ]
+    },
+    {
+      "language": "en",
+      "scene": "reading-blue-original",
+      "file": "reading-blue-original-en.png",
+      "width": 2200,
+      "height": 1520,
+      "sha256": "bd04361a77a15308a4d2309ec4b150c1e3cd0443f202d4720d40a39d16626b82",
+      "visibleHanAudit": {
+        "allowed": [],
+        "identityExceptions": [],
+        "forbidden": []
+      },
+      "displayAliases": {
+        "Xiaohongshu": "RedNote",
+        "replacements": 0
+      },
+      "devicePixelRatio": 1,
+      "overflow": 0,
+      "modal": [
+        {
+          "x": 130,
+          "y": 24,
+          "w": 840,
+          "h": 712
+        }
+      ],
+      "elements": [
+        {
+          "className": "",
+          "tag": "H1",
+          "text": "Start with movement and jumping",
+          "x": 227.5,
+          "y": 163,
+          "w": 630,
+          "h": 40.296875
+        },
+        {
+          "className": "reader-toolbar",
+          "tag": "DIV",
+          "text": "Reading versionOriginalProcessing status",
+          "x": 227.5,
+          "y": 227.296875,
+          "w": 630,
+          "h": 29
+        },
+        {
+          "className": "markdown",
+          "tag": "DIV",
+          "text": "\nStart with movement and jumping\nBuild a small scene with a floor. Move the char",
+          "x": 227.5,
+          "y": 280.296875,
+          "w": 630,
+          "h": 626.609375
+        },
+        {
+          "className": "",
+          "tag": "IMG",
+          "text": "",
+          "x": 227.5,
+          "y": 280.296875,
+          "w": 630,
+          "h": 225.75
+        }
+      ]
+    },
+    {
+      "language": "en",
+      "scene": "reading-blue-focus-original",
+      "file": "reading-blue-focus-original-en.png",
+      "width": 2200,
+      "height": 1520,
+      "sha256": "41d47e69c76c4ecf6e5c27a2f7dfef6ba91eef95d367da41063c33520324eaa4",
+      "visibleHanAudit": {
+        "allowed": [],
+        "identityExceptions": [],
+        "forbidden": []
+      },
+      "displayAliases": {
+        "Xiaohongshu": "RedNote",
+        "replacements": 0
+      },
+      "devicePixelRatio": 1,
+      "overflow": 0,
+      "modal": [
+        {
+          "x": 130,
+          "y": 24,
+          "w": 840,
+          "h": 712
+        }
+      ],
+      "elements": [
+        {
+          "className": "",
+          "tag": "H1",
+          "text": "Start with movement and jumping",
+          "x": 227.5,
+          "y": -17.5,
+          "w": 630,
+          "h": 40.296875
+        },
+        {
+          "className": "reader-toolbar",
+          "tag": "DIV",
+          "text": "Reading versionOriginalProcessing status",
+          "x": 227.5,
+          "y": 46.796875,
+          "w": 630,
+          "h": 29
+        },
+        {
+          "className": "markdown",
+          "tag": "DIV",
+          "text": "\nStart with movement and jumping\nBuild a small scene with a floor. Move the char",
+          "x": 227.5,
+          "y": 99.796875,
+          "w": 630,
+          "h": 626.609375
+        },
+        {
+          "className": "",
+          "tag": "IMG",
+          "text": "",
+          "x": 227.5,
+          "y": 99.796875,
+          "w": 630,
+          "h": 225.75
+        }
+      ]
+    },
+    {
+      "language": "en",
+      "scene": "reading-blue-focus",
+      "file": "reading-blue-focus-en.png",
+      "width": 2200,
+      "height": 1520,
+      "sha256": "75c68bfb5ad8b9398fdd7901e9802ed78e3cae0a1ba152a379300d8ef299f50a",
+      "visibleHanAudit": {
+        "allowed": [],
+        "identityExceptions": [],
+        "forbidden": []
+      },
+      "displayAliases": {
+        "Xiaohongshu": "RedNote",
+        "replacements": 0
+      },
+      "devicePixelRatio": 1,
+      "overflow": 0,
+      "modal": [
+        {
+          "x": 130,
+          "y": 24,
+          "w": 840,
+          "h": 712
+        }
+      ],
+      "elements": [
+        {
+          "className": "",
+          "tag": "H1",
+          "text": "Start with movement and jumping",
+          "x": 227.5,
+          "y": -137.5,
+          "w": 630,
+          "h": 40.296875
+        },
+        {
+          "className": "reader-toolbar",
+          "tag": "DIV",
+          "text": "Reading versionOriginalProcessing status",
+          "x": 227.5,
+          "y": -73.203125,
+          "w": 630,
+          "h": 29
+        },
+        {
+          "className": "reader-introduction",
+          "tag": "P",
+          "text": "Notes on movement, ground checks, and jumping. Test the controls before adding a",
+          "x": 227.5,
+          "y": -20.203125,
+          "w": 630,
+          "h": 99
+        },
+        {
+          "className": "markdown",
+          "tag": "DIV",
+          "text": "\nStart with movement and jumping\nBuild a small scene with a floor. Move the char",
+          "x": 227.5,
+          "y": 99.796875,
+          "w": 630,
+          "h": 626.609375
+        },
+        {
+          "className": "",
+          "tag": "IMG",
+          "text": "",
+          "x": 227.5,
+          "y": 99.796875,
+          "w": 630,
+          "h": 225.75
+        }
+      ]
+    },
+    {
+      "language": "en",
+      "scene": "reading-blue-code",
+      "file": "reading-blue-code-en.png",
+      "width": 2200,
+      "height": 1520,
+      "sha256": "75c68bfb5ad8b9398fdd7901e9802ed78e3cae0a1ba152a379300d8ef299f50a",
+      "visibleHanAudit": {
+        "allowed": [],
+        "identityExceptions": [],
+        "forbidden": []
+      },
+      "displayAliases": {
+        "Xiaohongshu": "RedNote",
+        "replacements": 0
+      },
+      "devicePixelRatio": 1,
+      "overflow": 0,
+      "modal": [
+        {
+          "x": 130,
+          "y": 24,
+          "w": 840,
+          "h": 712
+        }
+      ],
+      "elements": [
+        {
+          "className": "",
+          "tag": "H1",
+          "text": "Start with movement and jumping",
+          "x": 227.5,
+          "y": -137.5,
+          "w": 630,
+          "h": 40.296875
+        },
+        {
+          "className": "reader-toolbar",
+          "tag": "DIV",
+          "text": "Reading versionOriginalProcessing status",
+          "x": 227.5,
+          "y": -73.203125,
+          "w": 630,
+          "h": 29
+        },
+        {
+          "className": "reader-introduction",
+          "tag": "P",
+          "text": "Notes on movement, ground checks, and jumping. Test the controls before adding a",
+          "x": 227.5,
+          "y": -20.203125,
+          "w": 630,
+          "h": 99
+        },
+        {
+          "className": "markdown",
+          "tag": "DIV",
+          "text": "\nStart with movement and jumping\nBuild a small scene with a floor. Move the char",
+          "x": 227.5,
+          "y": 99.796875,
+          "w": 630,
+          "h": 626.609375
+        },
+        {
+          "className": "",
+          "tag": "IMG",
+          "text": "",
+          "x": 227.5,
+          "y": 99.796875,
           "w": 630,
           "h": 225.75
         }

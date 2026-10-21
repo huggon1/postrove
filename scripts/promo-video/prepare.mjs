@@ -18,9 +18,17 @@ for (const lang of ["zh-CN", "en"]) {
     "topics",
     "topic",
     "topic-source",
+    "library",
     "reading",
     "reading-original",
     "reading-code",
+    "reading-focus",
+    "reading-focus-original",
+    "reading-blue",
+    "reading-blue-original",
+    "reading-blue-code",
+    "reading-blue-focus",
+    "reading-blue-focus-original",
   ]) {
     const name = `${scene}-${lang}.png`;
     await copyFile(
@@ -29,10 +37,12 @@ for (const lang of ["zh-CN", "en"]) {
     );
   }
 }
-await copyFile(
-  path.join(root, "demo-assets/game.png"),
-  path.join(root, "public/demo-game.png"),
-);
+for (const tone of ["yellow", "blue"]) {
+  await copyFile(
+    path.join(root, "demo-assets", `cover-${tone}.png`),
+    path.join(root, "public", `demo-cover-${tone}.png`),
+  );
+}
 try {
   await access(path.join(root, "output/mix-en.wav"));
   await access(path.join(root, "output/mix-zh-CN.wav"));
@@ -51,5 +61,5 @@ for (const name of ["soundtrack.wav", "mix-zh-CN.wav", "mix-en.wav"]) {
   );
 }
 console.log(
-  "Prepared game-demo captures, Postrove artwork, and bilingual narration mixes.",
+  "Prepared current application captures, Postrove artwork, and bilingual story mixes.",
 );

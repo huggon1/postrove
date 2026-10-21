@@ -1,11 +1,15 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+const authoringFolder = path.dirname(fileURLToPath(import.meta.url));
+const story = JSON.parse(
+  fs.readFileSync(path.join(authoringFolder, "story.json"), "utf8"),
+);
 
 // An original, deterministic score: warm extended chords, a small piano-like
 // motif, and rounded tonal pulses. Each layer uses smooth amplitude envelopes.
 const RATE = 48_000;
-const DURATION = 48;
+const DURATION = story.seconds;
 const COUNT = RATE * DURATION;
 const TAU = Math.PI * 2;
 const left = new Float32Array(COUNT);
@@ -109,90 +113,66 @@ function arrival(time, strength = 1) {
   key(time + 0.018, 81, 0.055 * strength, 0.3, 3.4);
 }
 
-const chords = [
-  { time: 0, end: 4, notes: [47, 54, 57, 62, 66], root: 35 },
-  { time: 4, end: 8, notes: [43, 54, 57, 59, 62], root: 31 },
-  { time: 8, end: 10, notes: [45, 52, 57, 59, 64], root: 33 },
-  { time: 10, end: 14, notes: [47, 54, 57, 62, 66], root: 35 },
-  { time: 14, end: 18, notes: [43, 54, 57, 59, 62], root: 31 },
-  { time: 18, end: 22, notes: [38, 54, 57, 61, 64], root: 26 },
-  { time: 22, end: 25, notes: [45, 52, 57, 59, 61], root: 33 },
-  { time: 25, end: 29, notes: [47, 54, 57, 62, 66], root: 35 },
-  { time: 29, end: 34, notes: [38, 54, 57, 61, 64], root: 26 },
-  { time: 34, end: 38, notes: [43, 54, 57, 59, 62], root: 31 },
-  { time: 38, end: 42, notes: [38, 54, 57, 61, 64], root: 26 },
-  { time: 42, end: 43, notes: [45, 52, 57, 59, 61], root: 33 },
-  { time: 43, end: 46, notes: [38, 54, 57, 61, 64], root: 26 },
-  { time: 46, end: 46.3, notes: [38, 50, 57, 62, 64, 66], root: 26 },
-];
-
-// 10–25: platform search; 25: independent replies; 34: reading; 43: brand.
-for (const chord of chords) {
-  const size = chord.time < 5 ? 0.061 : chord.time >= 34 ? 0.087 : 0.073;
-  pad(chord.time, chord.end - chord.time, chord.notes, size);
-  if (chord.time >= 10 && chord.time < 46) {
-    for (let time = chord.time; time < chord.end - 0.1; time += 1) {
-      bass(time, chord.root, 0.69, chord.time >= 43 ? 0.17 : 0.2);
-      if (time + 0.75 < chord.end)
-        bass(time + 0.75, chord.root + 12, 0.17, 0.09);
-    }
-  }
-  const interval = chord.time < 5 ? 1 : chord.time >= 43 ? 0.75 : 0.5;
-  const order = [2, 4, 3, 1, 4, 2, 3, 4];
-  for (
-    let time = chord.time + 0.25, index = 0;
-    time < Math.min(chord.end, 46);
-    time += interval, index++
-  ) {
-    const note =
-      chord.notes[order[index % order.length] % chord.notes.length] + 12;
-    key(
-      time,
-      note,
-      (index % 3 === 0 ? 0.085 : 0.056) * (time < 5 ? 0.68 : 1),
-      Math.sin(index * 1.9) * 0.48,
-      2.05,
+function tap(start, amplitude = 0.07, pan = 0) {
+  voice(start, 0.105, pan, 0.08, (t) => {
+    const attack = smooth(t / 0.007);
+    const body = Math.sin(TAU * 520 * t) + 0.22 * Math.sin(TAU * 1042 * t);
+    return (
+      body *
+      amplitude *
+      attack *
+      Math.exp(-t * 64) *
+      (1 - smooth((t - 0.075) / 0.03))
     );
-  }
+  });
 }
 
-// A short recurring motif supplies a musical identity without crowding captions.
-const motif = [
-  [0, 78],
-  [0.75, 76],
-  [1.5, 73],
-  [2.5, 74],
-  [3.25, 69],
+// Each story has its own tension and resolution, aligned to story.json.
+const progression = [
+  [45, 52, 55, 59, 62],
+  [50, 57, 61, 64, 69],
+  [47, 54, 57, 61, 66],
+  [43, 50, 54, 57, 62],
 ];
-for (const [start, gain] of [
-  [5, 0.95],
-  [18, 0.85],
-  [27, 1],
-  [35, 0.8],
-  [43, 0.8],
-]) {
-  for (const [offset, midi] of motif)
-    key(start + offset, midi, 0.125 * gain, -0.16, 2.5);
+const contentStart = story.scenes.find[0];
+pad(0, contentStart, progression[0], 0.032);
+key(0.15, 74, 0.065, -0.1, 2.6);
+key(0.4, 81, 0.035, 0.15, 2.4);
+for (
+  let time = contentStart, index = 0;
+  time < DURATION - 2;
+  time += 3.5, index++
+) {
+  const notes = progression[index % 4];
+  const quiet =
+    (time >= story.scenes.browse[0] && time < story.scenes.forward[0]) ||
+    time >= story.scenes.use[0];
+  const hold = Math.min(3.5, DURATION - time);
+  pad(time, hold, notes, quiet ? 0.043 : 0.055);
+  for (let beat = 0; beat < hold - 0.15; beat += 0.7)
+    key(
+      time + beat + 0.1,
+      notes[Math.floor(beat / 0.7) % 5] + 12,
+      quiet ? 0.044 : 0.058,
+      Math.sin(beat) * 0.3,
+      1.4,
+    );
+  if (time >= story.scenes.ask[0] && time < story.scenes.end[0])
+    bass(time, notes[0] - 12, 0.65, 0.1);
 }
-key(46, 74, 0.15, -0.15, 2);
-key(46.03, 81, 0.065, 0.2, 1.97);
-bass(46, 26, 1.4, 0.2);
-
-for (let bar = 10; bar < 46; bar += 2) {
-  if (bar >= 43) {
-    kick(bar, 0.28);
-    continue;
-  }
-  kick(bar, 0.34);
-  kick(bar + 1.25, 0.21);
-  if (bar >= 18 && bar < 43) kick(bar + 1.75, 0.14);
+for (let time = story.scenes.ask[0]; time < story.scenes.end[0]; time += 1) {
+  const quiet =
+    time >= story.scenes.browse[0] && time < story.scenes.forward[0];
+  kick(time, quiet ? 0.08 : 0.17);
+  tap(time + 0.5, quiet ? 0.017 : 0.037, 0.13);
 }
-for (let time = 0; time < 10; time += 1) bass(time, 35, 0.35, 0.056);
-arrival(5, 0.78);
-arrival(10, 0.75);
-arrival(25, 0.65);
-arrival(34, 0.85);
-arrival(43, 0.95);
+for (const time of [0.8, 2.2, 18.3, 32.1, 33.85, 38.2, 39.4, 47.2])
+  tap(contentStart + time, 0.07, -0.1);
+for (const scene of ["bridge", "ask", "compare", "forward", "use", "end"])
+  arrival(story.scenes[scene][0], 0.42);
+key(story.scenes.end[0] + 1, 74, 0.09, -0.12, 2.7);
+key(story.scenes.end[0] + 1.05, 81, 0.04, 0.16, 2.6);
+bass(story.scenes.end[0] + 1, 38, 1.5, 0.08);
 
 // Crossed, filtered feedback taps provide an airy room and stereo echoes.
 const delays = [0.137, 0.211, 0.307, 0.431].map((seconds, index) => ({
@@ -219,7 +199,8 @@ for (let i = 0; i < COUNT; i++) {
     reverberationL += oldL * 0.24;
     reverberationR += oldR * 0.24;
   }
-  const fade = smooth(i / RATE / 0.07) * (1 - smooth((i / RATE - 46.2) / 1.8));
+  const fade =
+    smooth(i / RATE / 0.07) * (1 - smooth((i / RATE - (DURATION - 2.2)) / 2.2));
   left[i] = (left[i] + reverberationL) * fade;
   right[i] = (right[i] + reverberationR) * fade;
 }
@@ -229,7 +210,7 @@ const ceiling = 0.875;
 const master = (value) =>
   value / (1 + (Math.abs(value) / ceiling) ** 6) ** (1 / 6);
 // Fixed gain keeps the tonal arrangement stable between score revisions.
-const gain = 1.5;
+const gain = 1.35;
 
 const pcm = Buffer.alloc(COUNT * 4);
 let sum = 0;

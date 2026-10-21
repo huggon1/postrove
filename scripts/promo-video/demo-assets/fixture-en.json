@@ -11,9 +11,9 @@
   "advisors.json": {
     "version": 1,
     "enabled": [
-      "youtube-gemini-en",
       "x-grok-en",
       "xiaohongshu-diandian-zh",
+      "youtube-gemini-en",
       "reddit-ai-en"
     ]
   },
@@ -21,130 +21,130 @@
     "version": 1,
     "reports": [
       {
-        "reportId": "568e00ac-4980-4166-9391-7f20f836df33",
-        "taskId": "908c907f-0924-4e83-8071-59b14f52ecb2",
-        "createdAt": "2026-10-20T09:20:00.000Z",
-        "question": "I want to make a pixel game with AI. Where do I start?",
+        "reportId": "131f9885-f057-43f1-8fb6-80d16d3a2aab",
+        "taskId": "7f3f0a3e-5d7c-4939-8b4d-df316a9ba3f8",
+        "createdAt": "2026-10-21T09:20:00.000Z",
+        "question": "I want to make a pixel game with AI. Find devlogs, tutorials, and practical lessons.",
         "outputLanguage": "en",
         "taskOutcome": "completed",
         "origin": "manual",
         "status": "completed",
-        "finishedAt": "2026-10-20T09:20:00.000Z",
+        "finishedAt": "2026-10-21T09:20:00.000Z",
         "period": "all",
         "platforms": [
-          "youtube",
           "x",
           "xiaohongshu",
+          "youtube",
           "reddit"
         ],
         "sections": [
           {
-            "sectionId": "131a1b70-7776-4037-9b1c-e255b19ac5e2",
-            "platform": "youtube",
-            "advisorId": "youtube-gemini-en",
-            "connectionId": "gemini-web",
-            "routeId": "youtube-gemini",
-            "runId": "ce922b28-d5f7-489b-9741-04f2600f55b3",
-            "readingReply": "### Follow one short tutorial, step by step\n\nSee how movement works, then explore jumping and platform collisions. Treat each part as a small exercise and ask AI to explain what you observe.\n\n*Fictional demo reply · Sample sources*",
-            "promptLanguage": "en",
-            "prompt": "I want to make a pixel game with AI. Where do I start?",
-            "platformPrompt": "I want to make a pixel game with AI. Where do I start?",
-            "citationExtraction": {
-              "state": "completed"
-            },
-            "state": "completed",
-            "rawReply": "### Follow one short tutorial, step by step\n\nSee how movement works, then explore jumping and platform collisions. Treat each part as a small exercise and ask AI to explain what you observe.\n\n*Fictional demo reply · Sample sources*",
-            "candidates": [
-              {
-                "candidateId": "5bcc9b18-7930-423c-a2e7-5c1271ca1c20",
-                "postKey": "youtube:video:DEMO1234abc",
-                "url": "https://www.youtube.com/watch?v=DEMO1234abc",
-                "title": "Your first pixel game with AI",
-                "description": "Fictional demo source · Placeholder link"
-              }
-            ],
-            "finishedAt": "2026-10-20T09:20:00.000Z"
-          },
-          {
-            "sectionId": "84d0bb74-5c4e-4eac-a75e-6fb69a81745d",
+            "sectionId": "a204f898-4b97-4d0e-8511-7d36ef891072",
             "platform": "x",
             "advisorId": "x-grok-en",
             "connectionId": "x-grok",
             "routeId": "x-grok",
-            "runId": "c2485aba-1106-4711-8d97-238a3b209a66",
-            "readingReply": "### Build the smallest playable loop\n\nStart with one character and one platform. Add movement, then jumping and landing collisions. Ask AI to explain each small change.\n\n*Fictional demo reply · Sample sources*",
+            "runId": "00beab39-9825-4c28-88b4-0a65d716c2ad",
+            "readingReply": "### Start with one playable scene\n\nThis devlog starts with movement and jumping, then adds a coin. Add one action at a time, run it, and ask your agent to adjust it.",
             "promptLanguage": "en",
-            "prompt": "I want to make a pixel game with AI. Where do I start?",
-            "platformPrompt": "I want to make a pixel game with AI. Where do I start?",
+            "prompt": "I want to make a pixel game with AI. Find devlogs, tutorials, and practical lessons.",
+            "platformPrompt": "I want to make a pixel game with AI. Find devlogs, tutorials, and practical lessons.",
             "citationExtraction": {
               "state": "completed"
             },
             "state": "completed",
-            "rawReply": "### Build the smallest playable loop\n\nStart with one character and one platform. Add movement, then jumping and landing collisions. Ask AI to explain each small change.\n\n*Fictional demo reply · Sample sources*",
+            "rawReply": "### Start with one playable scene\n\nThis devlog starts with movement and jumping, then adds a coin. Add one action at a time, run it, and ask your agent to adjust it.",
             "candidates": [
               {
-                "candidateId": "deede0fb-0bd9-4237-b1eb-b096ad07ce36",
+                "candidateId": "d17d8fc4-1d7a-4a6c-ad0e-093f4f27c6a0",
                 "postKey": "x:9999999999999999999",
-                "url": "https://x.com/postrove_demo/status/9999999999999999999",
-                "title": "One character is enough to begin",
-                "description": "Fictional demo source · Placeholder link"
+                "url": "https://x.com/lin_dev/status/9999999999999999999",
+                "title": "Start with movement and jumping",
+                "description": "Devlogs, tutorials, and practical lessons"
               }
             ],
-            "finishedAt": "2026-10-20T09:20:00.000Z"
+            "finishedAt": "2026-10-21T09:20:00.000Z"
           },
           {
-            "sectionId": "4ae9826d-9f70-47d6-9d8c-2da5dcdeb252",
+            "sectionId": "9dfe3b4e-54a9-4624-abf7-e7c47d286424",
             "platform": "xiaohongshu",
             "advisorId": "xiaohongshu-diandian-zh",
             "connectionId": "xiaohongshu-diandian",
             "routeId": "xiaohongshu-diandian",
-            "runId": "f2535c11-e6ca-4899-9db7-2e4e3812a9c7",
-            "readingReply": "### Sketch one tiny world\n\nTry a 16×16 character and a two-color scene. Finish a single room where you can walk and jump, then develop the visual details.\n\n*Fictional demo reply · Sample sources*",
+            "runId": "10c229b6-98d4-4206-86f5-1eacc9c8cdb2",
+            "readingReply": "### Follow the first build\n\nThese notes follow a first pixel game built with AI. Test movement and collisions with simple blocks, then add pixel art.",
             "promptLanguage": "zh-CN",
-            "prompt": "我想用 AI 做一个像素小游戏，应该从哪里开始？",
-            "platformPrompt": "我想用 AI 做一个像素小游戏，应该从哪里开始？",
+            "prompt": "我想用 AI 做个像素游戏。找一些开发记录、教程和踩坑经验。",
+            "platformPrompt": "我想用 AI 做个像素游戏。找一些开发记录、教程和踩坑经验。",
             "citationExtraction": {
               "state": "completed"
             },
             "state": "completed",
-            "rawReply": "### 先画一个简单的小世界\n\n用 16×16 的角色和两种颜色搭出场景。先完成一个能走、能跳的小房间，再逐步丰富画面。\n\n*虚构演示回复 · 示例来源*",
+            "rawReply": "### 看一遍从零开始的过程\n\n这篇笔记记录了用 AI 做像素小游戏的过程。建议先用简单方块测试移动和碰撞，再换成像素素材。",
             "candidates": [
               {
-                "candidateId": "26a9e416-ab72-41bd-a04e-05f8b1a7ef11",
-                "postKey": "xiaohongshu:postrove_pixel_demo",
-                "url": "https://www.xiaohongshu.com/explore/postrove_pixel_demo",
-                "title": "A first 16×16 pixel character",
-                "description": "Fictional demo source · Placeholder link"
+                "candidateId": "48032aa2-320f-4046-84a6-7f7c77dc60dc",
+                "postKey": "xiaohongshu:67f0a34b000000001a012345",
+                "url": "https://www.xiaohongshu.com/explore/67f0a34b000000001a012345",
+                "title": "My first pixel game with AI",
+                "description": "Devlogs, tutorials, and practical lessons"
               }
             ],
-            "finishedAt": "2026-10-20T09:20:00.000Z"
+            "finishedAt": "2026-10-21T09:20:00.000Z"
           },
           {
-            "sectionId": "7cb44610-55a7-46f0-80be-285dc503b884",
+            "sectionId": "c3793d36-3227-47df-aeab-55f8dcb10bed",
+            "platform": "youtube",
+            "advisorId": "youtube-gemini-en",
+            "connectionId": "gemini-web",
+            "routeId": "youtube-gemini",
+            "runId": "26bc8fb9-b9bd-45d6-b602-560aa76ab7fd",
+            "readingReply": "### Follow a movement tutorial\n\nThis video demonstrates movement, jumping, and ground checks. Try these actions before designing a level.",
+            "promptLanguage": "en",
+            "prompt": "I want to make a pixel game with AI. Find devlogs, tutorials, and practical lessons.",
+            "platformPrompt": "I want to make a pixel game with AI. Find devlogs, tutorials, and practical lessons.",
+            "citationExtraction": {
+              "state": "completed"
+            },
+            "state": "completed",
+            "rawReply": "### Follow a movement tutorial\n\nThis video demonstrates movement, jumping, and ground checks. Try these actions before designing a level.",
+            "candidates": [
+              {
+                "candidateId": "497c46d5-4529-4017-8af2-f9a2287b903a",
+                "postKey": "youtube:video:DEMO1234abc",
+                "url": "https://www.youtube.com/watch?v=DEMO1234abc",
+                "title": "Pixel game movement, jumping, and collisions",
+                "description": "Devlogs, tutorials, and practical lessons"
+              }
+            ],
+            "finishedAt": "2026-10-21T09:20:00.000Z"
+          },
+          {
+            "sectionId": "886c63c3-93bf-4e9d-8102-c20929b0a4d4",
             "platform": "reddit",
             "advisorId": "reddit-ai-en",
             "connectionId": "reddit-web",
             "routeId": "reddit-ai",
-            "runId": "b5f5b143-08cd-43a7-b5c3-d79b56688c5b",
-            "readingReply": "### Keep the first game small\n\nMake one room with one goal. Write down “move, jump, land,” then use AI to help debug each part.\n\n*Fictional demo reply · Sample sources*",
+            "runId": "4aa42060-402b-4a3a-805c-3655685bc904",
+            "readingReply": "### Test the controls before adding features\n\nThe discussion recommends a small prototype. Test movement, jump distance, and landing before adding more features.",
             "promptLanguage": "en",
-            "prompt": "I want to make a pixel game with AI. Where do I start?",
-            "platformPrompt": "I want to make a pixel game with AI. Where do I start?",
+            "prompt": "I want to make a pixel game with AI. Find devlogs, tutorials, and practical lessons.",
+            "platformPrompt": "I want to make a pixel game with AI. Find devlogs, tutorials, and practical lessons.",
             "citationExtraction": {
               "state": "completed"
             },
             "state": "completed",
-            "rawReply": "### Keep the first game small\n\nMake one room with one goal. Write down “move, jump, land,” then use AI to help debug each part.\n\n*Fictional demo reply · Sample sources*",
+            "rawReply": "### Test the controls before adding features\n\nThe discussion recommends a small prototype. Test movement, jump distance, and landing before adding more features.",
             "candidates": [
               {
-                "candidateId": "52b3220a-8053-4241-a16c-5604170d152c",
-                "postKey": "reddit:post:demopixel",
-                "url": "https://www.reddit.com/r/postrove_demo/comments/demopixel/",
-                "title": "For your first game, finish one room",
-                "description": "Fictional demo source · Placeholder link"
+                "candidateId": "1e85b302-1387-4f94-ab7d-f8c127c82f37",
+                "postKey": "reddit:post:pixelgame",
+                "url": "https://www.reddit.com/r/postrove_demo/comments/pixelgame/",
+                "title": "Where should a first pixel game start?",
+                "description": "Devlogs, tutorials, and practical lessons"
               }
             ],
-            "finishedAt": "2026-10-20T09:20:00.000Z"
+            "finishedAt": "2026-10-21T09:20:00.000Z"
           }
         ],
         "submissions": []
@@ -156,159 +156,306 @@
     "version": 1,
     "tasks": [
       {
-        "taskId": "a42538e0-29da-4f04-8ce3-c104784c9bb3",
+        "taskId": "165ce87c-ed66-438d-a5a5-043c66c8d102",
         "materials": [
           {
-            "id": "pixel-demo-main",
+            "id": "interface-yellow-main",
             "role": "main",
-            "url": "https://www.youtube.com/watch?v=DEMO1234abc",
-            "title": "Your first pixel game with AI",
+            "url": "https://www.xiaohongshu.com/explore/67f0a34b000000001a012345",
+            "title": "My first pixel game with AI",
             "source": {
-              "sourceUrl": "https://www.youtube.com/watch?v=DEMO1234abc",
-              "markdown": "![Pixel character and platforms: fictional tutorial artwork](https://postrove-demo.example/pixel-game.png)\n\n## Make one character move\n\n[00:00 · Set up the scene](https://www.youtube.com/watch?v=DEMO1234abc&t=0s)　 [02:14 · Move and jump](https://www.youtube.com/watch?v=DEMO1234abc&t=134s)　 [05:32 · Platform collisions](https://www.youtube.com/watch?v=DEMO1234abc&t=332s)\n\nBegin with a tiny scene: move left and right, press space to jump, and land on a platform. Run each small change and observe what happens.\n\n```text\nCharacter: move left/right → press space to jump\nScene: one platform → check landing collisions\n```\n\n**Ask AI next:** “Break a character jump into three small steps and explain each one.”\n\n*Fictional demo material and placeholder sources illustrate the reading workflow.*",
-              "platform": "youtube",
-              "title": "Your first pixel game with AI",
-              "sourceIdentity": "Pixel Lab · Fictional demo",
-              "sourceKey": "youtube:video:DEMO1234abc",
-              "fetchedAt": "2026-10-20T09:20:00.000Z",
+              "sourceUrl": "https://www.xiaohongshu.com/explore/67f0a34b000000001a012345",
+              "markdown": "![像素游戏开发记录](https://postrove-demo.example/cover-yellow.png)\n\n## 先做一个能玩的场景\n\n我的目标是先让角色移动、跳跃，再收集一枚金币。地图只保留一块地面和一个平台，方便检查动作。\n\n## 每加一个动作就运行一次\n\n先用方块测试碰撞。确认角色能落地，再换上像素素材。把跳跃距离和速度分开调整。\n\n```text\n第一步：移动与落地检测\n第二步：跳跃与平台碰撞\n第三步：金币与计数\n```\n\n## 把问题说给 Agent\n\n记录角色在哪个位置卡住，以及预期的动作。每次修改后都运行一次，再决定下一个任务。\n\n[回到原始文章](https://www.xiaohongshu.com/explore/67f0a34b000000001a012345)",
+              "platform": "xiaohongshu",
+              "title": "My first pixel game with AI",
+              "sourceIdentity": "Lin’s game notes",
+              "fetchedAt": "2026-10-21T09:20:00.000Z",
               "contentBlocks": [
                 {
                   "type": "text",
-                  "text": "![Pixel character and platforms: fictional tutorial artwork](https://postrove-demo.example/pixel-game.png)\n\n## Make one character move\n\n[00:00 · Set up the scene](https://www.youtube.com/watch?v=DEMO1234abc&t=0s)　 [02:14 · Move and jump](https://www.youtube.com/watch?v=DEMO1234abc&t=134s)　 [05:32 · Platform collisions](https://www.youtube.com/watch?v=DEMO1234abc&t=332s)\n\nBegin with a tiny scene: move left and right, press space to jump, and land on a platform. Run each small change and observe what happens.\n\n```text\nCharacter: move left/right → press space to jump\nScene: one platform → check landing collisions\n```\n\n**Ask AI next:** “Break a character jump into three small steps and explain each one.”\n\n*Fictional demo material and placeholder sources illustrate the reading workflow.*"
+                  "text": "![像素游戏开发记录](https://postrove-demo.example/cover-yellow.png)\n\n## 先做一个能玩的场景\n\n我的目标是先让角色移动、跳跃，再收集一枚金币。地图只保留一块地面和一个平台，方便检查动作。\n\n## 每加一个动作就运行一次\n\n先用方块测试碰撞。确认角色能落地，再换上像素素材。把跳跃距离和速度分开调整。\n\n```text\n第一步：移动与落地检测\n第二步：跳跃与平台碰撞\n第三步：金币与计数\n```\n\n## 把问题说给 Agent\n\n记录角色在哪个位置卡住，以及预期的动作。每次修改后都运行一次，再决定下一个任务。\n\n[回到原始文章](https://www.xiaohongshu.com/explore/67f0a34b000000001a012345)"
                 }
               ],
               "images": [
                 {
-                  "imageId": "pixel-scene",
-                  "url": "https://postrove-demo.example/pixel-game.png",
-                  "alt": "Pixel Lab · Fictional demo",
-                  "cachedUrl": "postrove-image://c40febaf61d6ef5a6b6b8b4b6b2a667e29460949636d17f28c0108e631711c36"
+                  "imageId": "interface-yellow",
+                  "url": "https://postrove-demo.example/cover-yellow.png",
+                  "alt": "Pixel game notes",
+                  "cachedUrl": "postrove-image://4640809a922fc881c313ff79c98665df094ab2abb5cf4751a89f40ad093e1b4c"
                 }
               ],
               "completeness": "complete",
-              "completenessNote": "Fictional demo source · Placeholder link"
+              "completenessNote": "Main article and illustration."
             },
             "chunks": [
               {
                 "index": 0,
-                "original": "![Pixel character and platforms: fictional tutorial artwork](https://postrove-demo.example/pixel-game.png)\n\n## Make one character move\n\n[00:00 · Set up the scene](https://www.youtube.com/watch?v=DEMO1234abc&t=0s)　 [02:14 · Move and jump](https://www.youtube.com/watch?v=DEMO1234abc&t=134s)　 [05:32 · Platform collisions](https://www.youtube.com/watch?v=DEMO1234abc&t=332s)\n\nBegin with a tiny scene: move left and right, press space to jump, and land on a platform. Run each small change and observe what happens.\n\n```text\nCharacter: move left/right → press space to jump\nScene: one platform → check landing collisions\n```\n\n**Ask AI next:** “Break a character jump into three small steps and explain each one.”\n\n*Fictional demo material and placeholder sources illustrate the reading workflow.*",
-                "translated": "![Pixel character and platforms: fictional tutorial artwork](https://postrove-demo.example/pixel-game.png)\n\n## Make one character move\n\n[00:00 · Set up the scene](https://www.youtube.com/watch?v=DEMO1234abc&t=0s)　 [02:14 · Move and jump](https://www.youtube.com/watch?v=DEMO1234abc&t=134s)　 [05:32 · Platform collisions](https://www.youtube.com/watch?v=DEMO1234abc&t=332s)\n\nBegin with a tiny scene: move left and right, press space to jump, and land on a platform. Run each small change and observe what happens.\n\n```text\nCharacter: move left/right → press space to jump\nScene: one platform → check landing collisions\n```\n\n**Ask AI next:** “Break a character jump into three small steps and explain each one.”\n\n*Fictional demo material and placeholder sources illustrate the reading workflow.*",
+                "original": "![像素游戏开发记录](https://postrove-demo.example/cover-yellow.png)\n\n## 先做一个能玩的场景\n\n我的目标是先让角色移动、跳跃，再收集一枚金币。地图只保留一块地面和一个平台，方便检查动作。\n\n## 每加一个动作就运行一次\n\n先用方块测试碰撞。确认角色能落地，再换上像素素材。把跳跃距离和速度分开调整。\n\n```text\n第一步：移动与落地检测\n第二步：跳跃与平台碰撞\n第三步：金币与计数\n```\n\n## 把问题说给 Agent\n\n记录角色在哪个位置卡住，以及预期的动作。每次修改后都运行一次，再决定下一个任务。\n\n[回到原始文章](https://www.xiaohongshu.com/explore/67f0a34b000000001a012345)",
+                "translated": "![Pixel game development notes](https://postrove-demo.example/cover-yellow.png)\n\n## Start with one playable scene\n\nI want the character to move, jump, and collect one coin. Keep one floor and one platform so each action is easy to test.\n\n## Run the game after each change\n\nTest collisions with simple blocks first. Add pixel art after landing works. Adjust jump distance and movement speed separately.\n\n```text\nStep 1: movement and ground checks\nStep 2: jumping and platform collisions\nStep 3: coins and a counter\n```\n\n## Give the agent a concrete problem\n\nRecord where the character gets stuck and what should happen. Run the game after every change, then choose the next task.\n\n[Open the original article](https://www.xiaohongshu.com/explore/67f0a34b000000001a012345)",
                 "complete": true
               }
             ],
-            "summary": "Start with one character, one platform, and one jump. Follow a sample tutorial through movement, jumping, and collisions, then ask AI to explain the next step.",
+            "summary": "Build one scene with movement, jumping, and coins. Run it after each change, then tune speed and collisions.",
             "state": "completed"
           }
         ],
-        "materialId": "4d01d6dd-c704-46a5-bdce-3b92d76c2bf2",
-        "resultId": "f5aad3d4-b1bc-4e6a-9ebd-2eb5fdbebea2",
+        "materialId": "378610c6-c830-4c2d-b632-97cf4e38f247",
+        "resultId": "d5a2aa5b-478e-452d-9eca-43337cba0273",
         "target": {
-          "sourceUrl": "https://www.youtube.com/watch?v=DEMO1234abc",
+          "sourceUrl": "https://www.xiaohongshu.com/explore/67f0a34b000000001a012345",
           "entry": "app"
         },
         "state": "completed",
         "phase": "已保存",
         "outputLanguage": "en",
         "source": {
-          "sourceUrl": "https://www.youtube.com/watch?v=DEMO1234abc",
-          "markdown": "![Pixel character and platforms: fictional tutorial artwork](https://postrove-demo.example/pixel-game.png)\n\n## Make one character move\n\n[00:00 · Set up the scene](https://www.youtube.com/watch?v=DEMO1234abc&t=0s)　 [02:14 · Move and jump](https://www.youtube.com/watch?v=DEMO1234abc&t=134s)　 [05:32 · Platform collisions](https://www.youtube.com/watch?v=DEMO1234abc&t=332s)\n\nBegin with a tiny scene: move left and right, press space to jump, and land on a platform. Run each small change and observe what happens.\n\n```text\nCharacter: move left/right → press space to jump\nScene: one platform → check landing collisions\n```\n\n**Ask AI next:** “Break a character jump into three small steps and explain each one.”\n\n*Fictional demo material and placeholder sources illustrate the reading workflow.*",
-          "platform": "youtube",
-          "title": "Your first pixel game with AI",
-          "sourceIdentity": "Pixel Lab · Fictional demo",
-          "sourceKey": "youtube:video:DEMO1234abc",
-          "fetchedAt": "2026-10-20T09:20:00.000Z",
+          "sourceUrl": "https://www.xiaohongshu.com/explore/67f0a34b000000001a012345",
+          "markdown": "![像素游戏开发记录](https://postrove-demo.example/cover-yellow.png)\n\n## 先做一个能玩的场景\n\n我的目标是先让角色移动、跳跃，再收集一枚金币。地图只保留一块地面和一个平台，方便检查动作。\n\n## 每加一个动作就运行一次\n\n先用方块测试碰撞。确认角色能落地，再换上像素素材。把跳跃距离和速度分开调整。\n\n```text\n第一步：移动与落地检测\n第二步：跳跃与平台碰撞\n第三步：金币与计数\n```\n\n## 把问题说给 Agent\n\n记录角色在哪个位置卡住，以及预期的动作。每次修改后都运行一次，再决定下一个任务。\n\n[回到原始文章](https://www.xiaohongshu.com/explore/67f0a34b000000001a012345)",
+          "platform": "xiaohongshu",
+          "title": "My first pixel game with AI",
+          "sourceIdentity": "Lin’s game notes",
+          "fetchedAt": "2026-10-21T09:20:00.000Z",
           "contentBlocks": [
             {
               "type": "text",
-              "text": "![Pixel character and platforms: fictional tutorial artwork](https://postrove-demo.example/pixel-game.png)\n\n## Make one character move\n\n[00:00 · Set up the scene](https://www.youtube.com/watch?v=DEMO1234abc&t=0s)　 [02:14 · Move and jump](https://www.youtube.com/watch?v=DEMO1234abc&t=134s)　 [05:32 · Platform collisions](https://www.youtube.com/watch?v=DEMO1234abc&t=332s)\n\nBegin with a tiny scene: move left and right, press space to jump, and land on a platform. Run each small change and observe what happens.\n\n```text\nCharacter: move left/right → press space to jump\nScene: one platform → check landing collisions\n```\n\n**Ask AI next:** “Break a character jump into three small steps and explain each one.”\n\n*Fictional demo material and placeholder sources illustrate the reading workflow.*"
+              "text": "![像素游戏开发记录](https://postrove-demo.example/cover-yellow.png)\n\n## 先做一个能玩的场景\n\n我的目标是先让角色移动、跳跃，再收集一枚金币。地图只保留一块地面和一个平台，方便检查动作。\n\n## 每加一个动作就运行一次\n\n先用方块测试碰撞。确认角色能落地，再换上像素素材。把跳跃距离和速度分开调整。\n\n```text\n第一步：移动与落地检测\n第二步：跳跃与平台碰撞\n第三步：金币与计数\n```\n\n## 把问题说给 Agent\n\n记录角色在哪个位置卡住，以及预期的动作。每次修改后都运行一次，再决定下一个任务。\n\n[回到原始文章](https://www.xiaohongshu.com/explore/67f0a34b000000001a012345)"
             }
           ],
           "images": [
             {
-              "imageId": "pixel-scene",
-              "url": "https://postrove-demo.example/pixel-game.png",
-              "alt": "Pixel Lab · Fictional demo",
-              "cachedUrl": "postrove-image://c40febaf61d6ef5a6b6b8b4b6b2a667e29460949636d17f28c0108e631711c36"
+              "imageId": "interface-yellow",
+              "url": "https://postrove-demo.example/cover-yellow.png",
+              "alt": "Pixel game notes",
+              "cachedUrl": "postrove-image://4640809a922fc881c313ff79c98665df094ab2abb5cf4751a89f40ad093e1b4c"
             }
           ],
           "completeness": "complete",
-          "completenessNote": "Fictional demo source · Placeholder link"
+          "completenessNote": "Main article and illustration."
         },
         "activities": [],
         "report": {
           "materials": [
             {
-              "id": "pixel-demo-main",
+              "id": "interface-yellow-main",
               "role": "main",
-              "url": "https://www.youtube.com/watch?v=DEMO1234abc",
-              "title": "Your first pixel game with AI",
+              "url": "https://www.xiaohongshu.com/explore/67f0a34b000000001a012345",
+              "title": "My first pixel game with AI",
               "source": {
-                "sourceUrl": "https://www.youtube.com/watch?v=DEMO1234abc",
-                "markdown": "![Pixel character and platforms: fictional tutorial artwork](https://postrove-demo.example/pixel-game.png)\n\n## Make one character move\n\n[00:00 · Set up the scene](https://www.youtube.com/watch?v=DEMO1234abc&t=0s)　 [02:14 · Move and jump](https://www.youtube.com/watch?v=DEMO1234abc&t=134s)　 [05:32 · Platform collisions](https://www.youtube.com/watch?v=DEMO1234abc&t=332s)\n\nBegin with a tiny scene: move left and right, press space to jump, and land on a platform. Run each small change and observe what happens.\n\n```text\nCharacter: move left/right → press space to jump\nScene: one platform → check landing collisions\n```\n\n**Ask AI next:** “Break a character jump into three small steps and explain each one.”\n\n*Fictional demo material and placeholder sources illustrate the reading workflow.*",
-                "platform": "youtube",
-                "title": "Your first pixel game with AI",
-                "sourceIdentity": "Pixel Lab · Fictional demo",
-                "sourceKey": "youtube:video:DEMO1234abc",
-                "fetchedAt": "2026-10-20T09:20:00.000Z",
+                "sourceUrl": "https://www.xiaohongshu.com/explore/67f0a34b000000001a012345",
+                "markdown": "![像素游戏开发记录](https://postrove-demo.example/cover-yellow.png)\n\n## 先做一个能玩的场景\n\n我的目标是先让角色移动、跳跃，再收集一枚金币。地图只保留一块地面和一个平台，方便检查动作。\n\n## 每加一个动作就运行一次\n\n先用方块测试碰撞。确认角色能落地，再换上像素素材。把跳跃距离和速度分开调整。\n\n```text\n第一步：移动与落地检测\n第二步：跳跃与平台碰撞\n第三步：金币与计数\n```\n\n## 把问题说给 Agent\n\n记录角色在哪个位置卡住，以及预期的动作。每次修改后都运行一次，再决定下一个任务。\n\n[回到原始文章](https://www.xiaohongshu.com/explore/67f0a34b000000001a012345)",
+                "platform": "xiaohongshu",
+                "title": "My first pixel game with AI",
+                "sourceIdentity": "Lin’s game notes",
+                "fetchedAt": "2026-10-21T09:20:00.000Z",
                 "contentBlocks": [
                   {
                     "type": "text",
-                    "text": "![Pixel character and platforms: fictional tutorial artwork](https://postrove-demo.example/pixel-game.png)\n\n## Make one character move\n\n[00:00 · Set up the scene](https://www.youtube.com/watch?v=DEMO1234abc&t=0s)　 [02:14 · Move and jump](https://www.youtube.com/watch?v=DEMO1234abc&t=134s)　 [05:32 · Platform collisions](https://www.youtube.com/watch?v=DEMO1234abc&t=332s)\n\nBegin with a tiny scene: move left and right, press space to jump, and land on a platform. Run each small change and observe what happens.\n\n```text\nCharacter: move left/right → press space to jump\nScene: one platform → check landing collisions\n```\n\n**Ask AI next:** “Break a character jump into three small steps and explain each one.”\n\n*Fictional demo material and placeholder sources illustrate the reading workflow.*"
+                    "text": "![像素游戏开发记录](https://postrove-demo.example/cover-yellow.png)\n\n## 先做一个能玩的场景\n\n我的目标是先让角色移动、跳跃，再收集一枚金币。地图只保留一块地面和一个平台，方便检查动作。\n\n## 每加一个动作就运行一次\n\n先用方块测试碰撞。确认角色能落地，再换上像素素材。把跳跃距离和速度分开调整。\n\n```text\n第一步：移动与落地检测\n第二步：跳跃与平台碰撞\n第三步：金币与计数\n```\n\n## 把问题说给 Agent\n\n记录角色在哪个位置卡住，以及预期的动作。每次修改后都运行一次，再决定下一个任务。\n\n[回到原始文章](https://www.xiaohongshu.com/explore/67f0a34b000000001a012345)"
                   }
                 ],
                 "images": [
                   {
-                    "imageId": "pixel-scene",
-                    "url": "https://postrove-demo.example/pixel-game.png",
-                    "alt": "Pixel Lab · Fictional demo",
-                    "cachedUrl": "postrove-image://c40febaf61d6ef5a6b6b8b4b6b2a667e29460949636d17f28c0108e631711c36"
+                    "imageId": "interface-yellow",
+                    "url": "https://postrove-demo.example/cover-yellow.png",
+                    "alt": "Pixel game notes",
+                    "cachedUrl": "postrove-image://4640809a922fc881c313ff79c98665df094ab2abb5cf4751a89f40ad093e1b4c"
                   }
                 ],
                 "completeness": "complete",
-                "completenessNote": "Fictional demo source · Placeholder link"
+                "completenessNote": "Main article and illustration."
               },
               "chunks": [
                 {
                   "index": 0,
-                  "original": "![Pixel character and platforms: fictional tutorial artwork](https://postrove-demo.example/pixel-game.png)\n\n## Make one character move\n\n[00:00 · Set up the scene](https://www.youtube.com/watch?v=DEMO1234abc&t=0s)　 [02:14 · Move and jump](https://www.youtube.com/watch?v=DEMO1234abc&t=134s)　 [05:32 · Platform collisions](https://www.youtube.com/watch?v=DEMO1234abc&t=332s)\n\nBegin with a tiny scene: move left and right, press space to jump, and land on a platform. Run each small change and observe what happens.\n\n```text\nCharacter: move left/right → press space to jump\nScene: one platform → check landing collisions\n```\n\n**Ask AI next:** “Break a character jump into three small steps and explain each one.”\n\n*Fictional demo material and placeholder sources illustrate the reading workflow.*",
-                  "translated": "![Pixel character and platforms: fictional tutorial artwork](https://postrove-demo.example/pixel-game.png)\n\n## Make one character move\n\n[00:00 · Set up the scene](https://www.youtube.com/watch?v=DEMO1234abc&t=0s)　 [02:14 · Move and jump](https://www.youtube.com/watch?v=DEMO1234abc&t=134s)　 [05:32 · Platform collisions](https://www.youtube.com/watch?v=DEMO1234abc&t=332s)\n\nBegin with a tiny scene: move left and right, press space to jump, and land on a platform. Run each small change and observe what happens.\n\n```text\nCharacter: move left/right → press space to jump\nScene: one platform → check landing collisions\n```\n\n**Ask AI next:** “Break a character jump into three small steps and explain each one.”\n\n*Fictional demo material and placeholder sources illustrate the reading workflow.*",
+                  "original": "![像素游戏开发记录](https://postrove-demo.example/cover-yellow.png)\n\n## 先做一个能玩的场景\n\n我的目标是先让角色移动、跳跃，再收集一枚金币。地图只保留一块地面和一个平台，方便检查动作。\n\n## 每加一个动作就运行一次\n\n先用方块测试碰撞。确认角色能落地，再换上像素素材。把跳跃距离和速度分开调整。\n\n```text\n第一步：移动与落地检测\n第二步：跳跃与平台碰撞\n第三步：金币与计数\n```\n\n## 把问题说给 Agent\n\n记录角色在哪个位置卡住，以及预期的动作。每次修改后都运行一次，再决定下一个任务。\n\n[回到原始文章](https://www.xiaohongshu.com/explore/67f0a34b000000001a012345)",
+                  "translated": "![Pixel game development notes](https://postrove-demo.example/cover-yellow.png)\n\n## Start with one playable scene\n\nI want the character to move, jump, and collect one coin. Keep one floor and one platform so each action is easy to test.\n\n## Run the game after each change\n\nTest collisions with simple blocks first. Add pixel art after landing works. Adjust jump distance and movement speed separately.\n\n```text\nStep 1: movement and ground checks\nStep 2: jumping and platform collisions\nStep 3: coins and a counter\n```\n\n## Give the agent a concrete problem\n\nRecord where the character gets stuck and what should happen. Run the game after every change, then choose the next task.\n\n[Open the original article](https://www.xiaohongshu.com/explore/67f0a34b000000001a012345)",
                   "complete": true
                 }
               ],
-              "summary": "Start with one character, one platform, and one jump. Follow a sample tutorial through movement, jumping, and collisions, then ask AI to explain the next step.",
+              "summary": "Build one scene with movement, jumping, and coins. Run it after each change, then tune speed and collisions.",
               "state": "completed"
             }
           ],
           "source": {
-            "sourceUrl": "https://www.youtube.com/watch?v=DEMO1234abc",
-            "markdown": "![Pixel character and platforms: fictional tutorial artwork](https://postrove-demo.example/pixel-game.png)\n\n## Make one character move\n\n[00:00 · Set up the scene](https://www.youtube.com/watch?v=DEMO1234abc&t=0s)　 [02:14 · Move and jump](https://www.youtube.com/watch?v=DEMO1234abc&t=134s)　 [05:32 · Platform collisions](https://www.youtube.com/watch?v=DEMO1234abc&t=332s)\n\nBegin with a tiny scene: move left and right, press space to jump, and land on a platform. Run each small change and observe what happens.\n\n```text\nCharacter: move left/right → press space to jump\nScene: one platform → check landing collisions\n```\n\n**Ask AI next:** “Break a character jump into three small steps and explain each one.”\n\n*Fictional demo material and placeholder sources illustrate the reading workflow.*",
-            "platform": "youtube",
-            "title": "Your first pixel game with AI",
-            "sourceIdentity": "Pixel Lab · Fictional demo",
-            "sourceKey": "youtube:video:DEMO1234abc",
-            "fetchedAt": "2026-10-20T09:20:00.000Z",
+            "sourceUrl": "https://www.xiaohongshu.com/explore/67f0a34b000000001a012345",
+            "markdown": "![像素游戏开发记录](https://postrove-demo.example/cover-yellow.png)\n\n## 先做一个能玩的场景\n\n我的目标是先让角色移动、跳跃，再收集一枚金币。地图只保留一块地面和一个平台，方便检查动作。\n\n## 每加一个动作就运行一次\n\n先用方块测试碰撞。确认角色能落地，再换上像素素材。把跳跃距离和速度分开调整。\n\n```text\n第一步：移动与落地检测\n第二步：跳跃与平台碰撞\n第三步：金币与计数\n```\n\n## 把问题说给 Agent\n\n记录角色在哪个位置卡住，以及预期的动作。每次修改后都运行一次，再决定下一个任务。\n\n[回到原始文章](https://www.xiaohongshu.com/explore/67f0a34b000000001a012345)",
+            "platform": "xiaohongshu",
+            "title": "My first pixel game with AI",
+            "sourceIdentity": "Lin’s game notes",
+            "fetchedAt": "2026-10-21T09:20:00.000Z",
             "contentBlocks": [
               {
                 "type": "text",
-                "text": "![Pixel character and platforms: fictional tutorial artwork](https://postrove-demo.example/pixel-game.png)\n\n## Make one character move\n\n[00:00 · Set up the scene](https://www.youtube.com/watch?v=DEMO1234abc&t=0s)　 [02:14 · Move and jump](https://www.youtube.com/watch?v=DEMO1234abc&t=134s)　 [05:32 · Platform collisions](https://www.youtube.com/watch?v=DEMO1234abc&t=332s)\n\nBegin with a tiny scene: move left and right, press space to jump, and land on a platform. Run each small change and observe what happens.\n\n```text\nCharacter: move left/right → press space to jump\nScene: one platform → check landing collisions\n```\n\n**Ask AI next:** “Break a character jump into three small steps and explain each one.”\n\n*Fictional demo material and placeholder sources illustrate the reading workflow.*"
+                "text": "![像素游戏开发记录](https://postrove-demo.example/cover-yellow.png)\n\n## 先做一个能玩的场景\n\n我的目标是先让角色移动、跳跃，再收集一枚金币。地图只保留一块地面和一个平台，方便检查动作。\n\n## 每加一个动作就运行一次\n\n先用方块测试碰撞。确认角色能落地，再换上像素素材。把跳跃距离和速度分开调整。\n\n```text\n第一步：移动与落地检测\n第二步：跳跃与平台碰撞\n第三步：金币与计数\n```\n\n## 把问题说给 Agent\n\n记录角色在哪个位置卡住，以及预期的动作。每次修改后都运行一次，再决定下一个任务。\n\n[回到原始文章](https://www.xiaohongshu.com/explore/67f0a34b000000001a012345)"
               }
             ],
             "images": [
               {
-                "imageId": "pixel-scene",
-                "url": "https://postrove-demo.example/pixel-game.png",
-                "alt": "Pixel Lab · Fictional demo",
-                "cachedUrl": "postrove-image://c40febaf61d6ef5a6b6b8b4b6b2a667e29460949636d17f28c0108e631711c36"
+                "imageId": "interface-yellow",
+                "url": "https://postrove-demo.example/cover-yellow.png",
+                "alt": "Pixel game notes",
+                "cachedUrl": "postrove-image://4640809a922fc881c313ff79c98665df094ab2abb5cf4751a89f40ad093e1b4c"
               }
             ],
             "completeness": "complete",
-            "completenessNote": "Fictional demo source · Placeholder link"
+            "completenessNote": "Main article and illustration."
           },
           "outputLanguage": "en"
         },
-        "createdAt": "2026-10-20T09:20:00.000Z",
-        "finishedAt": "2026-10-20T09:20:00.000Z",
-        "updatedAt": "2026-10-20T09:20:00.000Z"
+        "createdAt": "2026-10-21T09:20:00.000Z",
+        "finishedAt": "2026-10-21T09:20:00.000Z",
+        "updatedAt": "2026-10-21T09:20:00.000Z"
+      },
+      {
+        "taskId": "06c6ee03-7310-42ae-927f-09dcfa5d71a5",
+        "materials": [
+          {
+            "id": "interface-blue-main",
+            "role": "main",
+            "url": "https://x.com/lin_dev/status/9999999999999999999",
+            "title": "Start with movement and jumping",
+            "source": {
+              "sourceUrl": "https://x.com/lin_dev/status/9999999999999999999",
+              "markdown": "![Movement and jumping notes](https://postrove-demo.example/cover-blue.png)\n\n## Start with movement and jumping\n\nBuild a small scene with a floor. Move the character left and right, check the ground, then add jumping.\n\n## Test the controls in a small scene\n\nAdjust movement speed and jump height. Check that the character can move after landing. Finally, add one coin and a counter.\n\n```text\nMove: direction input → horizontal speed\nJump: grounded state → upward speed\nCoin: collision check → count plus one\n```",
+              "platform": "x",
+              "title": "Start with movement and jumping",
+              "sourceIdentity": "lin.dev",
+              "fetchedAt": "2026-10-21T09:20:00.000Z",
+              "contentBlocks": [
+                {
+                  "type": "text",
+                  "text": "![Movement and jumping notes](https://postrove-demo.example/cover-blue.png)\n\n## Start with movement and jumping\n\nBuild a small scene with a floor. Move the character left and right, check the ground, then add jumping.\n\n## Test the controls in a small scene\n\nAdjust movement speed and jump height. Check that the character can move after landing. Finally, add one coin and a counter.\n\n```text\nMove: direction input → horizontal speed\nJump: grounded state → upward speed\nCoin: collision check → count plus one\n```"
+                }
+              ],
+              "images": [
+                {
+                  "imageId": "interface-blue",
+                  "url": "https://postrove-demo.example/cover-blue.png",
+                  "alt": "Pixel game notes",
+                  "cachedUrl": "postrove-image://e9f5c12a02235642ec4f9980bfd631772c09b18e721c998c63e23e884c1b48ea"
+                }
+              ],
+              "completeness": "complete",
+              "completenessNote": "Main article and illustration."
+            },
+            "chunks": [
+              {
+                "index": 0,
+                "original": "![Movement and jumping notes](https://postrove-demo.example/cover-blue.png)\n\n## Start with movement and jumping\n\nBuild a small scene with a floor. Move the character left and right, check the ground, then add jumping.\n\n## Test the controls in a small scene\n\nAdjust movement speed and jump height. Check that the character can move after landing. Finally, add one coin and a counter.\n\n```text\nMove: direction input → horizontal speed\nJump: grounded state → upward speed\nCoin: collision check → count plus one\n```",
+                "translated": "![Movement and jumping notes](https://postrove-demo.example/cover-blue.png)\n\n## Start with movement and jumping\n\nBuild a small scene with a floor. Move the character left and right, check the ground, then add jumping.\n\n## Test the controls in a small scene\n\nAdjust movement speed and jump height. Check that the character can move after landing. Finally, add one coin and a counter.\n\n```text\nMove: direction input → horizontal speed\nJump: grounded state → upward speed\nCoin: collision check → count plus one\n```",
+                "complete": true
+              }
+            ],
+            "summary": "Notes on movement, ground checks, and jumping. Test the controls before adding a map and art.",
+            "state": "completed"
+          }
+        ],
+        "materialId": "b394892a-fcde-474b-8f59-bbc81c52330e",
+        "resultId": "6e7409c5-c1c9-419b-adf4-bd99df25b7a3",
+        "target": {
+          "sourceUrl": "https://x.com/lin_dev/status/9999999999999999999",
+          "entry": "app"
+        },
+        "state": "completed",
+        "phase": "已保存",
+        "outputLanguage": "en",
+        "source": {
+          "sourceUrl": "https://x.com/lin_dev/status/9999999999999999999",
+          "markdown": "![Movement and jumping notes](https://postrove-demo.example/cover-blue.png)\n\n## Start with movement and jumping\n\nBuild a small scene with a floor. Move the character left and right, check the ground, then add jumping.\n\n## Test the controls in a small scene\n\nAdjust movement speed and jump height. Check that the character can move after landing. Finally, add one coin and a counter.\n\n```text\nMove: direction input → horizontal speed\nJump: grounded state → upward speed\nCoin: collision check → count plus one\n```",
+          "platform": "x",
+          "title": "Start with movement and jumping",
+          "sourceIdentity": "lin.dev",
+          "fetchedAt": "2026-10-21T09:20:00.000Z",
+          "contentBlocks": [
+            {
+              "type": "text",
+              "text": "![Movement and jumping notes](https://postrove-demo.example/cover-blue.png)\n\n## Start with movement and jumping\n\nBuild a small scene with a floor. Move the character left and right, check the ground, then add jumping.\n\n## Test the controls in a small scene\n\nAdjust movement speed and jump height. Check that the character can move after landing. Finally, add one coin and a counter.\n\n```text\nMove: direction input → horizontal speed\nJump: grounded state → upward speed\nCoin: collision check → count plus one\n```"
+            }
+          ],
+          "images": [
+            {
+              "imageId": "interface-blue",
+              "url": "https://postrove-demo.example/cover-blue.png",
+              "alt": "Pixel game notes",
+              "cachedUrl": "postrove-image://e9f5c12a02235642ec4f9980bfd631772c09b18e721c998c63e23e884c1b48ea"
+            }
+          ],
+          "completeness": "complete",
+          "completenessNote": "Main article and illustration."
+        },
+        "activities": [],
+        "report": {
+          "materials": [
+            {
+              "id": "interface-blue-main",
+              "role": "main",
+              "url": "https://x.com/lin_dev/status/9999999999999999999",
+              "title": "Start with movement and jumping",
+              "source": {
+                "sourceUrl": "https://x.com/lin_dev/status/9999999999999999999",
+                "markdown": "![Movement and jumping notes](https://postrove-demo.example/cover-blue.png)\n\n## Start with movement and jumping\n\nBuild a small scene with a floor. Move the character left and right, check the ground, then add jumping.\n\n## Test the controls in a small scene\n\nAdjust movement speed and jump height. Check that the character can move after landing. Finally, add one coin and a counter.\n\n```text\nMove: direction input → horizontal speed\nJump: grounded state → upward speed\nCoin: collision check → count plus one\n```",
+                "platform": "x",
+                "title": "Start with movement and jumping",
+                "sourceIdentity": "lin.dev",
+                "fetchedAt": "2026-10-21T09:20:00.000Z",
+                "contentBlocks": [
+                  {
+                    "type": "text",
+                    "text": "![Movement and jumping notes](https://postrove-demo.example/cover-blue.png)\n\n## Start with movement and jumping\n\nBuild a small scene with a floor. Move the character left and right, check the ground, then add jumping.\n\n## Test the controls in a small scene\n\nAdjust movement speed and jump height. Check that the character can move after landing. Finally, add one coin and a counter.\n\n```text\nMove: direction input → horizontal speed\nJump: grounded state → upward speed\nCoin: collision check → count plus one\n```"
+                  }
+                ],
+                "images": [
+                  {
+                    "imageId": "interface-blue",
+                    "url": "https://postrove-demo.example/cover-blue.png",
+                    "alt": "Pixel game notes",
+                    "cachedUrl": "postrove-image://e9f5c12a02235642ec4f9980bfd631772c09b18e721c998c63e23e884c1b48ea"
+                  }
+                ],
+                "completeness": "complete",
+                "completenessNote": "Main article and illustration."
+              },
+              "chunks": [
+                {
+                  "index": 0,
+                  "original": "![Movement and jumping notes](https://postrove-demo.example/cover-blue.png)\n\n## Start with movement and jumping\n\nBuild a small scene with a floor. Move the character left and right, check the ground, then add jumping.\n\n## Test the controls in a small scene\n\nAdjust movement speed and jump height. Check that the character can move after landing. Finally, add one coin and a counter.\n\n```text\nMove: direction input → horizontal speed\nJump: grounded state → upward speed\nCoin: collision check → count plus one\n```",
+                  "translated": "![Movement and jumping notes](https://postrove-demo.example/cover-blue.png)\n\n## Start with movement and jumping\n\nBuild a small scene with a floor. Move the character left and right, check the ground, then add jumping.\n\n## Test the controls in a small scene\n\nAdjust movement speed and jump height. Check that the character can move after landing. Finally, add one coin and a counter.\n\n```text\nMove: direction input → horizontal speed\nJump: grounded state → upward speed\nCoin: collision check → count plus one\n```",
+                  "complete": true
+                }
+              ],
+              "summary": "Notes on movement, ground checks, and jumping. Test the controls before adding a map and art.",
+              "state": "completed"
+            }
+          ],
+          "source": {
+            "sourceUrl": "https://x.com/lin_dev/status/9999999999999999999",
+            "markdown": "![Movement and jumping notes](https://postrove-demo.example/cover-blue.png)\n\n## Start with movement and jumping\n\nBuild a small scene with a floor. Move the character left and right, check the ground, then add jumping.\n\n## Test the controls in a small scene\n\nAdjust movement speed and jump height. Check that the character can move after landing. Finally, add one coin and a counter.\n\n```text\nMove: direction input → horizontal speed\nJump: grounded state → upward speed\nCoin: collision check → count plus one\n```",
+            "platform": "x",
+            "title": "Start with movement and jumping",
+            "sourceIdentity": "lin.dev",
+            "fetchedAt": "2026-10-21T09:20:00.000Z",
+            "contentBlocks": [
+              {
+                "type": "text",
+                "text": "![Movement and jumping notes](https://postrove-demo.example/cover-blue.png)\n\n## Start with movement and jumping\n\nBuild a small scene with a floor. Move the character left and right, check the ground, then add jumping.\n\n## Test the controls in a small scene\n\nAdjust movement speed and jump height. Check that the character can move after landing. Finally, add one coin and a counter.\n\n```text\nMove: direction input → horizontal speed\nJump: grounded state → upward speed\nCoin: collision check → count plus one\n```"
+              }
+            ],
+            "images": [
+              {
+                "imageId": "interface-blue",
+                "url": "https://postrove-demo.example/cover-blue.png",
+                "alt": "Pixel game notes",
+                "cachedUrl": "postrove-image://e9f5c12a02235642ec4f9980bfd631772c09b18e721c998c63e23e884c1b48ea"
+              }
+            ],
+            "completeness": "complete",
+            "completenessNote": "Main article and illustration."
+          },
+          "outputLanguage": "en"
+        },
+        "createdAt": "2026-10-21T09:20:00.000Z",
+        "finishedAt": "2026-10-21T09:20:00.000Z",
+        "updatedAt": "2026-10-21T09:20:00.000Z"
       }
     ]
   }

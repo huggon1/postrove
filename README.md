@@ -1,4 +1,4 @@
-https://github.com/user-attachments/assets/ff1ef73b-f457-480e-a0ed-ad4ddfa8fcfc
+https://github.com/user-attachments/assets/7af81a37-5655-4a79-8722-bcda63cb5bf0
 
 <p align="center"><img src="assets/postrove-icon.svg" width="112" alt="Postrove app icon"></p>
 

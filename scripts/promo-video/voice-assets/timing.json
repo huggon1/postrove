@@ -1,50 +1,182 @@
 {
-  "duration": 48,
+  "duration": 58,
   "sampleRate": 48000,
+  "synthesisRate": "+0%",
+  "storyVersion": 10,
   "provider": "Microsoft Edge online Neural TTS through edge-tts 7.3.1",
   "languages": {
     "zh-CN": [
       {
-        "start": 11,
-        "end": 17.2,
-        "text": "各平台的 AI 分别查找内容。你可以在同一个话题里查看回复和来源。",
+        "start": 3.2,
+        "limit": 6.8,
+        "end": 6.338,
+        "text": "查资料，要换平台、试关键词。",
+        "spokenText": "查资料，要换平台、试关键词。",
+        "speechEdits": [],
         "voice": "zh-CN-YunxiNeural",
         "playbackRate": 1
       },
       {
-        "start": 35,
-        "end": 38.987,
-        "text": "把内容收藏到阅读库，可以查看原文和中文翻译。",
+        "start": 7.05,
+        "limit": 10.8,
+        "end": 10.155,
+        "text": "让 AI 搜，也未必找得到平台里的帖子。",
+        "spokenText": "让AI搜，也未必找得到平台里的帖子。",
+        "speechEdits": [
+          {
+            "start": 0.5375,
+            "end": 1.025,
+            "rate": 1.25
+          }
+        ],
         "voice": "zh-CN-YunxiNeural",
         "playbackRate": 1
       },
       {
-        "start": 43.5,
-        "end": 46.309,
-        "text": "Postrove，跨平台提问和阅读。",
+        "start": 11.2,
+        "limit": 18.8,
+        "end": 17.806,
+        "text": "不过，有些 AI 能搜索这些平台。比如 Grok 找 X，点点找小红书。",
+        "spokenText": "不过，有些AI能搜索这些平台。比如 Grok 找 X，点点找小红书。",
+        "speechEdits": [
+          {
+            "start": 1.375,
+            "end": 2.0625,
+            "rate": 1.4
+          }
+        ],
+        "voice": "zh-CN-YunxiNeural",
+        "playbackRate": 1
+      },
+      {
+        "start": 19.2,
+        "limit": 24.8,
+        "end": 23.646,
+        "text": "所以我做了 Postrove，把同一个问题交给几位顾问。",
+        "spokenText": "所以我做了 Postrove，把同一个问题交给几位顾问。",
+        "speechEdits": [],
+        "voice": "zh-CN-YunxiNeural",
+        "playbackRate": 1
+      },
+      {
+        "start": 25.2,
+        "limit": 33.8,
+        "end": 32.009,
+        "text": "回答和相关帖子放在同一个话题里。自动翻译后，对照着看，也能打开原帖。",
+        "spokenText": "回答和相关帖子放在同一个话题里。自动翻译后，对照着看，也能打开原帖。",
+        "speechEdits": [],
+        "voice": "zh-CN-YunxiNeural",
+        "playbackRate": 1
+      },
+      {
+        "start": 34.15,
+        "limit": 39.8,
+        "end": 38.451,
+        "text": "还有些长帖，收藏在不同平台，过了一周也没看完。",
+        "spokenText": "还有些长帖，收藏在不同平台，过了一周也没看完。",
+        "speechEdits": [],
+        "voice": "zh-CN-YunxiNeural",
+        "playbackRate": 1
+      },
+      {
+        "start": 40.2,
+        "limit": 47.8,
+        "end": 46.939,
+        "text": "现在，我把收藏改成转发。发给飞书或 Telegram 机器人，就能统一保存。",
+        "spokenText": "现在，我把收藏改成转发。发给飞书或 Telegram 机器人，就能统一保存。",
+        "speechEdits": [],
+        "voice": "zh-CN-YunxiNeural",
+        "playbackRate": 1
+      },
+      {
+        "start": 48.2,
+        "limit": 53.8,
+        "end": 52.941,
+        "text": "有空就看摘要和正文，也可以让自己的 Agent 读取这些资料。",
+        "spokenText": "有空就看摘要和正文，也可以让自己的 Agent 读取这些资料。",
+        "speechEdits": [],
         "voice": "zh-CN-YunxiNeural",
         "playbackRate": 1
       }
     ],
     "en": [
       {
-        "start": 11,
-        "end": 18.221,
-        "text": "Each platform’s AI searches for relevant content. View the replies and source links together in one topic.",
+        "start": 3.2,
+        "limit": 6.8,
+        "end": 5.776,
+        "text": "Research means switching apps and trying keywords.",
+        "spokenText": "Research means switching apps and trying keywords.",
+        "speechEdits": [],
         "voice": "en-US-GuyNeural",
         "playbackRate": 1
       },
       {
-        "start": 35,
-        "end": 40.171,
-        "text": "Save sources to Reading. View the original text or the reading version.",
+        "start": 7.05,
+        "limit": 10.8,
+        "end": 10.167,
+        "text": "AI web search can miss posts inside these platforms.",
+        "spokenText": "AI web search can miss posts inside these platforms.",
+        "speechEdits": [],
         "voice": "en-US-GuyNeural",
         "playbackRate": 1
       },
       {
-        "start": 43.5,
-        "end": 47.274,
-        "text": "Postrove. Ask, save, and read.",
+        "start": 11.2,
+        "limit": 18.8,
+        "end": 16.423,
+        "text": "But some AIs can search them. Grok searches X. Diandian searches RedNote.",
+        "spokenText": "But some AIs can search them. Grok searches X. Diandian searches RedNote.",
+        "speechEdits": [],
+        "voice": "en-US-GuyNeural",
+        "playbackRate": 1
+      },
+      {
+        "start": 19.2,
+        "limit": 24.8,
+        "end": 22.945,
+        "text": "So I built Postrove to send the same question to several AI advisors.",
+        "spokenText": "So I built Postrove to send the same question to several AI advisors.",
+        "speechEdits": [],
+        "voice": "en-US-GuyNeural",
+        "playbackRate": 1
+      },
+      {
+        "start": 25.2,
+        "limit": 33.8,
+        "end": 32.607,
+        "text": "Answers and sources arrive in one topic. Automatic translation lets you compare the advice and check the original posts.",
+        "spokenText": "Answers and sources arrive in one topic. Automatic translation lets you compare the advice and check the original posts.",
+        "speechEdits": [],
+        "voice": "en-US-GuyNeural",
+        "playbackRate": 1
+      },
+      {
+        "start": 34.15,
+        "limit": 39.8,
+        "end": 39.647,
+        "text": "I also bookmark long posts across apps. A week later, they are still unread.",
+        "spokenText": "I also bookmark long posts across apps. A week later, they are still unread.",
+        "speechEdits": [],
+        "voice": "en-US-GuyNeural",
+        "playbackRate": 1
+      },
+      {
+        "start": 40.2,
+        "limit": 47.8,
+        "end": 45.842,
+        "text": "Now I forward them to my Feishu or Telegram bot. They go into one reading library.",
+        "spokenText": "Now I forward them to my Feishu or Telegram bot. They go into one reading library.",
+        "speechEdits": [],
+        "voice": "en-US-GuyNeural",
+        "playbackRate": 1
+      },
+      {
+        "start": 48.2,
+        "limit": 53.8,
+        "end": 53.437,
+        "text": "Read the summaries and articles. Your own agent can use these materials too.",
+        "spokenText": "Read the summaries and articles. Your own agent can use these materials too.",
+        "speechEdits": [],
         "voice": "en-US-GuyNeural",
         "playbackRate": 1
       }

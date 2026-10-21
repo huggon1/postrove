@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="430" viewBox="0 0 1200 430">
+  <rect width="1200" height="430" rx="26" fill="#9DB3EF"/>
+  <rect x="235" y="34" width="744" height="366" rx="20" fill="#26374B" opacity=".15"/>
+  <rect x="225" y="24" width="744" height="366" rx="20" fill="#FFFFFF"/>
+  <text x="515" y="53" font-family="Arial" font-size="13" letter-spacing="2" fill="#68778B">PIXEL GAME NOTES</text>
+  <g transform="translate(245 70)" shape-rendering="crispEdges"><rect width="704" height="300" fill="#BBDADD"/>
+  <rect x="535" y="30" width="44" height="44" fill="#FFF1C2"/>
+  <path d="M0 230V160H80V120H150V170H245V132H330V180H440V140H540V190H620V130H704V300H0Z" fill="#8DB9A4"/>
+  <path d="M0 250V220H100V185H230V220H360V200H470V230H580V190H704V300H0Z" fill="#6F9A85"/>
+  <rect y="252" width="704" height="12" fill="#D2DF9F"/><rect y="264" width="704" height="36" fill="#546857"/>
+  <rect x="315" y="198" width="108" height="12" fill="#E0D5A0"/><rect x="315" y="210" width="108" height="12" fill="#6B7360"/>
+  <rect x="362" y="148" width="19" height="27" fill="#F7D96E"/>
+  <g transform="translate(310 148)"><rect x="4" width="28" height="9" fill="#3A4660"/><rect y="9" width="36" height="20" fill="#E6BA91"/><rect x="26" y="14" width="5" height="5" fill="#263144"/><rect x="4" y="29" width="28" height="16" fill="#5679BB"/><rect y="45" width="13" height="8" fill="#33415A"/><rect x="23" y="45" width="13" height="8" fill="#33415A"/></g>
+  <rect x="633" y="170" width="7" height="82" fill="#E5EDD3"/><rect x="640" y="170" width="42" height="28" fill="#D88770"/>
+  </g></svg>
