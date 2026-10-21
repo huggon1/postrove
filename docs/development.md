@@ -29,6 +29,12 @@ Install Google Chrome and configure the platform connection in Members. Shared C
 
 `npm run typecheck` reports TypeScript diagnostics. `npm run build` rebuilds Electron, workers, and the renderer. The [test guide](../tests/README.md) owns the verification commands and evidence scope.
 
+## Preview the homepage
+
+`npm run homepage:dev` serves the [homepage](../website/index.html) at `http://127.0.0.1:4317`. Add `-- --port 4320` to select another port. The preview serves files from `website/` and artwork from `assets/`.
+
+`npm run homepage:build` copies the page and its artwork into `dist/homepage/`. Preview that output with `npm run homepage:dev -- --dir dist/homepage`.
+
 ## Create an installation package
 
 ```sh
