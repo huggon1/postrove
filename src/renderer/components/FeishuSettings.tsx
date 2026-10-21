@@ -367,7 +367,7 @@ export function FeishuSettings({
                         {busy ? (
                           <CircleNotch className="spin" />
                         ) : (
-                          <ArrowUpRight />
+                          <ArrowRight />
                         )}
                         {t("扫码创建应用")}
                       </button>
@@ -454,7 +454,7 @@ export function FeishuSettings({
                 }}
               >
                 {t("查看阅读内容")}
-                <ArrowUpRight />
+                <ArrowRight />
               </button>
             </div>
           )}

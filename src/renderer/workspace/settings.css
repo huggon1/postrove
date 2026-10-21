@@ -36,11 +36,6 @@
   font-size: 13px;
   color: #667084;
 }
-.settings-nav button > svg:last-child {
-  width: 14px;
-  margin-left: auto;
-  opacity: 0;
-}
 .settings-nav button:hover {
   background: #edf0f5;
 }
@@ -48,9 +43,6 @@
   color: var(--accent);
   background: #e9f0ff;
   font-weight: 600;
-}
-.settings-nav button[aria-current] > svg:last-child {
-  opacity: 1;
 }
 .settings-section-head {
   display: flex;
@@ -1506,9 +1498,6 @@
     padding: 10px 12px;
     gap: 6px;
     flex: none;
-  }
-  .settings-nav button > svg:last-child {
-    display: none;
   }
   .settings-nav button > svg {
     width: 16px;

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { sourceProfiles } from "../../shared/source-profiles";
 import {
+  ArrowRight,
   ArrowUpRight,
   BookOpen,
   CaretDown,
@@ -96,7 +97,7 @@ export function CollectLink({
         >
           <LinkSimple />
           {t("连接 Telegram 或飞书")}
-          <ArrowUpRight />
+          <ArrowRight />
         </button>
       </form>
     </Modal>
@@ -302,7 +303,7 @@ export function ReadingView({
               onClick={() => setReceipts(!receipts)}
             >
               {t("处理状态")}
-              <CaretDown />
+              <CaretDown className="disclosure-caret" />
             </button>
           </div>
           {receipts && (
