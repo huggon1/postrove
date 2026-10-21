@@ -14,6 +14,7 @@
     "dev": "npm run build && electron .",
     "homepage:dev": "node scripts/homepage/serve.mjs",
     "homepage:build": "node scripts/homepage/build.mjs",
+    "screenshots:readme": "node scripts/development/sync-readme-screenshots.mjs",
     "start": "npm run build && electron .",
     "typecheck": "tsc --noEmit",
     "review": "tsx scripts/development/review.ts",

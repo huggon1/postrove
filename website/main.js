@@ -44,12 +44,10 @@ const copy = {
     windowsDownload: "Download for Windows",
     footerTagline: "Ask · Save · Read",
     previewAlts: {
-      topics:
-        "Postrove topics with independent replies from platform AI members",
-      topic:
-        "A Postrove topic with member replies and sources ready to collect",
+      topics: "Ask how to make a first pixel game with AI",
+      topic: "Read independent replies and collect a pixel-game tutorial",
       reading:
-        "A saved article with a reading version, summary, and original-text switch",
+        "Read a saved pixel-game tutorial with its summary, illustration, and original-text switch",
     },
   },
   "zh-CN": {
@@ -97,9 +95,9 @@ const copy = {
     windowsDownload: "下载 Windows 版",
     footerTagline: "提问 · 收藏 · 阅读",
     previewAlts: {
-      topics: "话题首页：查看不同平台 AI 成员的独立回复",
-      topic: "话题详情：阅读成员回答，将有用的来源收进阅读库",
-      reading: "阅读页：查看译文、摘要和配图，随时切回原文",
+      topics: "发起话题：我想用 AI 做一个像素小游戏，应该从哪里开始？",
+      topic: "话题详情：阅读成员回答，将像素小游戏教程收进阅读库",
+      reading: "阅读页：查看像素小游戏教程的译文、摘要和配图，随时切回原文",
     },
   },
 };
