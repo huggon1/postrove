@@ -35,6 +35,10 @@ Install Google Chrome and configure the platform connection in Members. Shared C
 
 `npm run homepage:build` copies the page and its artwork into `dist/homepage/`. Preview that output with `npm run homepage:dev -- --dir dist/homepage`.
 
+The homepage presents platform AI, multilingual members, source collection, forwarded posts, reading enhancements, and local material in that order. A final architecture section presents Pi, model access, browser and content agents, and local storage. The reading section shows summaries for collected material, automatic translation, and structured text; it also states that AI replies support translation. `website/content.js` owns their bilingual copy and illustrated sample content. `website/videos.js` selects the public introductory films; `website/media/` contains their posters and timed captions. The language control switches the copy, film, illustrations, and application screenshots. English is the initial language; `?lang=zh-CN` opens Chinese directly.
+
+Open `/cards.html` for the eight portrait feature cards and PNG downloads. The cards share the homepage's content and artwork, with portrait layouts in `website/cards.css`. `/cards.html?id=translate&lang=zh-CN` opens one fixed 1080 × 1440 composition. After changing shared artwork or copy, render each card in both languages, capture the complete composition at 1080 × 1440 pixels, and replace the PNGs and ZIP archives in `website/exports/`. Check every card for text clipping, artwork overlap, and readable type at phone width.
+
 The [Homepage workflow](../.github/workflows/pages.yml) builds the static homepage on related pull requests. Updates to homepage files on `main`, or a manual workflow run on `main`, publish that artifact to [GitHub Pages](https://huggon1.github.io/postrove/). The build uses Node.js built-ins. The [screenshot guide](../assets/screenshots/README.md) owns the shared promotional captures.
 
 ## Create an installation package

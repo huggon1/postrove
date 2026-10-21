@@ -1,4 +1,4 @@
-import { copyFile, mkdir, rm, stat } from "node:fs/promises";
+import { copyFile, cp, mkdir, rm, stat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -8,6 +8,11 @@ const files = [
   ["website/index.html", "index.html"],
   ["website/styles.css", "styles.css"],
   ["website/main.js", "main.js"],
+  ["website/content.js", "content.js"],
+  ["website/videos.js", "videos.js"],
+  ["website/cards.html", "cards.html"],
+  ["website/cards.css", "cards.css"],
+  ["website/cards.js", "cards.js"],
   ...["postrove-mark.svg", "postrove-icon.svg"].map((name) => [
     `assets/${name}`,
     `assets/${name}`,
@@ -33,4 +38,14 @@ for (const [source, destination] of files) {
   await copyFile(path.join(repositoryRoot, source), outputFile);
 }
 
+await cp(
+  path.join(repositoryRoot, "website/media"),
+  path.join(outputDirectory, "media"),
+  { recursive: true },
+);
+await cp(
+  path.join(repositoryRoot, "website/exports"),
+  path.join(outputDirectory, "exports"),
+  { recursive: true },
+);
 console.log("Built homepage at dist/homepage");
