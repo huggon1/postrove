@@ -28,7 +28,7 @@ app.setPath("userData", process.env.POSTROVE_BROWSER_FIXTURE_ROOT!);
       : "https://www.reddit.com/answers/";
   const source =
     advisor.platform === "youtube"
-      ? "https://www.youtube.com/watch?v=abcdefghijk&t=12s"
+      ? "http://www.youtube.com/watch?v=abcdefghijk&t=12s"
       : "https://www.reddit.com/r/testing/comments/abc123/comment/def456/";
   const browser = new PlatformBrowser(
     join(app.getPath("userData"), input.advisorId),
@@ -40,7 +40,7 @@ app.setPath("userData", process.env.POSTROVE_BROWSER_FIXTURE_ROOT!);
   await context.route("**/*", async (route) =>
     route.fulfill({
       contentType: "text/html",
-      body: `<main><fixture-ai></fixture-ai></main><script>const root=document.querySelector('fixture-ai').attachShadow({mode:'open'});root.innerHTML='<label>Ask AI<textarea aria-label="Ask AI"></textarea></label><button id="send">Send question</button><section id="answer" hidden><div id="body"></div></section>';root.querySelector('#send').onclick=()=>{root.querySelector('#answer').hidden=false;root.querySelector('#body').innerHTML='<p>Complete original answer from this platform.</p><a href="${source}">Observed source</a><a href="https://example.test/wrong">Wrong platform</a>'};</script>`,
+      body: `<main><fixture-ai></fixture-ai></main><script>const root=document.querySelector('fixture-ai').attachShadow({mode:'open'});root.innerHTML='<style>model-response-content{display:block}</style><label>Ask AI<textarea aria-label="Ask AI"></textarea></label><button id="send">Send question</button><section id="answer" hidden><model-response-content><div id="body"></div></model-response-content></section>';root.querySelector('#send').onclick=()=>{root.querySelector('#answer').hidden=false;root.querySelector('#body').innerHTML='<p>Complete original answer from this platform.</p><a href="${source}">Observed source</a><a href="https://example.test/wrong">Wrong platform</a>'};</script>`,
     }),
   );
   const agent = new BrowserAgent(
@@ -162,7 +162,7 @@ app.whenReady().then(async () => {
   await context.route("**/*", (route) =>
     route.fulfill({
       contentType: "text/html",
-      body: '<article><h1>Observed video</h1><p>Browser transcript with original timestamped text.</p><a href="https://www.youtube.com/watch?v=abcdefghijk&t=3s">0:03</a></article>',
+      body: '<div><ytd-player>Sponsored advertisement</ytd-player><article><h1>Observed video</h1><p>Browser transcript with original timestamped text.</p><a href="https://www.youtube.com/watch?v=abcdefghijk&t=3s">0:03</a></article></div>',
     }),
   );
   const agent = new BrowserAgent(

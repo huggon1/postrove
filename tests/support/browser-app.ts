@@ -201,7 +201,7 @@ let browser: PlatformBrowser;
       contentType: "text/html; charset=utf-8",
       body: route.request().url().includes("/status/")
         ? "<title>Fixture source page</title><article><h1>Fixture post</h1><p>Verbatim post body with original punctuation。</p></article>"
-        : `<main><textarea aria-label="Ask AI"></textarea><button id="ask">Ask</button><article hidden><div id="question"></div><div id="reply"></div></article></main><script>document.querySelector('#ask').onclick=()=>{document.querySelector('article').hidden=false;document.querySelector('#question').textContent=document.querySelector('textarea').value;document.querySelector('#reply').innerHTML='<p>Verbatim fixture AI answer</p><a href="https://x.com/fixture/status/123456789">A source post</a>';document.querySelector('a').onclick=(event)=>{event.preventDefault();window.open(event.currentTarget.href+'?s=popup','_blank')};};</script>`,
+        : `<main><textarea aria-label="Ask AI"></textarea><button id="ask">Ask</button><article hidden><h2>Platform conversation</h2><div data-message-author-role="user" id="question"></div><div id="reply"></div></article></main><script>document.querySelector('#ask').onclick=()=>{document.querySelector('article').hidden=false;document.querySelector('#question').textContent=document.querySelector('textarea').value;document.querySelector('#reply').innerHTML='<p>Verbatim fixture AI answer</p><a href="https://x.com/fixture/status/123456789">A source post</a>';document.querySelector('a').onclick=(event)=>{event.preventDefault();window.open(event.currentTarget.href+'?s=popup','_blank')};};</script>`,
     }),
   );
   const agent = new BrowserAgent(

@@ -159,7 +159,7 @@ for (const advisorId of ["youtube-gemini-en", "reddit-ai-en"] as const) {
   test(`${advisorId} loads its Skill, operates shadow controls and validates original citations`, async ({}, info) => {
     const root = await mkdtemp(join(tmpdir(), "postrove-expansion-agent-"));
     const source = advisorId.startsWith("youtube")
-      ? "https://www.youtube.com/watch?v=abcdefghijk&t=12s"
+      ? "http://www.youtube.com/watch?v=abcdefghijk&t=12s"
       : "https://www.reddit.com/r/testing/comments/abc123/comment/def456/";
     const skill = advisorId.startsWith("youtube")
       ? "gemini-youtube-search"
@@ -168,6 +168,8 @@ for (const advisorId of ["youtube-gemini-en", "reddit-ai-en"] as const) {
       ? "https://gemini.google.com/app"
       : "https://www.reddit.com/answers/";
     let calls = 0;
+    let triedPartial = false;
+    let partialRejected = false;
     const server = createServer(async (req, res) => {
       let raw = "";
       for await (const part of req) raw += part;
@@ -207,9 +209,15 @@ for (const advisorId of ["youtube-gemini-en", "reddit-ai-en"] as const) {
             sourceCaptureIds: [latest.captureId],
             candidates: [
               {
-                url: source,
+                url: source.replace(/^http:/, "https:"),
                 title: "Observed source",
                 description: "Original source",
+                sourceCaptureId: latest.captureId,
+              },
+              {
+                url: source,
+                title: "Observed source",
+                description: "Same observed identity",
                 sourceCaptureId: latest.captureId,
               },
               {
@@ -252,12 +260,22 @@ for (const advisorId of ["youtube-gemini-en", "reddit-ai-en"] as const) {
           ),
         };
       } else if (!capture) {
+        const partial = advisorId.startsWith("youtube") && !triedPartial;
+        if (advisorId.startsWith("youtube") && triedPartial)
+          partialRejected = input.messages.some(
+            (message: any) =>
+              message.role === "tool" &&
+              JSON.stringify(message.content).includes("reply_scope:"),
+          );
+        triedPartial = true;
         args = {
           action: "capture",
           ref: find(
             (node: any) =>
-              node.tag === "DIV" &&
-              node.label.startsWith("Complete original answer"),
+              node.tag ===
+                (advisorId.startsWith("youtube") && !partial
+                  ? "MODEL-RESPONSE-CONTENT"
+                  : "DIV") && node.label.startsWith("Complete original answer"),
           ),
         };
       }
@@ -311,6 +329,13 @@ for (const advisorId of ["youtube-gemini-en", "reddit-ai-en"] as const) {
       );
       expect(result.result.rawReply).toContain("Complete original answer");
       expect(result.result.candidates).toHaveLength(1);
+      expect(result.result.candidates[0].url).toBe(
+        advisorId.startsWith("youtube")
+          ? source.replace(/^http:/, "https:")
+          : "https://www.reddit.com/r/testing/comments/abc123/_/def456/",
+      );
+      expect(result.result.citationExtraction.state).toBe("completed");
+      if (advisorId.startsWith("youtube")) expect(partialRejected).toBe(true);
       expect(result.result.candidates[0].postKey).toBe(
         advisorId.startsWith("youtube")
           ? "youtube:video:abcdefghijk"
@@ -350,6 +375,9 @@ for (const scenario of [
     const root = await mkdtemp(join(tmpdir(), "postrove-video-reading-"));
     let calls = 0;
     const observedTools: string[] = [];
+    let transcriptIds: { returned: string; evidence: string } | undefined;
+    let triedPlayback = false,
+      playbackRejected = false;
     const server = createServer(async (req, res) => {
       let raw = "";
       for await (const part of req) raw += part;
@@ -369,6 +397,11 @@ for (const scenario of [
       const caption = results.find(
         (result: any) => result.evidence?.kind === "transcript",
       );
+      if (caption)
+        transcriptIds = {
+          returned: caption.captureId,
+          evidence: caption.evidence.captureId,
+        };
       const pageCapture = results.find(
         (result: any) => result.captureId && !result.evidence,
       );
@@ -392,14 +425,25 @@ for (const scenario of [
       ) {
         name = "read_youtube_transcript";
         args = { url: "https://www.youtube.com/watch?v=abcdefghijk" };
-      } else if (!pageCapture)
+      } else if (!pageCapture) {
+        const playback = !triedPlayback;
+        if (triedPlayback)
+          playbackRejected = input.messages.some(
+            (message: any) =>
+              message.role === "tool" &&
+              JSON.stringify(message.content).includes("source_scope:"),
+          );
+        triedPlayback = true;
         args = {
           action: "capture",
           ref: snapshot.elements.find(
-            (element: any) => element.tag === "ARTICLE",
+            (element: any) =>
+              element.tag === (playback ? "DIV" : "ARTICLE") &&
+              (!playback ||
+                element.label.startsWith("Sponsored advertisement")),
           )?.ref,
         };
-      else
+      } else
         output = {
           materials: [
             {
@@ -468,6 +512,10 @@ for (const scenario of [
         "Observed creator",
       );
       expect(result.browserRuns).toBe(1);
+      expect(playbackRejected).toBe(true);
+      expect(result.materials[0].source.markdown).not.toContain(
+        "Sponsored advertisement",
+      );
       expect(observedTools[0]).toBe("load_platform_skill");
       expect(result.materials[0].source.markdown).toContain(
         "Browser transcript with original timestamped text.",
@@ -485,6 +533,8 @@ for (const scenario of [
         expect(result.readerAttempt).toBeUndefined();
       }
       if (scenario.captionsAvailable) {
+        expect(transcriptIds?.returned).toBe(transcriptIds?.evidence);
+        expect(transcriptIds?.returned).toBeTruthy();
         expect(result.materials[0].source.markdown).toContain(
           "Original creator caption.",
         );

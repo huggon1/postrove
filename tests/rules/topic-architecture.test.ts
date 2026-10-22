@@ -95,7 +95,7 @@ test("language experts share a connection and freeze identity, language and exac
     },
     async (input: any) => {
       calls.push(input.operation + ":" + input.targetLanguage);
-      return input.operation === "translate_content" &&
+      return input.operation === "translate_question" &&
         input.text === send.question
         ? input.targetLanguage === "en"
           ? "My question"
@@ -134,6 +134,8 @@ test("language experts share a connection and freeze identity, language and exac
       ),
     );
     assert.ok(calls.includes("format_content:zh-CN"));
+    assert.ok(calls.includes("translate_question:zh-CN"));
+    assert.ok(calls.includes("translate_question:en"));
     assert.equal(report.status, "partial");
     await assert.rejects(f.service.start(send), /member|advisor|enabled/i);
   } finally {
@@ -317,6 +319,64 @@ test("shared text capabilities repair links once, preserve code and reject inven
         }),
     ),
     /preservation/,
+  );
+});
+
+test("question translation keeps same-language input and repairs answers before submission", async () => {
+  const question = "请找 2 个 Godot 4 入门视频，并说明各自适合什么人。";
+  const calls: { text: string; system: string }[] = [];
+  const result = await executeContent(
+    {
+      operation: "translate_question",
+      text: question,
+      targetLanguage: "zh-CN",
+    },
+    async (text, system) => {
+      calls.push({ text, system });
+      return calls.length === 1
+        ? "我无法浏览 YouTube。建议自行搜索 Godot 教程。"
+        : JSON.stringify({
+            sourceLanguage: "zh-CN",
+            question: "模型改写的问题",
+          });
+    },
+  );
+  assert.equal(result, question);
+  assert.equal(calls.length, 2);
+  assert.equal(JSON.parse(calls[0].text).question, question);
+  assert.match(calls[0].system, /Keep requests as requests/);
+  await assert.rejects(
+    executeContent(
+      { operation: "translate_question", text: question, targetLanguage: "en" },
+      async () => "Here are two tutorials for you.",
+    ),
+    /Question translation/,
+  );
+});
+
+test("cross-language question translation preserves the request, URLs and code", async () => {
+  const question =
+    "Explain [this video](https://www.youtube.com/watch?v=abcdefghijk) and `Godot_4`.";
+  let calls = 0;
+  const result = await executeContent(
+    {
+      operation: "translate_question",
+      text: question,
+      targetLanguage: "zh-CN",
+    },
+    async () =>
+      JSON.stringify({
+        sourceLanguage: "en",
+        question:
+          ++calls === 1
+            ? "解释这个视频和 Godot。"
+            : "解释[这个视频](https://www.youtube.com/watch?v=abcdefghijk)和 `Godot_4`。",
+      }),
+  );
+  assert.equal(calls, 2);
+  assert.equal(
+    result,
+    "解释[这个视频](https://www.youtube.com/watch?v=abcdefghijk)和 `Godot_4`。",
   );
 });
 

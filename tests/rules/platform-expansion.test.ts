@@ -54,6 +54,9 @@ test("source identities retain video locators and distinguish Reddit posts and c
     `https://youtu.be/${videoId}?t=1m2s`,
     `https://www.youtube.com/watch?v=${videoId}&t=62`,
     `https://www.youtube.com/shorts/${videoId}#t=62s`,
+    `http://www.youtube.com/watch?v=${videoId}&t=62`,
+    `http://youtu.be/${videoId}?t=1m2s`,
+    `http://m.youtube.com/live/${videoId}?start=62`,
   ]) {
     assert.deepEqual(canonicalPost("youtube", url), {
       key: `youtube:video:${videoId}`,
@@ -69,6 +72,16 @@ test("source identities retain video locators and distinguish Reddit posts and c
     youtubeVideo(`https://www.youtube.com@evil.test/watch?v=${videoId}`),
     undefined,
   );
+  for (const url of [
+    `http://youtube.com.evil.test/watch?v=${videoId}`,
+    `http://www.youtube.com@evil.test/watch?v=${videoId}`,
+    `http://user:password@www.youtube.com/watch?v=${videoId}`,
+    `http://www.youtube.com:8080/watch?v=${videoId}`,
+    `ftp://www.youtube.com/watch?v=${videoId}`,
+    "http://www.youtube.com/watch?v=invalid",
+  ])
+    assert.equal(youtubeVideo(url), undefined);
+  assert.equal(sourcePlatform("http://x.com/reader/status/123"), "web");
   assert.equal(
     canonicalPost(
       "reddit",
