@@ -1,4 +1,4 @@
-import { capturedText } from "../../platforms/browser/dom";
+import { capturedText, isAssistantReply } from "../../platforms/browser/dom";
 import type { YoutubeTranscriptReader } from "./youtube-transcript";
 import type { TranscriptEvidence } from "../../shared/transcript-contracts";
 import { youtubeVideo } from "../../shared/source-profiles";
@@ -814,6 +814,12 @@ export class BrowserAgent {
                     throw new Error(
                       "stale_ref: Refresh the assistant reply snapshot",
                     );
+                  if (!(await body.evaluate(isAssistantReply))) {
+                    await body.dispose();
+                    throw new Error(
+                      "reply_scope: Selected container includes the user question, page controls, or only part of a Gemini reply. Capture the complete assistant-only reply container from a fresh snapshot.",
+                    );
+                  }
                   await new Promise<void>((resolve, reject) => {
                     const stop = () => {
                       clearTimeout(timer);
@@ -1036,7 +1042,11 @@ export class BrowserAgent {
                     return;
                   }
                   captures.push(value.capture);
-                  captureId = `capture-${captures.length}`;
+                  const evidenceId: unknown = value.evidence?.captureId;
+                  captureId =
+                    typeof evidenceId === "string"
+                      ? evidenceId
+                      : `capture-${captures.length}`;
                   captureRecords.set(captureId, value.capture);
                   captureData.set(captureId, {
                     ...(value.evidence ? { evidence: value.evidence } : {}),
@@ -1149,7 +1159,7 @@ export class BrowserAgent {
                     requestId: data.requestId,
                     error:
                       String(error?.message).match(
-                        /(?:stale_ref|source_scope|reply_generating):[^\n]+/,
+                        /(?:stale_ref|source_scope|reply_scope|reply_generating):[^\n]+/,
                       )?.[0] ??
                       "Browser action failed; refresh snapshot or request user login",
                   });

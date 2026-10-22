@@ -6,6 +6,7 @@
 | --- | --- | --- | --- | --- |
 | Platform bridge | Prepared question, platform identity, capture rules; submitted checkpoint on recovery | `browser`, `load_platform_skill`, `capture_search_sources`, `structure_content` | Selected platform search Skill name and description; full body after load | Captured answer, exact question, verified citations and source state |
 | Material capture | HTTPS address, main/reference scope, capture schema | `browser`, `load_platform_skill`, `structure_content`; optional `read_xiaohongshu`, runtime-ready `read_youtube_transcript` | Reading Skill names and descriptions; selected full bodies after load | Capture-backed material, source identity, ordered Markdown/images, coverage |
+| Question translation | Original question as JSON, expert language, request-preservation rules | Empty | Empty | Validated source language and translated question |
 | Translation | Current text chunk, target language, preservation rules | Empty | Empty | Translated Markdown |
 | Formatting | Captured text, paragraph/list/heading rules, preservation rules | Empty | Empty | Markdown reading version |
 | Structure | Current-task capture text and fixed JSON schema | Empty | Empty | Title, full Markdown, observed citation links |
@@ -18,7 +19,13 @@
 
 Main translates the original question into the expert language, then appends the route source profile’s localized sentence. [Source profiles](../src/shared/source-profiles.ts) owns the exact sentences for X posts, Xiaohongshu notes, YouTube videos, and Reddit posts/comments. The run snapshot retains its source-profile revision and complete prepared question.
 
+`translate_question` uses the [question translator](../src/worker/content/question.ts) with a structured source-language and question result. Matching source and expert languages reuse the original question. Cross-language results preserve links, code, and identifiers. Invalid JSON or preservation failures receive one correction attempt; a repeated failure ends question preparation with the original question retained.
+
 The bridge task contains that exact text and the output schema. The platform Skill supplies its fixed AI entry address and interaction guide. Main saves a captured stable answer before acknowledging the same session's citation phase. Browser captures provide the original answer bytes. Formatting and translation produce a separately saved reading version.
+
+Reply admission checks the selected DOM container before saving. Page roots, composers, and containers with user messages return a scope error so the bridge can select the complete assistant body. Source panels and cards use the saved reply's separate citation scope.
+
+YouTube material captures admit the video's author metadata, description, and transcript containers. A selected container with playback or advertising returns a source-scope error and directs the Agent to a narrower current container. Caption evidence supplies its original metadata, description, and timed text through the caption tool.
 
 ## Explicit Skill and tool loading
 

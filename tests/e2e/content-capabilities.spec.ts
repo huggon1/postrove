@@ -33,10 +33,17 @@ test("shared content service uses isolated Pi calls, bounded concurrency, cancel
       return;
     }
     const body = input.messages.at(-1).content;
-    const content =
+    let content =
       typeof body === "string"
         ? body
         : body.map((part: any) => part.text ?? "").join("");
+    if (
+      JSON.stringify(input.messages[0]).includes("Translate a search question")
+    )
+      content = JSON.stringify({
+        sourceLanguage: "en",
+        question: "A model rewrite that the same-language path discards.",
+      });
     res.writeHead(200, { "Content-Type": "text/event-stream" });
     for (const [delta, reason] of [
       [{ role: "assistant", content }, null],
@@ -101,8 +108,29 @@ test("shared content service uses isolated Pi calls, bounded concurrency, cancel
     const stoppedResult = await stopped;
     expect(stoppedResult.error).toBeTruthy();
     expect(stoppedResult.released).toBe(5);
+    const question =
+      "Find 2 Godot 4 tutorials.\n\nCompare their intended audiences.";
+    const questionId = randomUUID();
+    const translated = await app.evaluate(
+      async (_electron, input) => (globalThis as any).contentFixture(input),
+      {
+        id: questionId,
+        endpoint,
+        request: {
+          operation: "translate_question",
+          text: question,
+          targetLanguage: "en",
+        },
+      },
+    );
+    expect(translated.value).toBe(question);
+    expect(translated.released).toBe(6);
+    const questionCalls = calls.filter((call) =>
+      JSON.stringify(call.messages[0]).includes("Translate a search question"),
+    );
+    expect(questionCalls).toHaveLength(1);
     const files = await readdir(join(root, "traces"), { recursive: true });
-    for (const input of inputs)
+    for (const input of [...inputs, { id: questionId }])
       expect(
         files.some((file) => file.includes(input.id) && file.endsWith(".html")),
       ).toBe(true);
@@ -113,8 +141,8 @@ test("shared content service uses isolated Pi calls, bounded concurrency, cancel
           ...results.map((result) => result.peakLeases),
         ),
         peakRequestConcurrency: peak,
-        releasedLeases: 5,
-        taskTraceIds: inputs.map((input) => input.id),
+        releasedLeases: 6,
+        taskTraceIds: [...inputs.map((input) => input.id), questionId],
       }),
       contentType: "application/json",
     });

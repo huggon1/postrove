@@ -1,4 +1,34 @@
 /** Self-contained: Playwright serializes this function into the observed page. */
+export function isAssistantReply(element: Element): boolean {
+  if (
+    element.ownerDocument.location?.hostname === "gemini.google.com" &&
+    (element.closest("model-response-content") ||
+      element.ownerDocument.querySelector("model-response-content")) &&
+    element.tagName !== "MODEL-RESPONSE-CONTENT"
+  )
+    return false;
+  if (
+    ["HTML", "BODY", "MAIN", "NAV", "ASIDE", "FORM"].includes(
+      element.tagName,
+    ) ||
+    element.getAttribute("role") === "main"
+  )
+    return false;
+  const mixed =
+    'input:not([type="hidden"]),textarea,[contenteditable="true"],[role="textbox"],user-query,[data-message-author-role="user"]';
+  const roots: (Element | ShadowRoot)[] = [element];
+  for (let index = 0; index < roots.length; index++) {
+    const root = roots[index];
+    if (root instanceof Element && root.matches(mixed)) return false;
+    if (root.querySelector(mixed)) return false;
+    for (const node of [root, ...root.querySelectorAll("*")])
+      if (node instanceof Element && node.shadowRoot)
+        roots.push(node.shadowRoot);
+  }
+  return true;
+}
+
+/** Self-contained: Playwright serializes this function into the observed page. */
 export function capturedText(element: Element): string | undefined {
   if (!element.isConnected) return undefined;
   const hasShadow =

@@ -61,6 +61,7 @@ port.on("message", ({ data }) => {
           },
         );
       if (
+        input.operation === "translate_question" ||
         input.operation === "structure_content" ||
         input.operation === "introduce_content"
       ) {

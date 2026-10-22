@@ -470,6 +470,20 @@ export class PlatformBrowser {
           throw new Error(
             "source_scope: Take a fresh snapshot and capture the post's own content container",
           );
+        if (
+          purpose === "collect" &&
+          platform === "youtube" &&
+          (await target.evaluate((element) => {
+            const playback =
+              "ytd-player,#player,#movie_player,ytd-ad-slot-renderer,ytd-action-companion-ad-renderer";
+            return !!(
+              element.closest(playback) || element.querySelector(playback)
+            );
+          }))
+        )
+          throw new Error(
+            "source_scope: The selected container includes playback or advertisements. Capture the video's author metadata, expanded description or transcript container from a fresh snapshot.",
+          );
         const structured = await target.evaluate((element) => {
           const links: { url: string; title: string }[] = [];
           const images: { url: string; alt: string }[] = [];
@@ -638,7 +652,7 @@ export class PlatformBrowser {
         roots.flatMap((root) => [...root.querySelectorAll(selector)]);
       const controls = Array.from(
         query(
-          'body,main,article,section,[role="main"],[role="article"],button,a,img,input,textarea,[contenteditable="true"],[role="button"]',
+          'body,main,article,section,[role="main"],[role="article"],model-response-content,message-content,ytd-watch-metadata,button,a,img,input,textarea,[contenteditable="true"],[role="button"]',
         ),
       );
       const pointerControls = Array.from(query("div,span,[onclick],[tabindex]"))

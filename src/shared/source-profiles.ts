@@ -39,10 +39,10 @@ export type SourceProfileId = keyof typeof sourceProfiles;
 export const sourceEnhancement = (id: SourceProfileId, language: Language) =>
   sourceProfiles[id].enhancement[language];
 
-function secureUrl(raw: string) {
+function sourceUrl(raw: string, protocols = ["https:"]) {
   try {
     const url = new URL(raw);
-    return url.protocol === "https:" &&
+    return protocols.includes(url.protocol) &&
       !url.port &&
       !url.username &&
       !url.password
@@ -53,7 +53,7 @@ function secureUrl(raw: string) {
   }
 }
 export function youtubeVideo(raw: string) {
-  const url = secureUrl(raw);
+  const url = sourceUrl(raw, ["https:", "http:"]);
   if (!url) return undefined;
   const host = url.hostname.toLowerCase();
   const id = ["youtu.be", "www.youtu.be"].includes(host)
@@ -88,7 +88,7 @@ export function youtubeVideo(raw: string) {
   };
 }
 export function redditPost(raw: string) {
-  const url = secureUrl(raw);
+  const url = sourceUrl(raw);
   if (
     !url ||
     ![
@@ -114,7 +114,8 @@ export function redditPost(raw: string) {
 export function sourcePlatform(
   raw: string,
 ): SourceProfileId | "github" | "web" {
-  const url = secureUrl(raw);
+  if (youtubeVideo(raw)) return "youtube";
+  const url = sourceUrl(raw);
   if (!url) return "web";
   if (
     ["x.com", "www.x.com", "twitter.com", "www.twitter.com"].includes(
@@ -124,7 +125,6 @@ export function sourcePlatform(
     return "x";
   if (["xiaohongshu.com", "www.xiaohongshu.com"].includes(url.hostname))
     return "xiaohongshu";
-  if (youtubeVideo(raw)) return "youtube";
   if (redditPost(raw)) return "reddit";
   return url.hostname === "github.com" ? "github" : "web";
 }

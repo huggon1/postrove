@@ -4,6 +4,7 @@ import { languageSchema } from "./language";
 export const contentRequestSchema = z
   .object({
     operation: z.enum([
+      "translate_question",
       "translate_content",
       "format_content",
       "structure_content",

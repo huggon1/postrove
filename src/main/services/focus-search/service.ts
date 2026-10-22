@@ -691,7 +691,7 @@ export class FocusSearchService {
               const question = execution.content
                 ? await execution.content(
                     {
-                      operation: "translate_content",
+                      operation: "translate_question",
                       text: this.readTask(taskId).question,
                       targetLanguage: initial.promptLanguage,
                     },

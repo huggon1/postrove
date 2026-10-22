@@ -8,6 +8,7 @@ import {
   summarySystem,
 } from "../jobs/forwarding/reading-prompts";
 import { preserveReadingSyntax } from "../jobs/forwarding/reading-fidelity";
+import { translateQuestion } from "./question";
 
 export const contentPrompts = {
   translate_content: translationSystem,
@@ -30,6 +31,8 @@ export async function executeContent(
   onPartial?: (text: string) => void,
 ): Promise<string> {
   const input = contentRequestSchema.parse(raw);
+  if (input.operation === "translate_question")
+    return translateQuestion(input.text, input.targetLanguage, call);
   const system = contentPrompts[input.operation](input.targetLanguage);
   let output = await call(input.text, system, onPartial);
   if (input.operation === "introduce_content") return output.trim();

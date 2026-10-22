@@ -7,6 +7,7 @@ export const piLogExecutionSchema = z.object({
     "collect",
     "translation",
     "summary",
+    "translate_question",
     "translate_content",
     "format_content",
     "structure_content",
