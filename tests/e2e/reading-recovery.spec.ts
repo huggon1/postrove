@@ -226,26 +226,47 @@ test("reading recovers bounded model failures and reports saved incomplete work"
     await new Promise((done) => setTimeout(done, 1800));
     expect(counts["cancel:translation"]).toBe(requestsAtCancellation);
     calls.push({ cancellationAcknowledged: true, requestsAtCancellation });
+    const exportFile = join(root, "reading-logs.html");
     await app.evaluate(({ dialog, shell }, destination) => {
-      dialog.showOpenDialog = (async () => ({
+      dialog.showSaveDialog = (async () => ({
         canceled: false,
-        filePaths: [destination],
+        filePath: destination,
       })) as any;
       shell.openPath = async () => "";
-    }, root);
+    }, exportFile);
     const exported = await page.evaluate(
       (id) => window.postrove.exportTaskPiLogs(id),
       success,
     );
     expect(exported.ok).toBe(true);
-    const destination = (exported as any).value;
+    expect((exported as any).value).toBe(exportFile);
+    const document = await readFile(exportFile, "utf8");
     const manifest = JSON.parse(
-      await readFile(join(destination, "manifest.json"), "utf8"),
+      /<script id="pi-log-data" type="application\/json">([\s\S]*?)<\/script>/.exec(
+        document,
+      )![1],
     );
     expect(manifest.sessions).toHaveLength(4);
+    expect(manifest.task.kind).toBe("forwarding");
+    expect(manifest.task.title).toBeTruthy();
+    expect(
+      manifest.sessions.every(
+        (session: any) => session.details.namingSource === "recorded",
+      ),
+    ).toBe(true);
+    expect(
+      manifest.sessions.some(
+        (session: any) => session.label === "翻译正文 · 第 1 段",
+      ),
+    ).toBe(true);
+    expect(
+      manifest.sessions.some(
+        (session: any) => session.label === "生成阅读简介",
+      ),
+    ).toBe(true);
     let failedAttempts = 0;
     for (const session of manifest.sessions) {
-      const html = await readFile(join(destination, session.file), "utf8");
+      const html = Buffer.from(session.html, "base64").toString("utf8");
       expect(html.toLowerCase()).toContain("<html");
       const encoded =
         /<script id="session-data" type="application\/json">([\s\S]*?)<\/script>/.exec(

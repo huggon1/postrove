@@ -87,6 +87,24 @@ export async function runReadingJob(
       14,
       onPartial,
       {
+        trace: {
+          taskId: command.taskId,
+          stage,
+          materialId: material.id,
+          materialTitle: material.title,
+          sourceUrl: material.url,
+          operationId,
+          ...(stage === "translation"
+            ? {
+                chunkIndex: Number(
+                  operationId
+                    .slice(`${command.taskId}:${material.id}:`.length)
+                    .split(":")[0],
+                ),
+                repair: system.includes(" Repair the draft using the original."),
+              }
+            : {}),
+        },
         onAttempt: (attempt) =>
           emit({
             type: "model_attempt",

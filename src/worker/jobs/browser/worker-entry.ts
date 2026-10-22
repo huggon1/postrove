@@ -102,6 +102,12 @@ port.on("message", ({ data }) => {
         '\nUse the browser tool to execute the task before returning its result. Observed sign-in, verification, access limits, or account/terms confirmation return JSON {"error":"login_required|verification_required|access_limited|action_required"}, selecting the actual code. Account linking and agreement belong to the user. Recover incomplete browser actions with fresh observations before returning {"error":"browser_interaction_failed"}. A successful answer includes a real capture ID.',
       browserTools: tools,
     });
+    session.sessionManager.appendCustomEntry("postrove-execution", {
+      taskId: data.parentTaskId,
+      stage: data.purpose === "collect" ? "collect" : "search",
+      platform: data.platform,
+      attempt: 1,
+    });
     const runPhase = async (
       initialPrompt: string,
       citations: boolean,

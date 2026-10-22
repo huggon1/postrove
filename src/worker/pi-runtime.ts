@@ -1,4 +1,5 @@
 import { piTraceContext } from "./pi-trace-context";
+import type { PiLogExecution } from "../shared/pi-log-contracts";
 import { randomUUID } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
@@ -27,6 +28,7 @@ export interface PiModelAttempt {
 
 export interface PiRecoveryOptions {
   onAttempt?: (attempt: PiModelAttempt) => void;
+  trace?: Omit<PiLogExecution, "attempt">;
 }
 
 function transientFailure(error: ExecutionFailure) {
@@ -75,6 +77,7 @@ export async function runWithPi(
         maxTurns,
         onPartial,
         attempt,
+        recovery?.trace,
       );
       if (signal.aborted) throw new Error("cancelled");
       recovery?.onAttempt?.({ attempt, total, outcome: "completed" });
@@ -113,6 +116,7 @@ async function runPiAttempt(
   maxTurns: number,
   onPartial: ((text: string) => void) | undefined,
   attempt: number,
+  executionTrace?: Omit<PiLogExecution, "attempt">,
 ) {
   let turns = 0;
   let turnLimit = false;
@@ -297,6 +301,11 @@ async function runPiAttempt(
           browserTools: [],
         });
         try {
+          if (executionTrace)
+            handle.sessionManager.appendCustomEntry("postrove-execution", {
+              ...executionTrace,
+              attempt,
+            });
           for (const message of agent.state.messages)
             if (
               message.role === "system" ||

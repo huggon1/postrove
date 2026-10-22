@@ -75,7 +75,9 @@ The main process saves the initial task and report before execution, then valida
 
 `TaskActivity` contains ordered stage summaries and bounded public messages. Complete model messages and tool actions belong to the Pi session.
 
-A task can own several Pi sessions for browser work and reading attempts. Trace association uses the parent task identity and individual execution/session identity. Native HTML export copies the associated Pi files to the selected local destination. Persisted JSONL remains in the local profile; export reports an unavailable state when native HTML is absent. Trace contents remain local until the user chooses to export them.
+A task can own several Pi sessions for browser work and reading attempts. Trace association uses the parent task identity, admitted expert run identities, and individual execution/session identity. Native sessions record a `postrove-execution` custom entry with the trace task or expert run, browser or content operation, platform or material, translation segment, correction flag, and attempt number as applicable. Task log export saves one standalone HTML file named after the task. Its index presents the saved search question or parsing title, task kind and state, and the associated execution steps in native file update order. Current sessions use recorded execution metadata for naming. Older sessions use recognized application system prompts; other sessions display an unspecified-purpose label. Technical details expose task and execution identities and original filenames.
+
+The file embeds each complete native Pi HTML page as base64. The viewer applies the application's light palette and controls to each selected page in a sandboxed frame, and provides index, previous, next, and session selection controls. Source pages remain stored intact in the file. The export opens in the system browser after saving. Persisted JSONL remains in the local profile; export reports an unavailable state when native HTML is absent. Trace contents remain local until the user chooses to export them.
 
 ## Record visibility and undo journal
 
