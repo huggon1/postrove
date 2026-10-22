@@ -1228,7 +1228,7 @@
   background: #fff;
 }
 .model-connection-card.current {
-  border-color: #c4d3f2;
+  border-color: #9cb8ed;
 }
 .model-connection-icon {
   display: grid;
@@ -1253,6 +1253,41 @@
   flex: 1;
   min-width: 0;
 }
+.model-current-pill {
+  color: var(--accent);
+  white-space: nowrap;
+}
+.model-current-pill > i {
+  background: var(--accent);
+}
+.model-connection-menu {
+  position: relative;
+  flex: none;
+}
+.model-connection-menu-items {
+  position: absolute;
+  z-index: 5;
+  top: 38px;
+  right: 0;
+  display: grid;
+  min-width: 148px;
+  padding: 5px;
+  border: 1px solid #e1e6ef;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 8px 24px #26385a1a;
+}
+.model-connection-menu-items button {
+  padding: 10px 12px;
+  border-radius: 8px;
+  text-align: left;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.model-connection-menu-items button:hover,
+.model-connection-menu-items button:focus-visible {
+  background: #eff4fc;
+}
 .model-connection-heading > .connection-pill {
   flex: none;
   font-size: 11px;
@@ -1261,6 +1296,7 @@
   font-size: 14px;
   font-weight: 550;
   margin: 0 0 7px;
+  overflow-wrap: anywhere;
 }
 .model-connection-card p {
   font-size: 11px;
@@ -1272,12 +1308,17 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 20px;
-  border-top: 1px solid #edf1f7;
-  padding-top: 16px;
 }
-.model-connection-actions .text-button {
-  font-size: 12px;
+.model-use-button {
+  color: var(--accent);
+  border-color: #c4d3f2;
+}
+.model-current-model.config-field {
+  margin: 0;
+}
+.model-current-model select {
+  min-width: 0;
+  max-width: 100%;
 }
 .model-check-row {
   display: flex;
@@ -1285,15 +1326,7 @@
   gap: 18px;
   flex-wrap: wrap;
   font-size: 12px;
-  color: #8c9bb1;
-  padding: 20px 23px;
-  margin-top: 22px;
-  border: 1px solid #e1e8f4;
-  background: #f9fbff;
-  border-radius: 18px;
-}
-.model-check-row > span {
-  margin-left: auto;
+  color: #62718a;
 }
 .model-check-row > .setup-feedback {
   flex: 1;
@@ -1711,24 +1744,27 @@
     gap: 16px;
   }
   .model-connection-heading {
-    flex-wrap: wrap;
-    gap: 12px;
+    display: grid;
+    grid-template-columns: 43px minmax(0, 1fr) 34px;
+    gap: 10px 12px;
   }
   .model-connection-heading > .connection-pill {
-    margin-left: 55px;
+    grid-column: 2;
+    grid-row: 2;
+  }
+  .model-connection-menu {
+    grid-column: 3;
+    grid-row: 1;
   }
   .model-connection-actions {
     width: 100%;
     justify-content: flex-end;
-    border-top: 1px solid #edf1f7;
-    padding-top: 13px;
   }
   .model-check-row {
-    padding: 18px;
     gap: 14px;
   }
-  .model-check-row > span {
-    margin-left: 0;
+  .model-check-row > .setup-feedback {
+    flex-basis: 100%;
   }
   .preference-group {
     padding: 0 18px;

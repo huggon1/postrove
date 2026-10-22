@@ -130,6 +130,15 @@ export const selectModelConnectionSchema = z
 export type SelectModelConnectionInput = z.infer<
   typeof selectModelConnectionSchema
 >;
+export const activateModelConnectionSchema = z
+  .object({
+    connectionId: z.string().uuid(),
+    modelId: modelId.optional(),
+  })
+  .strict();
+export type ActivateModelConnectionInput = z.infer<
+  typeof activateModelConnectionSchema
+>;
 export const loginModelSchema = z
   .object({ authType: z.enum(["api_key", "oauth", "environment"]) })
   .strict();
@@ -176,6 +185,7 @@ export interface ModelView {
     options: PiOptions;
   } | null;
   providers: ProviderOption[];
+  currentModels: PiModelOption[];
   connections: {
     id: string;
     providerId: string;
@@ -214,6 +224,7 @@ export interface ModelView {
   message: string;
   check: "idle" | "running" | "passed" | "failed" | "cancelled";
   checkFailure?: FailureCode;
+  checkConnectionId?: string;
   checkModelId?: string;
   checkIsCurrent?: boolean;
   piVersion: string;

@@ -3,6 +3,7 @@ import { readFile, readdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 import type { AuthPrompt, AuthEvent } from "@earendil-works/pi-ai";
 import {
+  activateModelConnectionSchema,
   authAnswerSchema,
   customModelsSchema,
   defaultPiOptions,
@@ -12,6 +13,7 @@ import {
   type ModelExecutionConfig,
   type ModelView,
   type PiModelOption,
+  type PiOptions,
 } from "../../shared/model-contracts";
 import { classifyModelError } from "../../shared/task-failure";
 import {
@@ -47,6 +49,9 @@ export interface ModelDependencies {
   check(config: ModelExecutionConfig, signal: AbortSignal): Promise<void>;
   changed(): void;
 }
+
+// Only bounded application messages use this error; native provider errors stay private.
+export class ModelSettingsError extends Error {}
 
 /** Pi owns catalog composition, credentials, login, refresh, and provider requests. */
 export class ModelService {
@@ -85,6 +90,7 @@ export class ModelService {
     | "message"
     | "check"
     | "checkFailure"
+    | "checkConnectionId"
     | "checkModelId"
     | "checkIsCurrent"
   > = {
@@ -106,6 +112,27 @@ export class ModelService {
   }
   private changed() {
     this.dependencies.changed();
+  }
+  private executionKey(data: PiConnections) {
+    const active = data.connections.find((item) => item.id === data.activeId);
+    if (!active) return "";
+    const { name: _name, ...config } = active;
+    return JSON.stringify(config);
+  }
+  private async persist(next: PiConnections) {
+    const executionChanged =
+      this.executionKey(this.data) !== this.executionKey(next);
+    await this.store.save(next);
+    this.data = next;
+    if (executionChanged) {
+      this.generation++;
+      this.checkAbort?.abort();
+      this.state.check = "idle";
+      this.state.checkFailure = undefined;
+      this.state.checkConnectionId = undefined;
+      this.state.checkModelId = undefined;
+      this.state.checkIsCurrent = false;
+    }
   }
   private paths(id: string): PiRuntimePaths {
     const dir = join(this.dependencies.root, "connections", id);
@@ -320,6 +347,10 @@ export class ModelService {
           ],
         }))
         .sort((a, b) => a.name.localeCompare(b.name)),
+      currentModels:
+        active && this.runtimes.has(active.id)
+          ? this.modelOptions(this.runtimes.get(active.id)!, active.providerId)
+          : [],
       connections: this.data.connections.map(
         ({ id, providerId, name, modelId }) => ({
           id,
@@ -394,6 +425,71 @@ export class ModelService {
       await this.cancelLogin();
       await this.choose(value.providerId, value.connectionId);
       this.state.message = "已选择连接，保存后用于后续任务";
+      this.changed();
+    });
+  }
+  private async validateModel(
+    runtime: Runtime,
+    providerId: string,
+    modelId: string,
+    options: PiOptions,
+  ) {
+    const model = runtime.getModel(providerId, modelId);
+    if (!model) throw new ModelSettingsError("请从模型目录选择模型");
+    const status = runtime.getProviderAuthStatus(providerId);
+    if (!status.configured) throw new ModelSettingsError("请先完成 Pi 认证");
+    if (
+      !(await runtime.getAvailable(providerId)).some(
+        (item) => item.id === model.id,
+      )
+    )
+      throw new ModelSettingsError(
+        "当前认证下缺少所选模型，请刷新目录或重新认证",
+      );
+    if (!Object.keys(options.apiOptions).length) {
+      try {
+        const levels = this.supportedThinking(model);
+        resolveThinking(levels, options.browserThinking, "browser");
+        resolveThinking(levels, options.readingThinking, "reading");
+      } catch {
+        throw new ModelSettingsError(
+          "切换到该模型需要调整 Reasoning，请编辑配置后保存",
+        );
+      }
+    }
+    return { model, status };
+  }
+  async activate(input: unknown) {
+    return this.serial(async () => {
+      if (this.closed || this.loginAbort)
+        throw new ModelSettingsError("请等待认证完成");
+      const value = activateModelConnectionSchema.parse(input);
+      const saved = this.data.connections.find(
+        (item) => item.id === value.connectionId,
+      );
+      if (!saved) throw new ModelSettingsError("请选择已保存的连接");
+      const runtime = await this.runtime(saved.id);
+      const { model } = await this.validateModel(
+        runtime,
+        saved.providerId,
+        value.modelId ?? saved.modelId,
+        saved.options,
+      );
+      const { serverDefaultOutputModelId, ...settings } = saved;
+      const connection: PiConnection = {
+        ...settings,
+        modelId: model.id,
+        ...(serverDefaultOutputModelId === model.id
+          ? { serverDefaultOutputModelId }
+          : {}),
+      };
+      await this.persist({
+        ...this.data,
+        activeId: saved.id,
+        connections: this.data.connections.map((item) =>
+          item.id === saved.id ? connection : item,
+        ),
+      });
       this.changed();
     });
   }
@@ -673,26 +769,12 @@ export class ModelService {
       const candidate = this.candidate;
       if (!candidate || candidate.id !== value.connectionId)
         throw new Error("连接选择已变化，请重试");
-      const model = candidate.runtime.getModel(
+      const { model, status } = await this.validateModel(
+        candidate.runtime,
         candidate.providerId,
         value.modelId,
+        value.options,
       );
-      if (!model) throw new Error("请从 Pi 目录选择模型");
-      const status = candidate.runtime.getProviderAuthStatus(
-        candidate.providerId,
-      );
-      if (!status.configured) throw new Error("请先完成 Pi 认证");
-      if (
-        !(await candidate.runtime.getAvailable(candidate.providerId)).some(
-          (item) => item.id === model.id,
-        )
-      )
-        throw new Error("当前 Pi 认证下没有所选模型，请刷新目录或重新认证");
-      const levels = this.supportedThinking(model);
-      if (!Object.keys(value.options.apiOptions).length) {
-        resolveThinking(levels, value.options.browserThinking, "browser");
-        resolveThinking(levels, value.options.readingThinking, "reading");
-      }
       if (status.source === "environment" || status.source === "fallback")
         candidate.useEnvironment = true;
       const connection: PiConnection = {
@@ -709,16 +791,23 @@ export class ModelService {
           : {}),
       };
       const replacesId = candidate.replacesId;
+      const editingSaved = this.data.connections.some(
+        (item) => item.id === connection.id || item.id === replacesId,
+      );
       const next: PiConnections = {
         ...this.data,
-        activeId: connection.id,
+        activeId:
+          !editingSaved || (replacesId && this.data.activeId === replacesId)
+            ? connection.id
+            : this.data.activeId,
         legacyMigrated: true,
-        connections: [
-          ...this.data.connections.filter(
-            (c) => c.id !== connection.id && c.id !== replacesId,
-          ),
-          connection,
-        ],
+        connections: editingSaved
+          ? this.data.connections.map((item) =>
+              item.id === connection.id || item.id === replacesId
+                ? connection
+                : item,
+            )
+          : [...this.data.connections, connection],
         retiredIds: [
           ...new Set([
             ...this.data.retiredIds,
@@ -726,14 +815,11 @@ export class ModelService {
           ]),
         ],
       };
-      await this.store.save(next);
-      this.data = next;
+      await this.persist(next);
       this.drafts.delete(connection.id);
       candidate.replacesId = undefined;
       candidate.settings = undefined;
-      this.generation++;
-      this.state.checkIsCurrent = false;
-      this.state.message = "已保存，新连接将用于后续任务";
+      this.state.message = "连接已保存";
       this.changed();
       // Old leases own the remaining cleanup reference until their tasks finish.
       await this.retireLegacySource();
@@ -805,26 +891,34 @@ export class ModelService {
     });
   }
   async runCheck() {
+    if (this.checkAbort?.signal.aborted) await this.checking;
     if (this.checking) throw new Error("连接检查正在运行");
+    const generation = this.generation;
+    const active = this.data.connections.find(
+      (item) => item.id === this.data.activeId,
+    );
     const controller = (this.checkAbort = new AbortController());
     this.state.check = "running";
     this.state.checkFailure = undefined;
+    this.state.checkConnectionId = active?.id;
+    this.state.checkModelId = active?.modelId;
+    this.state.checkIsCurrent = true;
     this.changed();
     this.checking = (async () => {
       let lease: Awaited<ReturnType<ModelService["acquire"]>> | undefined;
       try {
         lease = await this.acquire();
-        this.state.checkModelId = lease.config.modelId;
-        this.changed();
         controller.signal.throwIfAborted();
         await this.dependencies.check(lease.config, controller.signal);
-        this.state.check = controller.signal.aborted ? "cancelled" : "passed";
+        if (generation === this.generation)
+          this.state.check = controller.signal.aborted ? "cancelled" : "passed";
       } catch (error) {
-        this.state.check = controller.signal.aborted ? "cancelled" : "failed";
-        if (!controller.signal.aborted)
-          this.state.checkFailure = classifyModelError(error);
+        if (generation === this.generation) {
+          this.state.check = controller.signal.aborted ? "cancelled" : "failed";
+          if (!controller.signal.aborted)
+            this.state.checkFailure = classifyModelError(error);
+        }
       } finally {
-        this.state.checkIsCurrent = lease?.generation === this.generation;
         await lease?.release();
         this.checkAbort = undefined;
         this.checking = undefined;
@@ -858,15 +952,12 @@ export class ModelService {
             : this.data.activeId,
         retiredIds: [...new Set([...this.data.retiredIds, value.connectionId])],
       };
-      await this.store.save(next);
-      this.data = next;
+      await this.persist(next);
       if (this.candidate?.id === value.connectionId) {
         this.candidate = undefined;
         this.state.auth = "signed_out";
         this.state.authSource = undefined;
       }
-      this.generation++;
-      this.state.checkIsCurrent = false;
       this.state.message = "连接已移除；运行中任务结束后清理本地认证";
       this.changed();
       await this.cleanupRetired(value.connectionId);

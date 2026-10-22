@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import {
   ArrowRight,
   Check,
   CircleNotch,
+  DotsThree,
   Plus,
   ShieldCheck,
   Sparkle,
@@ -58,8 +59,125 @@ function jsonObject(value: string): PiOptions["apiOptions"] {
   return parsed as PiOptions["apiOptions"];
 }
 
+function ConnectionMenu({
+  busy,
+  onEdit,
+  onRemove,
+}: {
+  busy: boolean;
+  onEdit(): void;
+  onRemove(): void;
+}) {
+  const [open, setOpen] = useState(false);
+  const root = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const id = useId();
+  useEffect(() => {
+    if (!open) return;
+    root.current
+      ?.querySelector<HTMLButtonElement>('[role="menuitem"]')
+      ?.focus();
+    const dismiss = (event: PointerEvent) => {
+      if (!root.current?.contains(event.target as Node)) setOpen(false);
+    };
+    document.addEventListener("pointerdown", dismiss);
+    return () => document.removeEventListener("pointerdown", dismiss);
+  }, [open]);
+  const invoke = (operation: () => void) => {
+    trigger.current?.focus();
+    setOpen(false);
+    operation();
+  };
+  return (
+    <div
+      className="model-connection-menu"
+      ref={root}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Escape" && open) {
+          event.preventDefault();
+          event.stopPropagation();
+          setOpen(false);
+          trigger.current?.focus();
+        } else if (
+          ["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)
+        ) {
+          event.preventDefault();
+          if (!open) {
+            if (!busy) setOpen(true);
+            return;
+          }
+          const items = [
+            ...root.current!.querySelectorAll<HTMLButtonElement>(
+              '[role="menuitem"]',
+            ),
+          ];
+          const index = items.indexOf(
+            document.activeElement as HTMLButtonElement,
+          );
+          const next =
+            event.key === "Home"
+              ? 0
+              : event.key === "End"
+                ? items.length - 1
+                : (index +
+                    (event.key === "ArrowDown" ? 1 : -1) +
+                    items.length) %
+                  items.length;
+          items[next]?.focus();
+        }
+      }}
+    >
+      <button
+        ref={trigger}
+        type="button"
+        className="icon-button"
+        aria-label={t("连接操作")}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-controls={open ? id : undefined}
+        aria-disabled={busy}
+        onClick={() => {
+          if (!busy) setOpen(!open);
+        }}
+      >
+        <DotsThree />
+      </button>
+      {open && (
+        <div
+          id={id}
+          className="model-connection-menu-items"
+          role="menu"
+          aria-label={t("连接操作")}
+        >
+          <button
+            type="button"
+            role="menuitem"
+            disabled={busy}
+            onClick={() => invoke(onEdit)}
+          >
+            {t("编辑配置")}
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className="danger-text"
+            disabled={busy}
+            onClick={() => invoke(onRemove)}
+          >
+            {t("移除连接")}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ModelSettings() {
   const [view, setView] = useState<ModelView>();
+  const [editingConnectionId, setEditingConnectionId] = useState<string>();
   const [editing, setEditing] = useState(false),
     [step, setStep] = useState(0),
     [providerId, setProviderId] = useState("");
@@ -76,6 +194,7 @@ export function ModelSettings() {
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [removing, setRemoving] = useState<string>();
+  const [errorConnectionId, setErrorConnectionId] = useState<string>();
   useEffect(() => {
     let active = true,
       version = 0;
@@ -85,7 +204,7 @@ export function ModelSettings() {
         const reply = await bridge.modelView();
         if (!active || revision !== version) return;
         if (reply.ok) setView(reply.value);
-        else setError(reply.message);
+        else setError(t(reply.message));
       } catch {
         if (active) setError(t("无法读取模型连接"));
       }
@@ -105,12 +224,16 @@ export function ModelSettings() {
     setApiJson(JSON.stringify(view.selected.options.apiOptions, null, 2));
   }, [view?.selected?.id, editing]);
   useEffect(() => setAnswer(""), [view?.authPrompt?.id]);
-  async function action(operation: () => Promise<ModelReply<unknown>>) {
+  async function action(
+    operation: () => Promise<ModelReply<unknown>>,
+    connectionId?: string,
+  ) {
     setBusy(true);
     setError("");
+    setErrorConnectionId(connectionId);
     try {
       const reply = await operation();
-      if (!reply.ok) setError(reply.message);
+      if (!reply.ok) setError(t(reply.message));
       return reply.ok;
     } catch {
       setError(t("操作未完成，请重试"));
@@ -156,15 +279,21 @@ export function ModelSettings() {
       setEditing(false);
   }
   const close = () => {
+    if (busy) return;
     if (view?.auth === "logging_in") void bridge.cancelModelLogin();
     setEditing(false);
     setAnswer("");
     setError("");
   };
-  const checkStatus =
-    view?.check === "running"
+  const checkIsCurrent =
+    view?.checkIsCurrent &&
+    view.checkConnectionId === view.current?.connectionId &&
+    view.checkModelId === view.current?.modelId;
+  const checkStatus = !checkIsCurrent
+    ? ""
+    : view?.check === "running"
       ? t("检查中…")
-      : view?.check === "passed" && view.checkIsCurrent
+      : view?.check === "passed"
         ? t("连接检查通过")
         : view?.check === "failed"
           ? t(
@@ -172,7 +301,28 @@ export function ModelSettings() {
                 ? failureMessages[view.checkFailure]
                 : "模型检查失败，请重试。",
             )
-          : "";
+          : view?.check === "cancelled"
+            ? t("检查已取消")
+            : "";
+  const editingTitle = t(editingConnectionId ? "编辑配置" : "模型连接配置");
+  const editConnection = async (
+    connection: ModelView["connections"][number],
+  ) => {
+    if (
+      await action(
+        () =>
+          bridge.selectModelConnection({
+            connectionId: connection.id,
+            providerId: connection.providerId,
+          }),
+        connection.id,
+      )
+    ) {
+      setEditingConnectionId(connection.id);
+      setStep(2);
+      setEditing(true);
+    }
+  };
   return (
     <section className="model-settings" aria-label={t("后台模型")}>
       <SectionHeading
@@ -180,7 +330,9 @@ export function ModelSettings() {
         action={
           <button
             className="primary small-primary"
+            disabled={busy}
             onClick={() => {
+              setEditingConnectionId(undefined);
               setEditing(true);
               setStep(0);
               setConnectionMode("builtin");
@@ -193,7 +345,7 @@ export function ModelSettings() {
           </button>
         }
       />
-      <div className="model-connection-list">
+      <div className="model-connection-list" aria-busy={busy}>
         {view?.connections.map((connection) => {
           const current =
             view.current?.method === "pi" &&
@@ -201,6 +353,7 @@ export function ModelSettings() {
           return (
             <article
               className={`model-connection-card ${current ? "current" : ""}`}
+              aria-label={connection.name}
               key={connection.id}
             >
               <div className="model-connection-heading">
@@ -210,47 +363,118 @@ export function ModelSettings() {
                 <div className="model-connection-name">
                   <h3>{connection.name}</h3>
                   <p>
-                    {connection.providerId} · {connection.modelId}
+                    {connection.providerId}
+                    {!current && ` · ${connection.modelId}`}
                   </p>
                 </div>
                 {current && (
-                  <span className="connection-pill connected">
+                  <span className="connection-pill model-current-pill">
                     <i />
                     {t("正在使用")}
                   </span>
                 )}
-              </div>
-              <div className="model-connection-actions">
-                <button
-                  className="text-button"
-                  aria-label={t("编辑连接")}
-                  disabled={busy}
-                  onClick={async () => {
-                    if (
-                      await action(() =>
-                        bridge.selectModelConnection({
-                          connectionId: connection.id,
-                          providerId: connection.providerId,
-                        }),
-                      )
-                    ) {
-                      setEditing(true);
-                      setStep(2);
-                    }
+                <ConnectionMenu
+                  busy={busy}
+                  onEdit={() => void editConnection(connection)}
+                  onRemove={() => {
+                    setError("");
+                    setRemoving(connection.id);
                   }}
-                >
-                  {t("编辑")}
-                  <ArrowRight />
-                </button>
-                <button
-                  className="text-button danger-text"
-                  aria-label={t("移除连接")}
-                  disabled={busy}
-                  onClick={() => setRemoving(connection.id)}
-                >
-                  {t("移除")}
-                </button>
+                />
               </div>
+              {current ? (
+                <>
+                  <label className="config-field model-current-model">
+                    <span>{t("当前模型")}</span>
+                    <select
+                      aria-label={t("当前模型")}
+                      value={connection.modelId}
+                      disabled={busy}
+                      onChange={(event) =>
+                        void action(
+                          () =>
+                            bridge.activateModelConnection({
+                              connectionId: connection.id,
+                              modelId: event.target.value,
+                            }),
+                          connection.id,
+                        )
+                      }
+                    >
+                      {!view.currentModels.some(
+                        (item) => item.id === connection.modelId,
+                      ) && (
+                        <option value={connection.modelId} disabled>
+                          {connection.modelId} · {t("目录已变化")}
+                        </option>
+                      )}
+                      {view.currentModels.map((item) => (
+                        <option
+                          key={item.id}
+                          value={item.id}
+                          disabled={!item.compatible}
+                        >
+                          {item.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <div className="model-check-row">
+                    <button
+                      className="primary"
+                      disabled={busy}
+                      onClick={() =>
+                        void action(
+                          view.check === "running"
+                            ? bridge.cancelModelCheck
+                            : bridge.checkModel,
+                          connection.id,
+                        )
+                      }
+                    >
+                      {view.check === "running" ? (
+                        <CircleNotch className="spin" />
+                      ) : (
+                        <ShieldCheck />
+                      )}
+                      {t(
+                        view.check === "running" ? "取消连接检查" : "检查连接",
+                      )}
+                    </button>
+                    {checkStatus &&
+                      (view.check === "running" ||
+                      view.check === "cancelled" ? (
+                        <span role="status">{checkStatus}</span>
+                      ) : (
+                        <Feedback error={view.check === "failed"}>
+                          {checkStatus}
+                        </Feedback>
+                      ))}
+                  </div>
+                </>
+              ) : (
+                <div className="model-connection-actions">
+                  <button
+                    className="secondary model-use-button"
+                    disabled={busy}
+                    onClick={() =>
+                      void action(
+                        () =>
+                          bridge.activateModelConnection({
+                            connectionId: connection.id,
+                          }),
+                        connection.id,
+                      )
+                    }
+                  >
+                    {t("使用此连接")}
+                  </button>
+                </div>
+              )}
+              {error &&
+                errorConnectionId === connection.id &&
+                !editing &&
+                !removing && <Feedback error>{error}</Feedback>}
             </article>
           );
         })}
@@ -261,38 +485,16 @@ export function ModelSettings() {
           <h3>{t("尚未连接模型")}</h3>
         </div>
       )}
-      {view?.current && (
-        <div className="model-check-row">
-          <button
-            className="secondary"
-            disabled={busy}
-            onClick={() =>
-              void action(
-                view.check === "running"
-                  ? bridge.cancelModelCheck
-                  : bridge.checkModel,
-              )
-            }
-          >
-            <ShieldCheck />
-            {t(view.check === "running" ? "取消连接检查" : "检查连接")}
-          </button>
-          {checkStatus &&
-            (view.check === "running" ? (
-              <span role="status">{checkStatus}</span>
-            ) : (
-              <Feedback error={view.check === "failed"}>{checkStatus}</Feedback>
-            ))}
-        </div>
+      {error && !errorConnectionId && !editing && !removing && (
+        <Feedback error>{error}</Feedback>
       )}
-      {error && !editing && !removing && <Feedback error>{error}</Feedback>}
       {editing && (
         <Modal
-          label={t("模型连接配置")}
+          label={editingTitle}
           className="connection-modal model-modal"
           onClose={close}
         >
-          <ModalHeader title={t("模型连接配置")} onClose={close} />
+          <ModalHeader title={editingTitle} onClose={close} />
           <div className="model-workspace">
             <SetupSteps
               items={[t("连接方式"), t("认证"), t("模型与参数")]}
@@ -764,16 +966,17 @@ export function ModelSettings() {
                   }
                   onClick={() => void save()}
                 >
-                  {t("保存连接")}
+                  {t(editingConnectionId ? "保存连接" : "保存并使用")}
                   <Check />
                 </button>
               </>
             )}
             {error && <Feedback error>{error}</Feedback>}
             <footer className="setup-footer">
-              {step > 0 && (
+              {step > (editingConnectionId ? 1 : 0) && (
                 <button
                   className="text-button"
+                  disabled={busy || view?.auth === "logging_in"}
                   onClick={() => {
                     setStep(step - 1);
                     setError("");
@@ -782,7 +985,7 @@ export function ModelSettings() {
                   {t("上一步")}
                 </button>
               )}
-              <button className="text-button" onClick={close}>
+              <button className="text-button" disabled={busy} onClick={close}>
                 {t("取消")}
               </button>
             </footer>
@@ -795,7 +998,12 @@ export function ModelSettings() {
           confirmLabel={t("移除")}
           busy={busy}
           error={error}
-          onClose={() => setRemoving(undefined)}
+          onClose={() => {
+            if (!busy) {
+              setRemoving(undefined);
+              setError("");
+            }
+          }}
           onConfirm={async () => {
             if (
               await action(() =>

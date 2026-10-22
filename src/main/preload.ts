@@ -112,6 +112,8 @@ const bridge: DesktopBridge = {
   loginModel: (input) => ipcRenderer.invoke(modelChannels.login, input),
   selectModelConnection: (input) =>
     ipcRenderer.invoke(modelChannels.select, input),
+  activateModelConnection: (input) =>
+    ipcRenderer.invoke(modelChannels.activate, input),
   removeModelConnection: (input) =>
     ipcRenderer.invoke(modelChannels.remove, input),
   configureModelCatalog: (input) =>

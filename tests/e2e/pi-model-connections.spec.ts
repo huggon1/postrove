@@ -252,7 +252,7 @@ test("native Pi UI, reasoning, API options, leases, and restart share one model 
     await page.getByLabel("Temperature", { exact: true }).fill("0.3");
     await page.getByLabel("最大输出 token", { exact: true }).fill("4096");
     await capture("model-parameters");
-    await page.getByRole("button", { name: "保存连接", exact: true }).click();
+    await page.getByRole("button", { name: "保存并使用", exact: true }).click();
     await expect
       .poll(async () => (await saved(profile)).connections[0]?.modelId)
       .toBe("fixture@local");
@@ -360,13 +360,14 @@ test("native Pi UI, reasoning, API options, leases, and restart share one model 
         await readFile(join(profile, "forwarding.json"), "utf8"),
       ).tasks.find((v: any) => v.taskId === taskId);
     await expect.poll(async () => (await task(first))?.state).toBe("running");
-    await page.getByRole("button", { name: "编辑连接", exact: true }).click();
+    await page.getByRole("button", { name: "连接操作", exact: true }).click();
+    await page.getByRole("menuitem", { name: "编辑配置", exact: true }).click();
     await page.getByText("高级 API 参数", { exact: true }).click();
     await page.getByLabel("Pi API options JSON", { exact: true }).fill("[]");
     await page.getByRole("button", { name: "保存连接", exact: true }).click();
     await expect(
       page
-        .getByRole("dialog", { name: "模型连接配置", exact: true })
+        .getByRole("dialog", { name: "编辑配置", exact: true })
         .getByRole("alert"),
     ).toContainText("请填写有效的 JSON 对象");
     await capture("model-advanced-validation");
@@ -446,7 +447,8 @@ test("native Pi UI, reasoning, API options, leases, and restart share one model 
       providerId: "fixture-provider",
       modelId: "fixture@local",
     });
-    await page.getByRole("button", { name: "编辑连接", exact: true }).click();
+    await page.getByRole("button", { name: "连接操作", exact: true }).click();
+    await page.getByRole("menuitem", { name: "编辑配置", exact: true }).click();
     await page.getByText("高级 API 参数", { exact: true }).click();
     await expect(
       page.getByLabel("Pi API options JSON", { exact: true }),
@@ -639,7 +641,7 @@ test("old Codex settings stay inactive while native Pi auth saves and restarts",
     await page
       .getByRole("combobox", { name: "模型", exact: true })
       .selectOption(target.id);
-    await page.getByRole("button", { name: "保存连接", exact: true }).click();
+    await page.getByRole("button", { name: "保存并使用", exact: true }).click();
     await expect
       .poll(async () => (await modelView(page)).current?.method)
       .toBe("pi");
@@ -686,7 +688,8 @@ test("old Codex settings stay inactive while native Pi auth saves and restarts",
       modelId: target.id,
     });
     expect((await modelView(page)).migration).toBeUndefined();
-    await page.getByRole("button", { name: "移除连接", exact: true }).click();
+    await page.getByRole("button", { name: "连接操作", exact: true }).click();
+    await page.getByRole("menuitem", { name: "移除连接", exact: true }).click();
     await capture("model-remove-confirmation");
     await page.getByRole("button", { name: "移除", exact: true }).click();
     await expect.poll(async () => (await modelView(page)).current).toBeNull();

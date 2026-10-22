@@ -53,7 +53,7 @@ import {
   createWorkerEnvironment,
   configureMainModelNetwork,
 } from "./services/worker-environment";
-import { ModelService } from "./services/model-service";
+import { ModelService, ModelSettingsError } from "./services/model-service";
 import { ModelStore } from "./storage/model-store";
 import {
   encodeLocalIntegrationSecret,
@@ -945,6 +945,7 @@ export async function initializeServices(
             modelChannels.save,
             modelChannels.remove,
             modelChannels.select,
+            modelChannels.activate,
             modelChannels.configure,
             modelChannels.respond,
             modelChannels.openAuthUrl,
@@ -973,6 +974,9 @@ export async function initializeServices(
           case modelChannels.select:
             await models!.select(args[0]);
             break;
+          case modelChannels.activate:
+            await models!.activate(args[0]);
+            break;
           case modelChannels.configure:
             await models!.configure(args[0]);
             break;
@@ -999,7 +1003,10 @@ export async function initializeServices(
       } catch (error) {
         return {
           ok: false,
-          message: "操作未完成，请检查配置、登录状态或服务地址后重试",
+          message:
+            error instanceof ModelSettingsError
+              ? error.message
+              : "操作未完成，请检查配置、登录状态或服务地址后重试",
         };
       }
     });
