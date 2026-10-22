@@ -35,6 +35,8 @@ Fixtures use isolated profiles and controlled external responses.
 
 `tests/rules/schedules.test.ts` covers recurrence contracts, calendar anchors, month ends, daylight-saving transitions, fixed intervals, and legacy normalization. `tests/rules/search-follow-lifecycle.test.ts` covers exhausted rules, recipient changes, offline expiration, and clock rollback. `tests/rules/` also covers search/follow admission, expert cancellation, text fidelity, immutable results, upgrade retention, profiles, and prompt identity. Update-driver checks exercise Windows EXE selection and staged-file integrity, plus macOS native staging. Release checks exercise both platform feeds and reject incomplete or mixed package sets. The reading fixture can invoke internal recovery directly. That scope establishes saved-state behavior independently of available UI actions.
 
+[Product identity](e2e/product-identity.spec.ts) opens saved reading and its cached image across two launches, alongside retained connections and browser sessions.
+
 ## Commands and evidence
 
 | Command              | Result                                    |

@@ -51,7 +51,7 @@ export class ChromeProfiles {
   ): Promise<Cookie[] | undefined> {
     if (
       existsSync(join(directory, "native-chrome-profile.json")) ||
-      !existsSync(join(directory, "branchout-session-status.json"))
+      !existsSync(join(directory, "postrove-session-status.json"))
     )
       return;
     const backup = join(directory, "previous-browser-session.json");
@@ -103,7 +103,7 @@ export class ChromeProfiles {
       try {
         ({ port, path } = JSON.parse(
           await readFile(
-            join(directory, "branchout-cdp-endpoint.json"),
+            join(directory, "postrove-cdp-endpoint.json"),
             "utf8",
           ),
         ));
@@ -202,7 +202,7 @@ export class ChromeProfiles {
       if (!endpoint || Number(endpoint[1]) !== port) return;
       output = "";
       endpointSaved = writeFile(
-        join(directory, "branchout-cdp-endpoint.json"),
+        join(directory, "postrove-cdp-endpoint.json"),
         JSON.stringify({ port: endpoint[1], path: endpoint[2] }),
         { mode: 0o600 },
       );

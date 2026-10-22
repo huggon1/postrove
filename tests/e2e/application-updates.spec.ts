@@ -90,6 +90,14 @@ test("update shutdown resumes queued searches on the next launch", async ({}, in
             .reports[0].status,
       )
       .toBe("partial");
+    await expect
+      .poll(async () => {
+        const tasks = JSON.parse(
+          await readFile(join(profile, "tasks.json"), "utf8"),
+        );
+        return tasks.tasks[0].state;
+      })
+      .toBe("completed");
     const tasks = JSON.parse(
       await readFile(join(profile, "tasks.json"), "utf8"),
     );

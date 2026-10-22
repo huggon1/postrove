@@ -175,7 +175,7 @@ export class PlatformBrowser {
       } catch {}
       const old = join(this.root, platform);
       try {
-        await access(join(old, "branchout-session-status.json"));
+        await access(join(old, "postrove-session-status.json"));
       } catch {
         continue;
       }
@@ -223,13 +223,13 @@ export class PlatformBrowser {
         let metadata: string;
         try {
           metadata = await readFile(
-            join(this.root, "shared", "branchout-session-status.json"),
+            join(this.root, "shared", "postrove-session-status.json"),
             "utf8",
           );
         } catch (error) {
           if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
           metadata = await readFile(
-            join(this.root, platform, "branchout-session-status.json"),
+            join(this.root, platform, "postrove-session-status.json"),
             "utf8",
           );
         }
@@ -244,7 +244,7 @@ export class PlatformBrowser {
   private async saveStatus(_platform: BrowserSite, context: BrowserContext) {
     const cookies = await context.cookies();
     await writeFile(
-      join(this.root, "shared", "branchout-session-status.json"),
+      join(this.root, "shared", "postrove-session-status.json"),
       JSON.stringify({
         cookies: cookies.map((c) => ({
           name: c.name,

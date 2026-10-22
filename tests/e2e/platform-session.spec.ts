@@ -111,7 +111,7 @@ test("shared Chrome sessions retain both accounts and retain login across reconn
       await browser.context(platform);
       expect((await browser.status(platform)).signedIn).toBe(true);
       const statusFile = await readFile(
-        join(root, "platforms", "shared", "branchout-session-status.json"),
+        join(root, "platforms", "shared", "postrove-session-status.json"),
         "utf8",
       );
       expect(statusFile).not.toContain(`fictional-${platform}`);
@@ -164,7 +164,7 @@ test("existing browser login survives the move from the previous launcher", asyn
   ]);
   await previous.close();
   await writeFile(
-    join(root, "xiaohongshu", "branchout-session-status.json"),
+    join(root, "xiaohongshu", "postrove-session-status.json"),
     JSON.stringify({
       cookies: [{ name: "web_session", expires: Date.now() / 1000 + 3600 }],
     }),
