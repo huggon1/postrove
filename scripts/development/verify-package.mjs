@@ -211,7 +211,7 @@ try {
   phase = "shutdown";
   await application.close();
   application = undefined;
-  await assert.rejects(access(join(profile, ".branchout-owner.json")), {
+  await assert.rejects(access(join(profile, ".postrove-owner.json")), {
     code: "ENOENT",
   });
   await writeFile(

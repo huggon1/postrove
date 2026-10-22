@@ -50,7 +50,7 @@ const authFiles = [
 export async function assertInactive(directory: string) {
   try {
     const owner = JSON.parse(
-      await readFile(join(directory, ".branchout-owner.json"), "utf8"),
+      await readFile(join(directory, ".postrove-owner.json"), "utf8"),
     );
     if (!Number.isInteger(owner.pid) || owner.pid < 1)
       throw new Error("Invalid profile owner");

@@ -21,15 +21,13 @@ protocol.registerSchemesAsPrivileged(
     privileges: { standard: true, secure: true, supportFetchAPI: true },
   })),
 );
-if (process.env.POSTROVE_TEST_DATA) {
-  app.setName("Postrove");
-  app.setPath("userData", resolve(process.env.POSTROVE_TEST_DATA));
-} else {
-  const storage = installedStorage(app.getPath("appData"));
-  // Electron captures this identity for its encryption backend before ready.
-  app.setName(storage.encryptionIdentity);
-  app.setPath("userData", storage.directory);
-}
+app.setName("Postrove");
+app.setPath(
+  "userData",
+  process.env.POSTROVE_TEST_DATA
+    ? resolve(process.env.POSTROVE_TEST_DATA)
+    : installedStorage(app.getPath("appData")),
+);
 
 const profileMode =
   process.env.POSTROVE_RUN_MODE ??
@@ -50,7 +48,7 @@ if (!locked) {
   let mainWindow: BrowserWindow | undefined;
   let startupStage = "electron_ready";
   mkdirSync(app.getPath("userData"), { recursive: true, mode: 0o700 });
-  const ownerPath = join(app.getPath("userData"), ".branchout-owner.json");
+  const ownerPath = join(app.getPath("userData"), ".postrove-owner.json");
   writeFileSync(
     ownerPath,
     JSON.stringify({ pid: process.pid, mode: profileMode }),

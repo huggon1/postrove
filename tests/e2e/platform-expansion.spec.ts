@@ -14,7 +14,7 @@ test("new members share Gemini setup, enable Reddit guest use, and retain schedu
   );
   // Cookie metadata is a controlled UI boundary; it contains no session values.
   await writeFile(
-    join(root, "platform-browser/shared/branchout-session-status.json"),
+    join(root, "platform-browser/shared/postrove-session-status.json"),
     JSON.stringify({
       cookies: [
         {

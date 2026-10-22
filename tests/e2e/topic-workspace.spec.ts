@@ -140,7 +140,7 @@ test("topic workspace connects experts, sends independently, reads and schedules
     await members.getByRole("button", { name: "关闭", exact: true }).click();
     // A platform session is observed through its real status boundary.
     await writeFile(
-      join(profile, "platform-browser/shared/branchout-session-status.json"),
+      join(profile, "platform-browser/shared/postrove-session-status.json"),
       JSON.stringify({
         cookies: [
           { name: "auth_token", domain: ".x.com", expires: -1 },

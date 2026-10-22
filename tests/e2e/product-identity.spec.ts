@@ -10,12 +10,20 @@ import {
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { ChromeProfiles } from "../../src/main/services/chrome-profiles";
+import {
+  savedReading,
+  savedImageId,
+  savedImagePng,
+} from "../fixtures/saved-reading";
 
 // Failure cases: a fresh profile uses another product's directory; an existing
 // profile is shadowed; encryption uses a different identity; saved image URLs
 // stop loading; browser login is lost; a restart changes the selected profile.
 test("Postrove opens a fresh profile with its own product identity", async ({}, info) => {
   const root = await mkdtemp(join(tmpdir(), "postrove-fresh-"));
+  const unrelated = join(root, "OtherProduct/profiles/default");
+  await mkdir(unrelated, { recursive: true });
+  await writeFile(join(unrelated, "preferences.json"), "other-product-data");
   const entry = join(root, "launch.cjs");
   await writeFile(
     entry,
@@ -40,6 +48,9 @@ test("Postrove opens a fresh profile with its own product identity", async ({}, 
       menu: "Postrove",
     });
     await expect(page.locator(".topbar .brand")).toContainText("postrove");
+    expect(await readFile(join(unrelated, "preferences.json"), "utf8")).toBe(
+      "other-product-data",
+    );
     await page.screenshot({ path: info.outputPath("postrove-fresh.png") });
     await info.attach("fresh-identity", {
       body: JSON.stringify(identity),
@@ -54,7 +65,7 @@ test("Postrove opens a fresh profile with its own product identity", async ({}, 
 test("Postrove retains an installed profile, encrypted connection, images and browser login", async ({}, info) => {
   test.setTimeout(120000);
   const root = await mkdtemp(join(tmpdir(), "postrove-retained-"));
-  const profile = join(root, "Branchout/profiles/default");
+  const profile = join(root, "Postrove/profiles/default");
   await mkdir(join(profile, "material-images"), { recursive: true });
   await writeFile(
     join(profile, "business-generation.json"),
@@ -70,17 +81,15 @@ test("Postrove retains an installed profile, encrypted connection, images and br
     source: "https://x.com/fictional/status/123",
   });
   await writeFile(join(profile, "retained-record.json"), retained);
-  const imageId = "a".repeat(64);
-  await writeFile(
-    join(profile, "material-images", imageId),
-    Buffer.from(
-      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jZyQAAAAASUVORK5CYII=",
-      "base64",
-    ),
-  );
+  const imageId = savedImageId;
+  await writeFile(join(profile, "material-images", imageId), savedImagePng);
   await writeFile(
     join(profile, "material-images", imageId + ".type"),
     "image/png",
+  );
+  await writeFile(
+    join(profile, "forwarding.json"),
+    JSON.stringify(savedReading()),
   );
   const chrome = new ChromeProfiles();
   const browserRoot = join(profile, "platform-browser/shared");
@@ -98,7 +107,7 @@ test("Postrove retains an installed profile, encrypted connection, images and br
   const seed = join(root, "seed.cjs");
   await writeFile(
     seed,
-    `const {app,BrowserWindow}=require("electron");app.setName("Branchout");app.setPath("userData",${JSON.stringify(profile)});app.whenReady().then(()=>new BrowserWindow({show:false}));`,
+    `const {app,BrowserWindow}=require("electron");app.setName("Postrove");app.setPath("userData",${JSON.stringify(profile)});app.whenReady().then(()=>new BrowserWindow({show:false}));`,
   );
   const producer = await electron.launch({
     args: [seed, "--use-mock-keychain"],
@@ -145,7 +154,24 @@ test("Postrove retains an installed profile, encrypted connection, images and br
       expect(identity).toEqual({
         name: "Postrove",
         profile,
-        encryption: "Branchout",
+        encryption: "Postrove",
+      });
+      await page
+        .getByRole("navigation")
+        .getByRole("button", { name: "Reading", exact: true })
+        .click();
+      await expect(
+        page.getByRole("button", { name: "Retained reading", exact: true }),
+      ).toBeVisible();
+      const cover = page.locator(".reading-cover img");
+      await expect(cover).toHaveAttribute("src", `postrove-image://${imageId}`);
+      await expect
+        .poll(() =>
+          cover.evaluate((image: HTMLImageElement) => image.naturalWidth),
+        )
+        .toBe(1);
+      await page.screenshot({
+        path: info.outputPath(`retained-reading-${launch}.png`),
       });
       await page.getByRole("button", { name: "Settings", exact: true }).click();
       await page
@@ -154,15 +180,13 @@ test("Postrove retains an installed profile, encrypted connection, images and br
       await expect(
         page.getByLabel("Interface language", { exact: true }),
       ).toHaveValue("en");
-      for (const scheme of ["branchout-image", "postrove-image"]) {
-        const result = await page.evaluate(async (url) => {
-          const image = new Image();
-          image.src = url;
-          await image.decode();
-          return image.naturalWidth;
-        }, `${scheme}://${imageId}`);
-        expect(result).toBe(1);
-      }
+      const width = await page.evaluate(async (url) => {
+        const image = new Image();
+        image.src = url;
+        await image.decode();
+        return image.naturalWidth;
+      }, `postrove-image://${imageId}`);
+      expect(width).toBe(1);
       const migrated = JSON.parse(
         await readFile(join(profile, "pi", "connections.json"), "utf8"),
       );
@@ -188,14 +212,19 @@ test("Postrove retains an installed profile, encrypted connection, images and br
       expect(
         await readFile(join(profile, "retained-record.json"), "utf8"),
       ).toBe(retained);
-      await expect(
-        access(join(root, "Postrove/profiles/default")),
-      ).rejects.toThrow();
+      await access(profile);
+      const owner = JSON.parse(
+        await readFile(join(profile, ".postrove-owner.json"), "utf8"),
+      );
+      expect(owner.pid).toBeGreaterThan(0);
       await page.screenshot({
         path: info.outputPath(`retained-settings-${launch}.png`),
       });
       await application.close();
       application = undefined;
+      await expect(
+        access(join(profile, ".postrove-owner.json")),
+      ).rejects.toThrow();
     }
     const restored = await chrome.connect(browserRoot);
     expect(
@@ -213,6 +242,7 @@ test("Postrove retains an installed profile, encrypted connection, images and br
         encryptedConnection: true,
         originalRecordBytes: true,
         cachedImages: true,
+        retainedReading: true,
         chromeLogin: true,
         boundary:
           "Fictional credentials and browser cookie; encryption uses Electron's mock keychain",

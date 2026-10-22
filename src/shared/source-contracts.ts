@@ -197,7 +197,7 @@ export const sourceSchema = z
             alt: z.string().max(1000),
             cachedUrl: z
               .string()
-              .regex(/^(?:postrove|branchout)-image:\/\/[a-f0-9]{64}$/)
+              .regex(/^postrove-image:\/\/[a-f0-9]{64}$/)
               .optional(),
           })
           .strict(),

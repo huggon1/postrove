@@ -9,7 +9,7 @@ import { join } from "node:path";
 
 // Startup and snapshot preparation share this short-lived, exclusive gate.
 export function claimProfile(directory: string): () => void {
-  const path = join(directory, ".branchout-profile-lock");
+  const path = join(directory, ".postrove-profile-lock");
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const descriptor = openSync(path, "wx", 0o600);

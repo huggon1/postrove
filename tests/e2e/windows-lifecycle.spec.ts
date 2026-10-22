@@ -52,7 +52,7 @@ test("Windows close exits cleanly and restart retains the workspace profile", as
     );
     await expect.poll(() => child.exitCode, { timeout: 45000 }).toBe(0);
     await expect(
-      readFile(join(profile, ".branchout-owner.json")),
+      readFile(join(profile, ".postrove-owner.json")),
     ).rejects.toMatchObject({ code: "ENOENT" });
     application = await launch();
     page = await application.firstWindow();

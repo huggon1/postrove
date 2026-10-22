@@ -251,7 +251,7 @@ try {
   if (application && baselineProcess?.exitCode === null)
     await application.close().catch(() => {});
   const owner = JSON.parse(
-    await readFile(join(profile, ".branchout-owner.json"), "utf8").catch(
+    await readFile(join(profile, ".postrove-owner.json"), "utf8").catch(
       () => "{}",
     ),
   );
@@ -259,7 +259,7 @@ try {
     await writeFile(join(profile, "close-for-verification"), "close");
     await until(
       () =>
-        access(join(profile, ".branchout-owner.json")).then(
+        access(join(profile, ".postrove-owner.json")).then(
           () => false,
           () => true,
         ),

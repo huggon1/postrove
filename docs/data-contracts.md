@@ -87,7 +87,9 @@ Deletion changes visibility independently of the execution stores. Original reco
 
 `RuntimeProfile` records installed, review, or test mode, resolved data directory, and integration policy. Storage, credentials, browser sessions, and traces resolve under the selected profile. Independent instances use independent profiles. Review mode pauses background integrations during preparation.
 
-Installed profiles retain their storage location, encryption identity, browser sessions, and cached image addresses. Fresh installations use `Postrove/profiles/default` under the operating system's application-data directory.
+Installed builds use `Postrove/profiles/default` under the operating system's application-data directory and the `Postrove` encryption identity. Startup opens this profile on each launch. Profiles stored under a retired product identity remain in their original directory; this release starts a separate Postrove profile. Users configure connections and platform login in that profile.
+
+Profile ownership and preparation use `.postrove-owner.json` and `.postrove-profile-lock`. Browser metadata uses `postrove-session-status.json` and `postrove-cdp-endpoint.json`. Cached image addresses use `postrove-image://` followed by a 64-character lowercase hexadecimal cache identifier.
 
 `PromptExecution` associates task and attempt identity, revision, output language, model, and build with reading. New records also include provider ID, Pi version, requested reasoning, and effective reasoning; advanced API mode records `api_options`. Historical records retain their original optional fields. Current reading `promptRevision` hashes its translation and introduction system strings; its scope is that base post-collection instruction pair. Browser tool definitions and loaded skill bodies are recorded in native session messages. Search saves `outputLanguage` in its report and uses native sessions for execution context.
 

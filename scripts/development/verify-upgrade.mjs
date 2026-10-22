@@ -53,20 +53,13 @@ const profile = releasedVersion
   ? join(applicationData, "Postrove/profiles/default")
   : join(root, "profile");
 if (releasedVersion) {
-  for (const directory of [
-    join(applicationData, "Postrove"),
-    join(applicationData, "Branchout"),
-  ]) {
-    const existing = await lstat(directory).catch((error) => {
+  const existing = await lstat(join(applicationData, "Postrove")).catch(
+    (error) => {
       if (error.code === "ENOENT") return undefined;
       throw error;
-    });
-    assert.equal(
-      existing,
-      undefined,
-      "Hosted runner application data is fresh",
-    );
-  }
+    },
+  );
+  assert.equal(existing, undefined, "Hosted runner application data is fresh");
 }
 const preparing = process.argv.includes("--prepare");
 const identity = process.env.CSC_NAME;
@@ -410,7 +403,7 @@ require("./main.cjs");\n`,
         ])
       ).stdout.trim();
       owner = JSON.parse(
-        await readFile(join(profile, ".branchout-owner.json"), "utf8").catch(
+        await readFile(join(profile, ".postrove-owner.json"), "utf8").catch(
           () => "{}",
         ),
       );
