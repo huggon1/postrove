@@ -45,7 +45,7 @@ The reading worker uses the same translation and introduction implementations wi
 
 `PlatformBrowser` owns Chrome, sessions, constrained operations, and the serial access lock. `BrowserAgent` maps worker calls to validated operations and current-task captures. `PlatformAccess` validates source identity and caches images. Both browser Agent types use explicit `load_platform_skill`; automatic project instruction and extension discovery stays disabled in the Pi session factory.
 
-[The Pi bridge](../src/pi/README.md) adapts native ModelRuntime, authentication, stream handling, reasoning, and request options. Main owns active connection selection and leases. A lease freezes model/options and retains its credential directory through worker cleanup. Browser and tool-free sessions export native transcripts under `browser-traces`. Task log export includes expert run IDs and reading attempts.
+[The Pi bridge](../src/pi/README.md) adapts native ModelRuntime, authentication, stream handling, reasoning, and request options. Main owns active connection selection and leases. A lease freezes model/options and retains its credential directory through worker cleanup. Browser and tool-free sessions export native transcripts under `browser-traces`. Task log export packages expert runs and reading attempts into one standalone page using the [trace contract](data-contracts.md#task-snapshots-and-activity-messages).
 
 Worker environments inherit explicit proxy policy. On macOS and Windows, GUI startup resolves explicit proxy variables before manual system proxy settings. Loopback traffic retains direct routing. Default workers receive the minimal permitted environment; environment-auth connections explicitly opt into native ambient credential resolution.
 

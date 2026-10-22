@@ -1200,6 +1200,7 @@ export class BrowserAgent {
         worker.postMessage({
           config,
           platform,
+          parentTaskId: taskId,
           taskId: randomUUID(),
           traceRoot: join(this.traceRoot, taskId, "executions"),
           prompt,

@@ -52,7 +52,13 @@ port.on("message", ({ data }) => {
           undefined,
           1,
           undefined,
-          {},
+          {
+            trace: {
+              taskId: data.taskId,
+              stage: input.operation,
+              repair: system.includes(" Repair the draft using the original."),
+            },
+          },
         );
       if (
         input.operation === "structure_content" ||

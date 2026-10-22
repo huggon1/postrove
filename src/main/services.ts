@@ -741,15 +741,31 @@ export async function initializeServices(
       return { ok: false, message: "Invalid task request" };
     try {
       const id = z.string().uuid().parse(taskId);
+      const task = taskView!.snapshots().find((task) => task.taskId === id);
+      const report = search.reports().find((report) => report.taskId === id);
+      const parsed = forwarding!.list().find((task) => task.taskId === id);
+      const detail = parsed ? forwarding!.read(id) : undefined;
+      const title =
+        report?.question ||
+        detail?.task.report?.source.title ||
+        detail?.partial.materials?.[0]?.title ||
+        parsed?.target.sourceUrl ||
+        task?.label;
       const value = await exportTaskPiLogs(
         [join(app.getPath("userData"), "browser-traces")],
         id,
-        search
-          .reports()
-          .find((report) => report.taskId === id)
-          ?.sections.flatMap((section) =>
-            section.runId ? [section.runId] : [],
-          ) ?? [],
+        report?.sections.flatMap((section) =>
+          section.runId ? [section.runId] : [],
+        ) ?? [],
+        title
+          ? {
+              title,
+              kind: task?.kind,
+              state: report?.status ?? task?.state,
+              sourceUrl: parsed?.target.sourceUrl,
+              createdAt: report?.createdAt ?? task?.createdAt,
+            }
+          : undefined,
       );
       return { ok: true, value };
     } catch {
