@@ -29,11 +29,14 @@ Fixtures use isolated profiles and controlled external responses.
 | [platform sessions](e2e/platform-session.spec.ts)               | Shared sessions, logout, and restart                                                                                                                                                                                                                 |
 | [platform expansion](e2e/platform-expansion.spec.ts)            | Shared Gemini language setup, Reddit guest enablement, scheduled experts, Shadow DOM controls, original citations, direct caption reading, and browser fallback                                                                                      |
 | [Native Pi connections](e2e/pi-model-connections.spec.ts)       | Native catalog/auth UI, option propagation, frozen leases, restart, and inactive legacy settings                                                                                                                                                     |
+| [Model settings](e2e/model-settings.spec.ts) | Direct connection/model selection, scoped checks, inactive edits, actions-menu keyboard behavior, and bilingual compact layouts |
 | [Shared content capabilities](e2e/content-capabilities.spec.ts) | Tool-free Pi execution, bounded concurrency, cancellation, released model leases, and task traces                                                                                                                                                    |
 
 ## Service and contract scope
 
 `tests/rules/schedules.test.ts` covers recurrence contracts, calendar anchors, month ends, daylight-saving transitions, fixed intervals, and legacy normalization. `tests/rules/search-follow-lifecycle.test.ts` covers exhausted rules, recipient changes, offline expiration, and clock rollback. `tests/rules/` also covers search/follow admission, expert cancellation, text fidelity, immutable results, upgrade retention, profiles, and prompt identity. Update-driver checks exercise Windows EXE selection and staged-file integrity, plus macOS native staging. Release checks exercise both platform feeds and reject incomplete or mixed package sets. The reading fixture can invoke internal recovery directly. That scope establishes saved-state behavior independently of available UI actions.
+
+`tests/rules/model-connections.test.ts` covers saved connection activation, independent editor catalogs, retained execution leases, failed writes, inactive credential replacement, reasoning compatibility, and late check completion after an active configuration change.
 
 [Product identity](e2e/product-identity.spec.ts) opens saved reading and its cached image across two launches, alongside retained connections and browser sessions.
 

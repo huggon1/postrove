@@ -8,6 +8,8 @@ The top bar contains the Postrove mark, Topics, Reading, Scheduled sends, Member
 
 Settings uses a category rail and a content pane. Section headings and their primary actions share a row at desktop widths. Connection cards open focused setup dialogs. Model setup presents connection method, authentication, and model options as three steps. Member setup shares a platform connection across its language experts.
 
+Each background-model card identifies its connection. The active card uses a blue In use indicator and contains the Current model selector followed by a blue primary Check connection button and its inline result. A successful check uses green feedback; cancellation uses neutral status text. Other cards expose Use this connection. The connection actions menu contains configuration editing and removal. At compact widths, the active indicator follows the connection name and check feedback wraps below its button.
+
 The scheduled-message dialog uses two columns on desktop: message and recipients on the left, time and repeat controls on the right. Its large time fields support additional daily send times. Weekly day buttons expose their selected state and offer day-group presets. More settings expands the zone and date bounds. A live preview shows the next occurrences and input errors. Schedule cards show the rule, saved zone, next send or Ended state, and a pause switch.
 
 ## Interaction indicators

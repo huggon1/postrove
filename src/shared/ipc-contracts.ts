@@ -24,6 +24,7 @@ import type {
   ModelView,
   SaveModelInput,
   SelectModelConnectionInput,
+  ActivateModelConnectionInput,
   LoginModelInput,
 } from "./model-contracts";
 import type {
@@ -76,6 +77,7 @@ export const modelChannels = {
   save: "model:save",
   login: "model:login",
   select: "model:select",
+  activate: "model:activate",
   remove: "model:remove",
   configure: "model:configure",
   respond: "model:respond",
@@ -187,6 +189,9 @@ export interface DesktopBridge {
   loginModel(input: LoginModelInput): Promise<ModelReply<void>>;
   selectModelConnection(
     input: SelectModelConnectionInput,
+  ): Promise<ModelReply<void>>;
+  activateModelConnection(
+    input: ActivateModelConnectionInput,
   ): Promise<ModelReply<void>>;
   removeModelConnection(input: {
     connectionId: string;
