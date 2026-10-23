@@ -47,6 +47,8 @@ Section `citationExtraction` records pending, running, completed, empty, or fail
 
 Report loading keeps current schema fields and strips retired synthesis data. Existing platform replies, candidates, and submission associations remain available.
 
+`questionPreparations` optionally saves each topic's `zh-CN` and `en` preparation. Each entry has state `preparing`, `ready` with its question, or `failed` with its error. The report's frozen original question defines the input for both entries. Main commits a ready entry before composing and saving the expert's platform-specific prompt. Dependents reuse the saved outcome and correction budget. Supported topic recovery reuses ready and failed entries; an interrupted preparing entry starts a fresh preparation. Historical reports acquire entries as their pending experts request them.
+
 ## Candidate sources and parsing submission
 
 Candidates contain identity, canonical `postKey`, URL, title, description, and optional displayed publication date. The saved answer and associated source captures establish citation evidence; titles and dates come from those captures. Main validates each candidate's platform and post identity. New Xiaohongshu candidates require an observed source-card address with access parameters, or a readable note whose own content container and document navigation share its note identity. Bare inline links remain answer evidence while source verification runs. Admitted addresses preserve their access parameters for parsing submission.

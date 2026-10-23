@@ -25,6 +25,7 @@ import type { SearchProgress } from "../browser-agent";
 import { localizedText, type Language } from "../../../shared/language";
 import { failureMessages } from "../../../shared/task-failure";
 import { nextScheduleRun, normalizeSchedule } from "../../../shared/schedules";
+import { QuestionPreparationPool } from "./question-preparation";
 
 /** Shared calendar and elapsed-interval calculation for future occurrences. */
 export const nextFollowRun = nextScheduleRun;
@@ -148,6 +149,7 @@ function searchStatus(sections: SearchSection[]) {
 export class FocusSearchService {
   private active = new Map<string, AbortController>();
   private sectionControllers = new Map<string, AbortController>();
+  private preparations = new Map<string, QuestionPreparationPool>();
   private queue: Promise<unknown> = Promise.resolve();
   private mutations: Promise<unknown> = Promise.resolve();
   private schedules: Promise<unknown> = Promise.resolve();
@@ -655,6 +657,38 @@ export class FocusSearchService {
       });
       this.changed();
       execution = await this.prepareExecution();
+      const bound = execution;
+      const preparations = new QuestionPreparationPool(
+        controller.signal,
+        (target) => this.readTask(taskId).questionPreparations?.[target],
+        async (target, preparation) => {
+          await this.store.update((state) => {
+            const report = state.reports.find((r) => r.taskId === taskId)!;
+            report.questionPreparations ??= {};
+            report.questionPreparations[target] = preparation;
+          });
+          this.changed();
+        },
+        (target, signal) =>
+          bound.content
+            ? bound.content(
+                {
+                  operation: "translate_question",
+                  text: this.readTask(taskId).question,
+                  targetLanguage: target,
+                },
+                signal,
+                taskId,
+              )
+            : this.options.prepareQuestion
+              ? this.options.prepareQuestion(
+                  this.readTask(taskId).question,
+                  target,
+                  signal,
+                )
+              : Promise.resolve(this.readTask(taskId).question),
+      );
+      this.preparations.set(taskId, preparations);
       for (const queued of this.readTask(taskId).sections) {
         if (controller.signal.aborted) break;
         const initial = this.readTask(taskId).sections.find(
@@ -688,23 +722,11 @@ export class FocusSearchService {
         try {
           if (!initial.checkpoint || initial.checkpoint.state === "prepared") {
             try {
-              const question = execution.content
-                ? await execution.content(
-                    {
-                      operation: "translate_question",
-                      text: this.readTask(taskId).question,
-                      targetLanguage: initial.promptLanguage,
-                    },
-                    sectionController.signal,
-                    initial.runId ?? taskId,
-                  )
-                : this.options.prepareQuestion
-                  ? await this.options.prepareQuestion(
-                      this.readTask(taskId).question,
-                      initial.promptLanguage,
-                      sectionController.signal,
-                    )
-                  : this.readTask(taskId).question;
+              const question = await preparations.get(
+                initial.promptLanguage,
+                sectionController.signal,
+              );
+              sectionController.signal.throwIfAborted();
               initial.prompt = searchInstruction(
                 initial.platform,
                 question,
@@ -729,6 +751,7 @@ export class FocusSearchService {
               throw error;
             }
           }
+          sectionController.signal.throwIfAborted();
           const result = await execution.execute(
             initial,
             sectionController.signal,
@@ -785,16 +808,8 @@ export class FocusSearchService {
               const readingReply = execution.content
                 ? await execution.content(
                     {
-                      operation: "translate_content",
-                      text: await execution.content(
-                        {
-                          operation: "format_content",
-                          text: result.rawReply,
-                          targetLanguage,
-                        },
-                        sectionController.signal,
-                        initial.runId ?? taskId,
-                      ),
+                      operation: "prepare_reading",
+                      text: result.rawReply,
                       targetLanguage,
                     },
                     sectionController.signal,
@@ -981,7 +996,13 @@ export class FocusSearchService {
       }
     } finally {
       try {
-        await execution?.release();
+        try {
+          this.preparations.get(taskId)?.cancelUnused(new Set());
+          await this.preparations.get(taskId)?.drain();
+        } finally {
+          this.preparations.delete(taskId);
+          await execution?.release();
+        }
       } finally {
         this.active.delete(taskId);
         release?.();
@@ -1012,6 +1033,15 @@ export class FocusSearchService {
       section.finishedAt = this.now();
       finishCitation(section, section.error);
     });
+    this.preparations.get(taskId)?.cancelUnused(
+      new Set(
+        this.readTask(taskId)
+          .sections.filter(
+            (s) => !s.cancelled && ["pending", "running"].includes(s.state),
+          )
+          .map((s) => s.promptLanguage),
+      ),
+    );
     this.changed();
   }
   async retry(_taskId: string): Promise<string> {

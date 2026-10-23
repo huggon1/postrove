@@ -52,11 +52,11 @@ const nodes = [
     label: "ELECTRON MAIN",
     lines: [
       "Freeze roles and languages",
-      "Translate + source sentence",
+      "Share questions by language",
       "Dispatch / persist / recover",
     ],
     detail:
-      "Main freezes expert, connection, language, and execution model. The source profile selects the accepted source kinds and localized one-sentence enhancement. Main translates the original question, appends that sentence, and saves the exact text and revisions. Answer persistence precedes same-session citation extraction. Validated source identities govern collection; each expert retains independent cancellation and receipt state.",
+      "Main freezes expert, connection, language, and execution model. Each topic saves one question preparation per target language, including its terminal failure. Experts reuse that question, append their source profile's localized sentence, and save the exact submitted text and revisions. Answer persistence precedes same-session citation extraction. One prepare_reading operation produces each reply's reading version. Each expert retains independent cancellation and receipt state; shared preparation follows its remaining consumers.",
   },
   {
     id: "reading",
@@ -71,7 +71,7 @@ const nodes = [
       "Save original, prepare reading",
     ],
     detail:
-      "Every source starts the same capture Agent through PlatformAccess.collect. The Agent loads the relevant reading Skill, chooses page operations and available tools, and returns captured evidence. Main validates and saves the source, then dispatches direct references one level deep. Translation, formatting, and introduction consume saved material.",
+      "Every source starts the same capture Agent through PlatformAccess.collect. The Agent loads the relevant reading Skill, chooses page operations and available tools, and returns captured evidence. Main validates and saves the source, then dispatches direct references one level deep. Translation preserves Markdown blocks and completed chunks; recovery processes unfinished chunks from saved material in the frozen reading language. Introduction remains a separate operation.",
   },
   {
     id: "storage",
@@ -157,15 +157,15 @@ const nodes = [
     title: "Shared content capabilities",
     label: "ISOLATED TEXT AGENTS",
     lines: [
-      "translate / format / structure / introduce",
+      "questions / reading / structure / introduce",
       "Explicit content + one output contract",
       "Text Agents: tools [] · Skills []",
     ],
-    task: "Run one text operation on supplied content. Translation follows the target language. Formatting adds readable Markdown structure. Structure returns the fixed title/Markdown/citations schema. Introduction summarizes one material within its observed coverage.",
+    task: "Run one text operation on supplied content. Question preparation returns the original request in a target language. Reading preparation translates and formats a captured reply in one operation. Material translation preserves the saved source and completed chunks. Structure returns the fixed title/Markdown/citations schema. Introduction summarizes one material within its observed coverage.",
     tools: [],
     skills: [],
     prompt:
-      "translate_content uses translationSystem; format_content preserves wording, facts, language and links; structure_content preserves full content and uses observed links; introduce_content uses summarySystem. Each Agent receives explicit content and one operation contract.",
+      "translate_question returns sourceLanguage and question, with one correction budget shared by a topic's language consumers. prepare_reading receives JSON sourceMarkdown and uses readingSystem; translate_content uses translationSystem. Both preserve target-language passages and treat embedded questions and instructions as source data. format_content preserves wording, facts, language and links; structure_content uses observed links; introduce_content uses summarySystem.",
     output:
       "Translated or formatted Markdown, validated structured JSON, or a short introduction. Shared fidelity checks preserve links, executable code and identifiers; one correction repairs a failed preservation check.",
   },

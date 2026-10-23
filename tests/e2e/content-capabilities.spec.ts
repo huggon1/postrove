@@ -1,9 +1,10 @@
 import { test, expect, _electron as electron } from "@playwright/test";
 import { createServer } from "node:http";
-import { mkdtemp, rm, readdir } from "node:fs/promises";
+import { mkdtemp, rm, readdir, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
+import { readPiLogSessionDetails } from "../../src/main/services/tasks/pi-log-document";
 
 test("shared content service uses isolated Pi calls, bounded concurrency, cancellation and task traces", async ({}, info) => {
   test.setTimeout(90000);
@@ -12,6 +13,10 @@ test("shared content service uses isolated Pi calls, bounded concurrency, cancel
     peak = 0,
     held = false;
   const calls: any[] = [];
+  const messageText = (body: any) =>
+    typeof body === "string"
+      ? body
+      : body.map((part: any) => part.text ?? "").join("");
   const server = createServer(async (req, res) => {
     let raw = "";
     for await (const part of req) raw += part;
@@ -33,10 +38,7 @@ test("shared content service uses isolated Pi calls, bounded concurrency, cancel
       return;
     }
     const body = input.messages.at(-1).content;
-    let content =
-      typeof body === "string"
-        ? body
-        : body.map((part: any) => part.text ?? "").join("");
+    let content = messageText(body);
     if (
       JSON.stringify(input.messages[0]).includes("Translate a search question")
     )
@@ -44,6 +46,8 @@ test("shared content service uses isolated Pi calls, bounded concurrency, cancel
         sourceLanguage: "en",
         question: "A model rewrite that the same-language path discards.",
       });
+    else if (JSON.stringify(input.messages[0]).includes("JSON sourceMarkdown"))
+      content = JSON.parse(content).sourceMarkdown.replace("Read", "阅读");
     res.writeHead(200, { "Content-Type": "text/event-stream" });
     for (const [delta, reason] of [
       [{ role: "assistant", content }, null],
@@ -129,11 +133,44 @@ test("shared content service uses isolated Pi calls, bounded concurrency, cancel
       JSON.stringify(call.messages[0]).includes("Translate a search question"),
     );
     expect(questionCalls).toHaveLength(1);
+    const readingId = randomUUID();
+    const reading = await app.evaluate(
+      async (_electron, input) => (globalThis as any).contentFixture(input),
+      {
+        id: readingId,
+        endpoint,
+        request: {
+          operation: "prepare_reading",
+          text,
+          targetLanguage: "zh-CN",
+        },
+      },
+    );
+    expect(reading.value).toBe(text.replace("Read", "阅读"));
+    expect(reading.released).toBe(7);
+    const readingCalls = calls.filter((call) =>
+      JSON.stringify(call.messages[0]).includes("JSON sourceMarkdown"),
+    );
+    expect(readingCalls).toHaveLength(1);
+    expect(readingCalls[0].tools).toEqual([]);
+    expect(
+      JSON.parse(messageText(readingCalls[0].messages.at(-1).content))
+        .sourceMarkdown,
+    ).toBe(text);
     const files = await readdir(join(root, "traces"), { recursive: true });
-    for (const input of [...inputs, { id: questionId }])
+    for (const input of [...inputs, { id: questionId }, { id: readingId }])
       expect(
         files.some((file) => file.includes(input.id) && file.endsWith(".html")),
       ).toBe(true);
+    const readingFile = files.find(
+      (file) => file.includes(readingId) && file.endsWith("session.html"),
+    )!;
+    const readingDetails = readPiLogSessionDetails(
+      await readFile(join(root, "traces", readingFile), "utf8"),
+      readingId,
+    );
+    expect(readingDetails.stage).toBe("prepare_reading");
+    expect(readingDetails.targetLanguage).toBe("zh-CN");
     await info.attach("content-service-boundary", {
       body: JSON.stringify({
         isolatedCalls: calls.length,
@@ -141,8 +178,12 @@ test("shared content service uses isolated Pi calls, bounded concurrency, cancel
           ...results.map((result) => result.peakLeases),
         ),
         peakRequestConcurrency: peak,
-        releasedLeases: 6,
-        taskTraceIds: [...inputs.map((input) => input.id), questionId],
+        releasedLeases: 7,
+        taskTraceIds: [
+          ...inputs.map((input) => input.id),
+          questionId,
+          readingId,
+        ],
       }),
       contentType: "application/json",
     });

@@ -1,4 +1,3 @@
-import { marked } from "marked";
 import { randomUUID } from "node:crypto";
 import type { ModelExecutionConfig } from "../../../shared/model-contracts";
 import type { ReadingMaterial } from "../../../shared/reading-contracts";
@@ -8,6 +7,7 @@ import { promptExecution } from "../../prompt-execution";
 import { localizedText } from "../../../shared/language";
 import { translationSystem, summarySystem } from "./reading-prompts";
 import { executeContent } from "../../content/capabilities";
+import { splitMarkdown } from "../../content/chunks";
 import {
   ExecutionFailure,
   failureMessages,
@@ -26,27 +26,6 @@ export interface ReadingDependencies {
     index: number,
   ): Promise<{ text: string; truncated: boolean; issue?: string }>;
   summarize(material: ReadingMaterial): Promise<string>;
-}
-
-// Markdown blocks stay intact. An oversized block is sent intact; the provider
-// reports its actual capacity and the job retains the preceding saved chunks.
-function splitBody(body: string, budget: number) {
-  const parts = marked.lexer(body).map((token) => token.raw);
-  const chunks: string[] = [];
-  let current = "";
-  for (const part of parts) {
-    if (current && current.length + part.length > budget) {
-      chunks.push(current);
-      current = "";
-    }
-    current += part;
-    if (current.length >= budget) {
-      chunks.push(current);
-      current = "";
-    }
-  }
-  if (current) chunks.push(current);
-  return chunks;
 }
 
 export async function runReadingJob(
@@ -101,7 +80,9 @@ export async function runReadingJob(
                     .slice(`${command.taskId}:${material.id}:`.length)
                     .split(":")[0],
                 ),
-                repair: system.includes(" Repair the draft using the original."),
+                repair: system.includes(
+                  " Repair the draft using the original.",
+                ),
               }
             : {}),
         },
@@ -161,7 +142,7 @@ export async function runReadingJob(
       if (!pieces.length) throw new Error("No translated portion to summarize");
       while (pieces.join("\n\n").length > budget * 2) {
         const next: string[] = [];
-        for (const [index, text] of splitBody(
+        for (const [index, text] of splitMarkdown(
           pieces.join("\n\n"),
           budget * 2,
         ).entries()) {
@@ -264,12 +245,14 @@ export async function runReadingJob(
                       : b.text,
               )
               .join("\n\n");
-          material.chunks = splitBody(body, budget).map((original, index) => ({
-            index,
-            original,
-            translated: "",
-            complete: false,
-          }));
+          material.chunks = splitMarkdown(body, budget).map(
+            (original, index) => ({
+              index,
+              original,
+              translated: "",
+              complete: false,
+            }),
+          );
           save(material);
         }
         emit({ type: "phase", taskId: command.taskId, phase: "翻译材料" });
