@@ -90,4 +90,4 @@ Skill 约定读取范围，工具提供对应来源的获取方式。两端安�
 
 > ⚠️ Postrove 使用已登录的平台账号执行自动搜索和内容读取。这类操作可能触发平台风控，导致额外验证、限流、账号限制或封禁。建议为 X、小红书等平台使用专用小号，以降低账号受限时的影响。
 
-[开发指南](docs/development.md) · [0.2.0 发布说明](docs/releases/0.2.0.md) · [发布指南](docs/releasing.md) · [MIT 许可证](LICENSE)
+[开发指南](docs/development.md) · [0.2.1 发布说明](docs/releases/0.2.1.md) · [发布指南](docs/releasing.md) · [MIT 许可证](LICENSE)
