@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import {
   ArrowDown,
   ArrowClockwise,
+  ArrowRight,
   CaretRight,
+  Check,
   X,
 } from "@phosphor-icons/react";
 import { bridge } from "../bridge";
@@ -261,38 +263,53 @@ export function UpdateExperience({
           </p>
         </div>
       )}
-      {view.state === "available" && dismissed !== view.release?.version && (
-        <div className="update-toast" role="status">
-          <span>{tf("Postrove {0} 已发布", view.release?.version)}</span>
-          <button
-            className="secondary"
-            onClick={() => {
-              setDismissed(view.release!.version);
-              onOpen();
-            }}
-          >
-            {t("查看更新")}
-          </button>
-          <button
-            className="secondary"
-            onClick={() => setDismissed(view.release!.version)}
-          >
-            {t("稍后")}
-          </button>
-        </div>
-      )}
-      {view.updatedFrom && (
-        <div className="update-toast" role="status">
-          <span>{tf("已更新至 Postrove {0}", view.version)}</span>
-          <button
-            className="icon-button"
-            aria-label={t("关闭提示")}
-            onClick={() => void updates.action(bridge.dismissUpdateSuccess)}
-          >
-            <X size={16} />
-          </button>
-        </div>
-      )}
+      <div className="update-toast-stack">
+        {view.state === "available" && dismissed !== view.release?.version && (
+          <div className="update-toast" role="status">
+            <span className="update-toast-icon" aria-hidden="true">
+              <ArrowDown />
+            </span>
+            <div className="update-toast-content">
+              <p>{tf("Postrove {0} 已发布", view.release?.version)}</p>
+              <div className="update-toast-actions">
+                <button
+                  className="primary"
+                  onClick={() => {
+                    setDismissed(view.release!.version);
+                    onOpen();
+                  }}
+                >
+                  {t("查看更新")}
+                  <ArrowRight aria-hidden="true" />
+                </button>
+                <button
+                  className="text-button"
+                  onClick={() => setDismissed(view.release!.version)}
+                >
+                  {t("稍后")}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {view.updatedFrom && (
+          <div className="update-toast update-toast-success" role="status">
+            <span className="update-toast-icon" aria-hidden="true">
+              <Check />
+            </span>
+            <div className="update-toast-content">
+              <p>{tf("已更新至 Postrove {0}", view.version)}</p>
+            </div>
+            <button
+              className="icon-button"
+              aria-label={t("关闭提示")}
+              onClick={() => void updates.action(bridge.dismissUpdateSuccess)}
+            >
+              <X size={16} />
+            </button>
+          </div>
+        )}
+      </div>
       {updates.confirmation && (
         <ConfirmDialog
           title={tf("{0} 个任务正在运行", view.jobs.length)}
