@@ -6,7 +6,8 @@
 | --- | --- | --- | --- | --- |
 | Platform bridge | Prepared question, platform identity, capture rules; submitted checkpoint on recovery | `browser`, `load_platform_skill`, `capture_search_sources`, `structure_content` | Selected platform search Skill name and description; full body after load | Captured answer, exact question, verified citations and source state |
 | Material capture | HTTPS address, main/reference scope, capture schema | `browser`, `load_platform_skill`, `structure_content`; optional `read_xiaohongshu`, runtime-ready `read_youtube_transcript` | Reading Skill names and descriptions; selected full bodies after load | Capture-backed material, source identity, ordered Markdown/images, coverage |
-| Question translation | Original question as JSON, expert language, request-preservation rules | Empty | Empty | Validated source language and translated question |
+| Question translation | Original question as JSON, expert language, request-preservation rules | Empty | Empty | Model-reported source language and prepared question |
+| Reading version | Captured reply as JSON source Markdown, reading language, preservation and formatting rules | Empty | Empty | Faithfully translated, readable Markdown |
 | Translation | Current text chunk, target language, preservation rules | Empty | Empty | Translated Markdown |
 | Formatting | Captured text, paragraph/list/heading rules, preservation rules | Empty | Empty | Markdown reading version |
 | Structure | Current-task capture text and fixed JSON schema | Empty | Empty | Title, full Markdown, observed citation links |
@@ -17,11 +18,13 @@
 
 ## Question and answer flow
 
-Main translates the original question into the expert language, then appends the route source profile’s localized sentence. [Source profiles](../src/shared/source-profiles.ts) owns the exact sentences for X posts, Xiaohongshu notes, YouTube videos, and Reddit posts/comments. The run snapshot retains its source-profile revision and complete prepared question.
+Main prepares the original question once per selected expert language in each topic. The first dependent expert starts preparation; later dependents share its pending call or saved success or failure. Each expert appends its route source profile’s localized sentence after preparation. [Source profiles](../src/shared/source-profiles.ts) owns the exact sentences for X posts, Xiaohongshu notes, YouTube videos, and Reddit posts/comments. The run snapshot retains its source-profile revision and complete prepared question.
 
-`translate_question` uses the [question translator](../src/worker/content/question.ts) with a structured source-language and question result. Matching source and expert languages reuse the original question. Cross-language results preserve links, code, and identifiers. Invalid JSON or preservation failures receive one correction attempt; a repeated failure ends question preparation with the original question retained.
+`translate_question` uses the [question translator](../src/worker/content/question.ts) with a structured source-language and question result. A matching model-reported source language selects the saved original question. Cross-language results preserve links, code, and identifiers. Invalid JSON or preservation failures receive one correction attempt shared by all dependents of that language. A repeated failure ends preparation for those experts with the original question retained. Real-model regression checks assess request preservation alongside programmatic syntax checks.
 
-The bridge task contains that exact text and the output schema. The platform Skill supplies its fixed AI entry address and interaction guide. Main saves a captured stable answer before acknowledging the same session's citation phase. Browser captures provide the original answer bytes. Formatting and translation produce a separately saved reading version.
+The bridge task contains that exact text and the output schema. The platform Skill supplies its fixed AI entry address and interaction guide. Main saves a captured stable answer before acknowledging the same session's citation phase. Browser captures provide the original answer bytes. `prepare_reading` receives the captured reply in a `sourceMarkdown` JSON field and combines necessary Markdown formatting with faithful translation into the frozen reading language. Passages already in that language retain their wording. Source questions and instructions retain their role as content. The reading version remains separate from the saved answer.
+
+Collected materials use `translate_content` for their existing Markdown and generate their introduction separately. The shared [Markdown splitter](../src/worker/content/chunks.ts) keeps blocks intact and attaches separator whitespace to adjacent content. Material retries reuse completed chunks from the saved source version and process unfinished chunks in the task's frozen reading language.
 
 Reply admission checks the selected DOM container before saving. Page roots, composers, and containers with user messages return a scope error so the bridge can select the complete assistant body. Source panels and cards use the saved reply's separate citation scope.
 
@@ -41,6 +44,6 @@ The Pi coding-session factory uses the application system and Pi working-directo
 
 Browser recovery retains the same session and task budget. Transient model failures permit up to three attempts; invalid output has bounded corrections. Reading text calls use the same bounded transient retry policy. Fidelity validation permits one correction call and retains the original when the correction fails.
 
-The content worker limits tool-free calls to one Agent turn and carries a task cancellation signal. Main bounds concurrent content workers at two and drains cancellation through credential persistence. Search stages share one frozen model lease.
+The content worker limits tool-free calls to one Agent turn and carries a task cancellation signal. Main bounds concurrent content workers at two and drains cancellation through credential persistence. Search stages share one frozen model lease. Stopping an expert exits its wait; remaining dependents keep shared preparation active. Stopping its final dependent or the topic cancels preparation. Native question-preparation traces use the topic identity and record their target language; expert reading traces use the expert run identity.
 
 Native Pi JSONL/HTML records systems, actual user tasks, loaded Skill bodies, tool definitions, observations, and responses. Browser sessions add model/settings metadata. [Execution identity](data-contracts.md#development-profiles-and-execution-identity) defines revision and trace association.

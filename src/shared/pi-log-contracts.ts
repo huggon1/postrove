@@ -8,11 +8,13 @@ export const piLogExecutionSchema = z.object({
     "translation",
     "summary",
     "translate_question",
+    "prepare_reading",
     "translate_content",
     "format_content",
     "structure_content",
     "introduce_content",
   ]),
+  targetLanguage: z.enum(["zh-CN", "en"]).optional(),
   platform: z
     .enum(["x", "xiaohongshu", "youtube", "reddit", "github", "web"])
     .optional(),

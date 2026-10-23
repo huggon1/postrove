@@ -5,6 +5,7 @@ export const contentRequestSchema = z
   .object({
     operation: z.enum([
       "translate_question",
+      "prepare_reading",
       "translate_content",
       "format_content",
       "structure_content",

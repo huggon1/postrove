@@ -115,7 +115,7 @@
       callers.push('<span class="detail-static-chip">Main 服务入口</span>');
     const nested = t.profileId
       ? section(
-          "工具内部的 Agent",
+          t.callers.length ? "工具内部的 Agent" : "服务内部的 Agent",
           button(
             "profile",
             t.profileId,
@@ -123,13 +123,20 @@
             "detail-forward",
           ) +
             prose(
-              "同一内容能力通过 Main 服务和 Agent 工具适配器调用。当前浏览器 Agent 的工具列表配发 structure_content。",
+              t.callers.length
+                ? "同一内容能力通过 Main 服务和 Agent 工具适配器调用。当前浏览器 Agent 配发 structure_content。"
+                : "Main 通过共享内容服务直接调用此操作。",
             ),
         )
       : "";
     return {
       title: t.name,
-      kicker: "TOOL · " + t.title,
+      kicker:
+        (t.service
+          ? t.callers.length
+            ? "TOOL / SERVICE · "
+            : "SERVICE · "
+          : "TOOL · ") + t.title,
       html:
         prose(t.summary) +
         (t.conditional
@@ -243,12 +250,12 @@
       kicker: "SOURCE PROFILE · 统一准备 / 分别约束",
       html:
         prose(
-          "Main 翻译原问题，再从来源策略选一句增强提示。Skill 负责平台操作。桥梁任务保持精简。",
+          "Main 按话题和目标语言共享提问准备。各专家复用该语言版本，再从来源策略选一句增强提示。Skill 负责平台操作。",
         ) +
         section(
           "同一流程",
           code(
-            "原问题 → 按专家语言翻译 → 追加来源增强句\n→ 保存实际提问与策略版本 → 桥梁发送\n→ 保存回答 → 捕获引用 → Main 校验来源身份",
+            "原问题 → 按话题和目标语言共享准备\n→ 各专家追加来源增强句 → 保存实际提问与策略版本\n→ 桥梁发送 → 保存回答 → 捕获引用 → Main 校验来源身份\n→ prepare_reading 合并翻译与排版 → 保存阅读版本",
           ),
         ) +
         section("按来源定义", `<div class="policy-cards">${cards}</div>`) +
@@ -270,12 +277,13 @@
       kicker: "SHARED CONTENT · TOOL / SERVICE",
       html:
         prose(
-          "四项能力共用同一实现，入口分别服务于 Main 调度和 Agent 工具调用。每次内部模型调用使用独立短上下文。",
+          "六项内容操作共用同一实现，入口分别服务于 Main 调度和 Agent 工具调用。每次内部模型调用使用独立短上下文。",
         ) +
         section(
           "调用分工",
           list([
-            "Main 按规则调用翻译、排版、结构化和单篇导读。",
+            "Main 按目标语言共享 translate_question，再由各专家追加来源增强句。",
+            "平台回复通过 prepare_reading 合并翻译与排版；材料通过 translate_content 逐块翻译，并单独生成导读。",
             "平台桥梁与内容采集 Agent 当前配发 structure_content。",
             "文本 Agent 接收本次内容、目标与输出要求，工具和 Skill 列表为空。",
           ]),

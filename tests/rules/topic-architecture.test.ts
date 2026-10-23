@@ -133,7 +133,8 @@ test("language experts share a connection and freeze identity, language and exac
           section.readingReply === reply.rawReply,
       ),
     );
-    assert.ok(calls.includes("format_content:zh-CN"));
+    assert.equal(calls.filter((c) => c === "prepare_reading:zh-CN").length, 2);
+    assert.ok(!calls.some((c) => c.startsWith("format_content:")));
     assert.ok(calls.includes("translate_question:zh-CN"));
     assert.ok(calls.includes("translate_question:en"));
     assert.equal(report.status, "partial");
@@ -261,7 +262,7 @@ test("stopping a queued expert skips its execution and stopping processing prese
     async () => ({ ...reply, citationExtraction: { state: "completed" } }),
     {},
     async (input: any, signal: AbortSignal) => {
-      if (input.operation !== "format_content") return input.text;
+      if (input.operation !== "prepare_reading") return input.text;
       processing = true;
       await new Promise<void>((_, reject) =>
         signal.addEventListener("abort", () => reject(new Error("cancelled")), {

@@ -42,6 +42,8 @@ Fixtures use isolated profiles and controlled external responses.
 
 ## Commands and evidence
 
+`tests/rules/translation-lifecycle.test.ts` covers shared question preparation across experts, topic-scoped reuse, the reported question-to-answer failure, cancellation and model-lease draining, saved preparation recovery, mixed-content reading preservation, Markdown separators, and retry of unfinished material chunks. The content-capabilities E2E checks the combined reading operation through the production worker and native Pi trace metadata. Live model trials assess semantic fidelity separately from controlled responses.
+
 | Command              | Result                                    |
 | -------------------- | ----------------------------------------- |
 | `npm run check`      | Types, document references, and rules     |

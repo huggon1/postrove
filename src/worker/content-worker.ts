@@ -4,7 +4,7 @@ import { contentRequestSchema } from "../shared/content-contracts";
 import { runWithPi, resolveModel } from "./pi-runtime";
 import { executeContent } from "./content/capabilities";
 import { piTraceContext } from "./pi-trace-context";
-import { marked } from "marked";
+import { splitMarkdown } from "./content/chunks";
 
 const port = process.parentPort!;
 const controller = new AbortController();
@@ -30,15 +30,8 @@ port.on("message", ({ data }) => {
           ),
         ),
       );
-      const chunks: string[] = [];
-      for (const token of marked.lexer(input.text)) {
-        if (
-          chunks.length &&
-          chunks[chunks.length - 1].length + token.raw.length <= budget
-        )
-          chunks[chunks.length - 1] += token.raw;
-        else chunks.push(token.raw);
-      }
+      const chunks = splitMarkdown(input.text, budget);
+      let chunkIndex: number | undefined;
       const call = (text: string, system: string) =>
         runWithPi(
           config,
@@ -56,6 +49,8 @@ port.on("message", ({ data }) => {
             trace: {
               taskId: data.taskId,
               stage: input.operation,
+              targetLanguage: input.targetLanguage,
+              chunkIndex,
               repair: system.includes(" Repair the draft using the original."),
             },
           },
@@ -73,8 +68,10 @@ port.on("message", ({ data }) => {
         });
       } else {
         const output: string[] = [];
-        for (const text of chunks)
+        for (const [index, text] of chunks.entries()) {
+          chunkIndex = chunks.length > 1 ? index : undefined;
           output.push(await executeContent({ ...input, text }, call));
+        }
         port.postMessage({ type: "result", value: output.join("\n\n") });
       }
     } finally {

@@ -17,6 +17,7 @@ const stageNames = {
   translation: "翻译正文",
   summary: "生成阅读简介",
   translate_question: "提问翻译",
+  prepare_reading: "生成阅读版本",
   translate_content: "翻译内容",
   format_content: "整理内容格式",
   structure_content: "提取内容结构",

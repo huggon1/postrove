@@ -18,6 +18,7 @@ export interface PiLogTask {
 
 export interface PiLogSessionDetails {
   stage?: PiLogExecution["stage"];
+  targetLanguage?: PiLogExecution["targetLanguage"];
   platform?: PiLogExecution["platform"];
   materialTitle?: string;
   sourceUrl?: string;
@@ -208,6 +209,7 @@ export function readPiLogSessionDetails(
       .find((message) => message.role === "assistant");
     return {
       stage,
+      targetLanguage: recorded?.targetLanguage,
       platform:
         recorded?.platform ??
         (stage === "search"

@@ -106,7 +106,8 @@ test("task logs export as one offline HTML with an index and native session navi
         customType: "postrove-execution",
         data: {
           taskId,
-          stage: "translation",
+          stage: "prepare_reading",
+          targetLanguage: "zh-CN",
           materialTitle: "本地优先阅读工具的设计",
           chunkIndex: 0,
           attempt: 2,
@@ -192,7 +193,8 @@ test("task logs export as one offline HTML with an index and native session navi
     );
     expect(manifest.taskId).toBe(taskId);
     expect(manifest.task.title).toBe(taskTitle);
-    expect(manifest.sessions[0].label).toBe("翻译正文 · 第 1 段");
+    expect(manifest.sessions[0].label).toBe("生成阅读版本 · 第 1 段");
+    expect(manifest.sessions[0].details.targetLanguage).toBe("zh-CN");
     expect(manifest.sessions[0].details.attempt).toBe(2);
     expect(
       manifest.sessions.map((session: any) =>
@@ -237,7 +239,9 @@ test("task logs export as one offline HTML with an index and native session navi
       "background-color",
       "rgb(255, 255, 255)",
     );
-    await expect(frame.locator(".header h1")).toHaveText("翻译正文 · 第 1 段");
+    await expect(frame.locator(".header h1")).toHaveText(
+      "生成阅读版本 · 第 1 段",
+    );
     await expect(frame.locator("#messages")).toContainText(
       "Fictional request · 中文 🦊",
     );

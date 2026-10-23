@@ -103,12 +103,35 @@ export const searchSectionSchema = z
         ctx.addIssue({ code: "custom", message: "Invalid platform candidate" });
     }
   });
+export const questionPreparationSchema = z.discriminatedUnion("state", [
+  z.object({ state: z.literal("preparing") }).strict(),
+  z
+    .object({
+      state: z.literal("ready"),
+      question: z.string().min(1).max(1_000_000),
+    })
+    .strict(),
+  z
+    .object({
+      state: z.literal("failed"),
+      error: z.string().min(1).max(1000),
+    })
+    .strict(),
+]);
+export type QuestionPreparation = z.infer<typeof questionPreparationSchema>;
 export const focusSearchReportSchema = z
   .object({
     reportId: z.string().uuid(),
     taskId: z.string().uuid(),
     createdAt: z.string().datetime(),
     question: z.string().min(1),
+    questionPreparations: z
+      .object({
+        "zh-CN": questionPreparationSchema.optional(),
+        en: questionPreparationSchema.optional(),
+      })
+      .strict()
+      .optional(),
     outputLanguage: z.enum(["zh-CN", "en"]).optional(),
     taskOutcome: z.enum(["completed", "failed", "cancelled"]).optional(),
     origin: z.enum(["manual", "follow"]).optional(),

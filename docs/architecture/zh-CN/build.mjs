@@ -40,7 +40,7 @@ ${text(969, 889, "Markdown 文件交付", "col-title")}${text(969, 914, "result.
 ${text(280, 972, storage.path, "path")}${text(280, 993, storage.latest, "saved-copy")}
 </g></svg>`;
 const mmd = `flowchart LR
-  question[话题 / 定时发送] --> main[Main 冻结专家与语言 / 准备提问]
+  question[话题 / 定时发送] --> main[Main 冻结专家与语言 / 按目标语言共享提问准备]
   connection[共享 AI 登录 / 独立顾问路线 / 语言专家] -.-> main
   policy[来源策略 / 一句增强 / 来源类型与身份] -.-> main
   main --> bridge[平台桥梁 Agent / 精确提问与路线 Skill 索引]
@@ -56,7 +56,12 @@ const mmd = `flowchart LR
   skill[Skill 目录 / 自行选择并 load] -.-> bridge
   skill -.-> capture
   sources --> save[Main 保存原始来源 / 版本 / 回执]
-  save --> content[共享文本能力 / 翻译 / 排版 / 结构化 / 导读]
+  main --> questionPrep[translate_question / 共享状态与纠正预算]
+  questionPrep --> main
+  bridge --> replySave[Main 保存原始回答]
+  replySave --> readingVersion[prepare_reading / 翻译与必要排版]
+  readingVersion --> files
+  save --> content[translate_content / 未完成分块 / 独立导读]
   content --> files[固定 result.md / 最新 latest.md / 原始字幕证据]
 `;
 const detailSource = fs.readFileSync(root + "detail-client.js", "utf8");
