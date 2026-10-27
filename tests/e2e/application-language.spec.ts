@@ -93,7 +93,7 @@ for (const scenario of [
   });
 }
 
-test("initial and manual language selections persist across system-language changes", async ({}, info) => {
+test("initial and manual language selections persist across system-language changes", { tag: "@smoke" }, async ({}, info) => {
   let page = await launch(["fr-FR"]);
   await expect(
     page.getByRole("button", { name: "Settings", exact: true }),

@@ -22,6 +22,7 @@
     "docs:check": "node scripts/checks/docs.mjs",
     "check": "npm run typecheck && npm run docs:check && npm run test:rules",
     "test:e2e": "npm run build && node tests/build-workers.mjs && playwright test",
+    "test:smoke": "npm run test:e2e -- --grep @smoke --no-deps",
     "check:full": "npm run check && npm run test:e2e",
     "test:upgrade": "node scripts/development/verify-upgrade.mjs",
     "prepare:upgrade": "node scripts/development/verify-upgrade.mjs --prepare",
