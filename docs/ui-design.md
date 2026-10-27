@@ -25,6 +25,8 @@ Each trailing indicator represents the control's actual result. Choose it from t
 
 The leading icon, label, and active styling form the complete indicator set for leaf page and category navigation. Disclosure carets belong to controls that show and hide content. When removing an indicator, retire its selectors at every breakpoint so positional SVG rules continue to style the intended icon.
 
+Update availability, installation preparation, and success share the floating card layout. Installation preparation shows a blue rotating restart icon, its status title, and the existing restart message. Reduced-motion preferences keep that icon still. Compact windows place the cards above the bottom navigation.
+
 ## Adaptive layout
 
 The topic feed and its supporting column share the desktop viewport. Compact widths place supporting content below the feed, move navigation to its compact position, and adapt settings categories and dialogs to the available width. Text, controls, and saved content remain within their scroll containers. The scheduled-message dialog stacks its columns below 660 pixels and scrolls inside its frame.
