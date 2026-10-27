@@ -105,6 +105,9 @@ export class PlatformBrowser {
       ? this.options.headless()
       : (this.options.headless ?? true);
   }
+  userAgent(context: BrowserContext) {
+    return this.chrome.userAgent(context);
+  }
   context(platform: BrowserSite, headless?: boolean) {
     const operation = this.contextQueue
       .catch(() => {})
@@ -320,6 +323,7 @@ export class PlatformBrowser {
         page = await context.newPage();
         signal.addEventListener("abort", abort, { once: true });
         if (signal.aborted) throw new Error("Cancelled");
+        if (this.contextHeadless) await this.chrome.useChromeIdentity(page);
         await this.guardTaskPage(platform, page);
         return await run(page);
       } finally {
@@ -652,7 +656,7 @@ export class PlatformBrowser {
         roots.flatMap((root) => [...root.querySelectorAll(selector)]);
       const controls = Array.from(
         query(
-          'body,main,article,section,[role="main"],[role="article"],model-response-content,message-content,ytd-watch-metadata,button,a,img,input,textarea,[contenteditable="true"],[role="button"]',
+          'body,main,article,section,[role="main"],[role="article"],model-response-content,message-content,.guides-response-ssr,.rendererd-rtjson,ytd-watch-metadata,button,a,img,input,textarea,[contenteditable="true"],[role="button"]',
         ),
       );
       const pointerControls = Array.from(query("div,span,[onclick],[tabindex]"))

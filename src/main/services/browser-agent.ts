@@ -817,7 +817,7 @@ export class BrowserAgent {
                   if (!(await body.evaluate(isAssistantReply))) {
                     await body.dispose();
                     throw new Error(
-                      "reply_scope: Selected container includes the user question, page controls, or only part of a Gemini reply. Capture the complete assistant-only reply container from a fresh snapshot.",
+                      "reply_scope: Selected container includes the user question, page controls, or only part of the assistant reply. Capture the complete assistant-only reply container from a fresh snapshot.",
                     );
                   }
                   await new Promise<void>((resolve, reject) => {

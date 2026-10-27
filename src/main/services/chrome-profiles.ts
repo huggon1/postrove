@@ -12,7 +12,30 @@ import { homedir } from "node:os";
 import { createServer } from "node:net";
 import { join, resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
-import { chromium, type Browser, type Cookie } from "playwright-core";
+import {
+  chromium,
+  type Browser,
+  type BrowserContext,
+  type Cookie,
+  type Page,
+} from "playwright-core";
+
+type ChromeClientHints = {
+  brands?: { brand: string; version: string }[];
+  fullVersionList?: { brand: string; version: string }[];
+  platform: string;
+  platformVersion: string;
+  architecture: string;
+  model: string;
+  mobile: boolean;
+  bitness?: string;
+  wow64?: boolean;
+};
+type ChromeIdentity = {
+  userAgent: string;
+  platform: string;
+  metadata?: ChromeClientHints;
+};
 
 export function chromeExecutable() {
   const candidates =
@@ -44,6 +67,7 @@ export function chromeExecutable() {
 // that verified profile and retain its website session.
 export class ChromeProfiles {
   private children = new Map<string, ChildProcess>();
+  private identities = new WeakMap<Browser, ChromeIdentity>();
 
   private async previousSession(
     directory: string,
@@ -102,10 +126,7 @@ export class ChromeProfiles {
       let port: string, path: string;
       try {
         ({ port, path } = JSON.parse(
-          await readFile(
-            join(directory, "postrove-cdp-endpoint.json"),
-            "utf8",
-          ),
+          await readFile(join(directory, "postrove-cdp-endpoint.json"), "utf8"),
         ));
       } catch {
         [port, path] = (
@@ -139,6 +160,30 @@ export class ChromeProfiles {
         }
         const command = await probe.locator("#command_line").innerText();
         headless = /--headless(?:=\S+)?(?:\s|$)/.test(command);
+        const identity = await probe.evaluate(async () => {
+          const hints = (
+            navigator as Navigator & {
+              userAgentData?: {
+                getHighEntropyValues(
+                  keys: string[],
+                ): Promise<ChromeClientHints>;
+              };
+            }
+          ).userAgentData;
+          return {
+            userAgent: navigator.userAgent,
+            platform: navigator.platform,
+            metadata: await hints?.getHighEntropyValues([
+              "architecture",
+              "bitness",
+              "model",
+              "platformVersion",
+              "fullVersionList",
+              "wow64",
+            ]),
+          };
+        });
+        this.identities.set(browser, identity);
       } finally {
         await probe.close().catch(() => {});
       }
@@ -146,6 +191,36 @@ export class ChromeProfiles {
     } catch {
       return;
     }
+  }
+
+  private chromeIdentity(context: BrowserContext) {
+    const browser = context.browser();
+    const identity = browser && this.identities.get(browser);
+    if (!identity) throw new Error("Platform browser identity unavailable");
+    return {
+      ...identity,
+      userAgent: identity.userAgent.replaceAll("HeadlessChrome/", "Chrome/"),
+    };
+  }
+
+  userAgent(context: BrowserContext) {
+    return this.chromeIdentity(context).userAgent;
+  }
+
+  async useChromeIdentity(page: Page) {
+    const identity = this.chromeIdentity(page.context());
+    // Keep Chrome's actual platform, version and Client Hints together. The
+    // task page owns this CDP session and releases it when the page closes.
+    const session = await page.context().newCDPSession(page);
+    await session.send("Emulation.setUserAgentOverride", {
+      userAgent: identity.userAgent,
+      platform: identity.platform,
+      ...(identity.metadata
+        ? {
+            userAgentMetadata: identity.metadata,
+          }
+        : {}),
+    });
   }
 
   async connect(directory: string, headless = true): Promise<Browser> {

@@ -212,9 +212,7 @@ export function Members({
                   {t(
                     status[connection.connectionId]?.signedIn
                       ? "已连接"
-                      : allowsGuest(connection.connectionId)
-                        ? "可使用"
-                        : "待连接",
+                      : "未连接",
                   )}
                 </span>
                 <button
@@ -251,13 +249,7 @@ export function Members({
             <div className="identity-line" />
             <span className="identity-status">
               {connected ? <CheckCircle /> : <Globe />}
-              {t(
-                connected
-                  ? "已连接"
-                  : allowsGuest(current.connectionId)
-                    ? "可使用"
-                    : "待连接",
-              )}
+              {t(connected ? "已连接" : "未连接")}
             </span>
           </aside>
           <div className="member-workspace">

@@ -30,6 +30,7 @@ export async function cacheMaterialImage(
   context: BrowserContext,
   root: string,
   url: string,
+  userAgent: string,
 ) {
   const id = createHash("sha256").update(url).digest("hex");
   await mkdir(root, { recursive: true, mode: 0o700 });
@@ -37,7 +38,10 @@ export async function cacheMaterialImage(
     await access(join(root, id));
     return `postrove-image://${id}`;
   } catch {}
-  const response = await context.request.get(url, { timeout: 15000 });
+  const response = await context.request.get(url, {
+    timeout: 15000,
+    headers: { "User-Agent": userAgent },
+  });
   try {
     const mime = (response.headers()["content-type"] ?? "").split(";")[0];
     if (!response.ok() || !/^image\/(png|jpeg|gif|webp|avif)$/.test(mime))

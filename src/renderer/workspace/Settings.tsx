@@ -20,7 +20,6 @@ import { usePlatformStatus } from "./use-platform-status";
 import {
   advisors,
   advisorById,
-  allowsGuest,
   platformConnections,
 } from "../../shared/advisor-contracts";
 import type { Workspace } from "./use-workspace";
@@ -165,9 +164,7 @@ export function Settings({
                       {t(
                         platformStatus[connection.connectionId]?.signedIn
                           ? "已连接"
-                          : allowsGuest(connection.connectionId)
-                            ? "可使用"
-                            : "待连接",
+                          : "未连接",
                       )}
                     </span>
                     <ArrowRight />

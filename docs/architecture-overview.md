@@ -27,7 +27,7 @@ The diagram includes Gemini/YouTube, Reddit AI, source profiles, and platform re
 
 A manual or scheduled send resolves enabled experts and freezes role, connection, question language, reading language, run identity, and prompt/Skill revisions. Main acquires an execution lease and owns a [question preparation pool](../src/main/services/focus-search/question-preparation.ts) for that topic. Each target language shares one in-flight preparation and saved outcome. Each expert appends its route source profile’s enhancement sentence to that language version. Main saves the actual question before browser execution.
 
-Each expert receives a separate bridge task. The bridge sees a generic system, prepared question, output contract, browser tools, and the selected route’s Skill summary. It selects and loads that Skill. The Skill supplies the platform's fixed entry address and page guide. The bridge submits the prepared question once and captures the stable answer.
+Each expert receives a separate bridge task. The bridge sees a generic system, prepared question, output contract, browser tools, and the selected route’s Skill summary. It selects and loads that Skill. The Skill supplies the platform's fixed entry address and page guide. The bridge submits the prepared question once and captures the stable answer. Browser snapshots expose Reddit streaming and refreshed answer bodies beyond the general link-count filter. Reply validation requires the complete recognized answer container before Main saves its citation scope.
 
 Main commits the answer and acknowledges it. The same Pi session continues into citation extraction. Captures and observed URLs establish provenance; Main validates the source profile’s original post, comment, or video identity before accepting sources. Main generates a reading version through one shared text operation. Original and reading versions remain separate. Each expert has its own cancellation signal and receipt state. Shared question preparation continues for its remaining consumers, and its workers drain before the topic releases its model lease. The global browser lock serializes access.
 
@@ -44,6 +44,8 @@ The reading worker uses the same translation and introduction implementations wi
 ## Browser, model, and integration boundaries
 
 `PlatformBrowser` owns Chrome, sessions, constrained operations, and the serial access lock. `BrowserAgent` maps worker calls to validated operations and current-task captures. `PlatformAccess` validates source identity and caches images. Both browser Agent types use explicit `load_platform_skill`; automatic project instruction and extension discovery stays disabled in the Pi session factory.
+
+Background task pages and material-image downloads use the installed Chrome user agent with the Chrome product name. Before page navigation, Main applies that identity with Chrome's reported Client Hints, retaining its versions, architecture, and platform. Each task page owns this identity for its lifetime.
 
 [The Pi bridge](../src/pi/README.md) adapts native ModelRuntime, authentication, stream handling, reasoning, and request options. Main owns active connection selection and leases. A lease freezes model/options and retains its credential directory through worker cleanup. Browser and tool-free sessions export native transcripts under `browser-traces`. Task log export packages expert runs and reading attempts into one standalone page using the [trace contract](data-contracts.md#task-snapshots-and-activity-messages).
 

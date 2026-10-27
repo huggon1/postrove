@@ -188,10 +188,12 @@ export class PlatformAccess {
           let cachedUrl: string | undefined;
           if (this.browser && this.imageRoot) {
             try {
+              const context = await this.browser.context(platform);
               cachedUrl = await cacheMaterialImage(
-                await this.browser.context(platform),
+                context,
                 this.imageRoot,
                 image.url,
+                this.browser.userAgent(context),
               );
             } catch {}
           }
