@@ -6,7 +6,7 @@ import { join, resolve } from "node:path";
 import { launchChineseApplication } from "../support/application";
 
 for (const language of ["zh-CN", "en"] as const) {
-  test(`update notices fit and open About in ${language}`, async ({}, info) => {
+  test(`update notices fit through installation in ${language}`, async ({}, info) => {
     const profile = await mkdtemp(join(tmpdir(), "postrove-update-notices-"));
     const server = createServer((_, res) => {
       res.setHeader("Content-Type", "application/json");
@@ -124,13 +124,82 @@ for (const language of ["zh-CN", "en"] as const) {
         }),
       ).toBeVisible();
       await expect(notices).toHaveCount(0);
+      await page
+        .getByRole("button", {
+          name: english ? "Download update" : "下载更新",
+          exact: true,
+        })
+        .click();
+      await page
+        .getByRole("button", {
+          name: english ? "Install and restart" : "安装并重启",
+          exact: true,
+        })
+        .click();
+      const installation = page.getByRole("status").filter({
+        hasText: english
+          ? "Preparing to install the update"
+          : "正在准备安装更新",
+      });
+      await expect(installation).toContainText(
+        english
+          ? "Verifying the package and saving state, then restarting the application."
+          : "正在验证安装包并保存状态，随后重启应用。",
+      );
+      for (const width of [1100, 390, 340]) {
+        await page.setViewportSize({ width, height: 800 });
+        const bound = await installation.evaluate((element) => {
+          const rect = element.getBoundingClientRect();
+          const style = getComputedStyle(element);
+          return {
+            left: rect.left,
+            right: rect.right,
+            top: rect.top,
+            bottom: rect.bottom,
+            border: style.borderTopWidth,
+            background: style.backgroundColor,
+            text: [...element.querySelectorAll("p")].map((paragraph) => {
+              const box = paragraph.getBoundingClientRect();
+              return {
+                left: box.left,
+                right: box.right,
+                bottom: box.bottom,
+                overflow: paragraph.scrollWidth > paragraph.clientWidth,
+              };
+            }),
+          };
+        });
+        expect(bound.left).toBeGreaterThanOrEqual(16);
+        expect(bound.right).toBeLessThanOrEqual(width - 16);
+        expect(bound.top).toBeGreaterThanOrEqual(0);
+        expect(bound.bottom).toBeLessThanOrEqual(
+          800 - (width <= 600 ? 82 : 24),
+        );
+        expect(bound.border).toBe("1px");
+        expect(bound.background).toBe("rgb(255, 255, 255)");
+        for (const paragraph of bound.text) {
+          expect(paragraph.left).toBeGreaterThan(bound.left);
+          expect(paragraph.right).toBeLessThan(bound.right);
+          expect(paragraph.bottom).toBeLessThan(bound.bottom);
+          expect(paragraph.overflow).toBe(false);
+        }
+        measurements.push({ state: "installing", width, bound });
+        await page.screenshot({
+          path: info.outputPath(`${language}-${width}-installing.png`),
+        });
+      }
+      await page.emulateMedia({ reducedMotion: "reduce" });
+      await expect(installation.locator("svg")).toHaveCSS(
+        "animation-name",
+        "none",
+      );
       await info.attach("notice-review", {
         body: JSON.stringify(
           {
             language,
             measurements,
             copyAdmission:
-              "Existing release, success, View update, Later, and Dismiss notice strings in their existing update states. No added copy.",
+              "Existing release, success, View update, Later, and Dismiss notice strings in their existing update states. Existing installation title and restart message appear when Install and restart enters the installing state. Both interface languages retain their existing strings.",
             boundary:
               "Production renderer, IPC and update service; controlled release response and isolated profile.",
           },

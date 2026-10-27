@@ -254,16 +254,20 @@ export function UpdateExperience({
   if (!view) return null;
   return (
     <>
-      {view.state === "installing" && (
-        <div className="update-installation" role="status">
-          <img src="../assets/postrove.png" alt="" width="76" height="76" />
-          <h2>{t("正在准备安装更新")}</h2>
-          <p className="muted">
-            {t("正在验证安装包并保存状态，随后重启应用。")}
-          </p>
-        </div>
-      )}
       <div className="update-toast-stack">
+        {view.state === "installing" && (
+          <div className="update-toast update-installation" role="status">
+            <span className="update-toast-icon" aria-hidden="true">
+              <ArrowClockwise className="spin" />
+            </span>
+            <div className="update-toast-content">
+              <p>{t("正在准备安装更新")}</p>
+              <p className="update-toast-description">
+                {t("正在验证安装包并保存状态，随后重启应用。")}
+              </p>
+            </div>
+          </div>
+        )}
         {view.state === "available" && dismissed !== view.release?.version && (
           <div className="update-toast" role="status">
             <span className="update-toast-icon" aria-hidden="true">
