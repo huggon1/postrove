@@ -37,8 +37,9 @@ test("new members share Gemini setup, enable Reddit guest use, and retain schedu
     const page = await app.firstWindow();
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.getByRole("button", { name: "管理成员", exact: true }).click();
-    const members = page.getByRole("dialog", { name: "我的成员", exact: true });
+    const members = page.locator(".member-modal");
     await expect(members.locator(".shared-adapter-card")).toHaveCount(4);
+    await expect(members.getByText("未连接", { exact: true })).toHaveCount(3);
     const gemini = members.locator(".shared-adapter-card").filter({
       has: page.getByRole("heading", { name: "Gemini", exact: true }),
     });
@@ -75,7 +76,7 @@ test("new members share Gemini setup, enable Reddit guest use, and retain schedu
     const reddit = members.locator(".shared-adapter-card").filter({
       has: page.getByRole("heading", { name: "Reddit AI", exact: true }),
     });
-    await expect(reddit.getByText("可使用", { exact: true })).toBeVisible();
+    await expect(reddit.getByText("未连接", { exact: true })).toBeVisible();
     await reddit
       .getByRole("switch", { name: "Reddit AI · 英文", exact: true })
       .click();
@@ -83,6 +84,13 @@ test("new members share Gemini setup, enable Reddit guest use, and retain schedu
       path: info.outputPath("new-member-catalog.png"),
       animations: "disabled",
     });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await reddit.scrollIntoViewIfNeeded();
+    await page.screenshot({
+      path: info.outputPath("member-connection-status-zh-narrow.png"),
+      animations: "disabled",
+    });
+    await page.setViewportSize({ width: 1280, height: 900 });
     await members.getByRole("button", { name: "关闭", exact: true }).click();
     await expect(
       page.getByRole("button", {
@@ -103,16 +111,34 @@ test("new members share Gemini setup, enable Reddit guest use, and retain schedu
       await expect(
         members.getByRole("heading", { name: member.heading, exact: true }),
       ).toBeVisible();
+      await expect(members.locator(".identity-status")).toHaveText(
+        member.heading.startsWith("Reddit") ? "未连接" : "已连接",
+      );
+      if (member.heading.startsWith("Reddit"))
+        await page.screenshot({
+          path: info.outputPath("reddit-disconnected-detail-zh.png"),
+          animations: "disabled",
+        });
       await members.getByRole("button", { name: "关闭", exact: true }).click();
     }
     await page.getByRole("button", { name: "设置", exact: true }).click();
     await page.getByRole("button", { name: "AI 成员", exact: true }).click();
     await expect(
       page.getByRole("button", {
-        name: "Reddit AI Reddit 英文专家 可使用",
+        name: "Gemini YouTube 中文专家 英文专家 已连接",
         exact: true,
       }),
     ).toBeVisible();
+    await expect(
+      page.getByRole("button", {
+        name: "Reddit AI Reddit 英文专家 未连接",
+        exact: true,
+      }),
+    ).toBeVisible();
+    await page.screenshot({
+      path: info.outputPath("member-connection-status-zh.png"),
+      animations: "disabled",
+    });
     await page.getByRole("button", { name: "定时发送", exact: true }).click();
     await page
       .getByRole("button", { name: "新建定时消息", exact: true })
@@ -149,6 +175,61 @@ test("new members share Gemini setup, enable Reddit guest use, and retain schedu
       await readFile(join(root, "advisors.json"), "utf8"),
     ).enabled;
     expect(enabled).toHaveLength(3);
+    await page.getByRole("button", { name: "设置", exact: true }).click();
+    await page.getByRole("button", { name: "偏好设置", exact: true }).click();
+    await page.getByLabel("界面语言", { exact: true }).selectOption("en");
+    await page.getByRole("button", { name: "AI members", exact: true }).click();
+    await page.screenshot({
+      path: info.outputPath("member-connection-status-en.png"),
+      animations: "disabled",
+    });
+    await page
+      .getByRole("button", {
+        name: "Reddit AI Reddit English expert Disconnected",
+        exact: true,
+      })
+      .click();
+    await expect(members.locator(".identity-status")).toHaveText(
+      "Disconnected",
+    );
+    await expect(
+      members.getByRole("switch", {
+        name: "Reddit AI · English",
+        exact: true,
+      }),
+    ).toBeEnabled();
+    await page.screenshot({
+      path: info.outputPath("reddit-disconnected-detail-en.png"),
+      animations: "disabled",
+    });
+    await members
+      .getByRole("button", { name: "Back to members", exact: true })
+      .click();
+    await expect(
+      members.getByText("Disconnected", { exact: true }),
+    ).toHaveCount(3);
+    await expect(members.getByText("Connected", { exact: true })).toHaveCount(
+      1,
+    );
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.screenshot({
+      path: info.outputPath("member-connection-status-en-narrow.png"),
+      animations: "disabled",
+    });
+    await info.attach("copy-admission", {
+      body: JSON.stringify({
+        message: "未连接 / Disconnected",
+        source:
+          "Explicit user approval: replace the signed-out platform status label",
+        trigger: "The shared platform session has no detected sign-in",
+        surfaces: [
+          "member catalog",
+          "connection detail",
+          "Settings AI members",
+        ],
+      }),
+      contentType: "application/json",
+    });
   } finally {
     await app.close();
     await rm(root, { recursive: true, force: true });
@@ -260,8 +341,8 @@ for (const advisorId of ["youtube-gemini-en", "reddit-ai-en"] as const) {
           ),
         };
       } else if (!capture) {
-        const partial = advisorId.startsWith("youtube") && !triedPartial;
-        if (advisorId.startsWith("youtube") && triedPartial)
+        const partial = !triedPartial;
+        if (triedPartial)
           partialRejected = input.messages.some(
             (message: any) =>
               message.role === "tool" &&
@@ -273,9 +354,13 @@ for (const advisorId of ["youtube-gemini-en", "reddit-ai-en"] as const) {
           ref: find(
             (node: any) =>
               node.tag ===
-                (advisorId.startsWith("youtube") && !partial
-                  ? "MODEL-RESPONSE-CONTENT"
-                  : "DIV") && node.label.startsWith("Complete original answer"),
+                (partial
+                  ? "P"
+                  : advisorId.startsWith("youtube")
+                    ? "MODEL-RESPONSE-CONTENT"
+                    : "DIV") &&
+              node.label.startsWith("Complete original answer") &&
+              (partial || node.label.includes("Final advice")),
           ),
         };
       }
@@ -335,7 +420,8 @@ for (const advisorId of ["youtube-gemini-en", "reddit-ai-en"] as const) {
           : "https://www.reddit.com/r/testing/comments/abc123/_/def456/",
       );
       expect(result.result.citationExtraction.state).toBe("completed");
-      if (advisorId.startsWith("youtube")) expect(partialRejected).toBe(true);
+      expect(partialRejected).toBe(true);
+      expect(result.result.rawReply).toContain("Final advice");
       expect(result.result.candidates[0].postKey).toBe(
         advisorId.startsWith("youtube")
           ? "youtube:video:abcdefghijk"

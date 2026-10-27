@@ -1,10 +1,142 @@
+import { isAssistantReply } from "../../src/platforms/browser/dom";
 import { test, expect } from "@playwright/test";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { createServer } from "node:http";
 import { PlatformBrowser } from "../../src/main/services/platform-browser";
 import { ChromeProfiles } from "../../src/main/services/chrome-profiles";
 const html = `<main><h1>Fixture platform AI</h1><textarea aria-label="Ask AI"></textarea><input type="password" value="fictional-private-value"><button id="ask">Ask</button><button aria-label="Follow">Follow</button><div id="reply" hidden></div><div id="sources" hidden style="cursor:pointer"><span>Show sources</span></div></main><script>let typed=false;const editor=document.querySelector('textarea');editor.onkeydown=(event)=>{typed=true;if(event.key==='Enter')document.querySelector('#ask').click()};editor.oninput=()=>{if(!typed)editor.value=''};document.querySelector('#ask').onclick=()=>{const reply=document.querySelector('#reply');reply.hidden=false;document.querySelector('#sources').hidden=false;reply.innerHTML='<p>Original fixture answer about durable drafts</p><img width="300" height="100" alt="Fixture image" src="https://pbs.twimg.com/media/fixture.png">'};document.querySelector('#sources').addEventListener('click',()=>{setTimeout(()=>document.querySelector('#reply').insertAdjacentHTML('beforeend','<a href="https://x.com/fixture/status/123456789">A linked post</a>'),2200)});</script>`;
+test("background tasks share Chrome identity across headers, page scripts and platform routes", async ({}, info) => {
+  test.setTimeout(90_000);
+  const root = await mkdtemp(join(tmpdir(), "postrove-browser-identity-"));
+  const browser = new PlatformBrowser(root, () => {});
+  const server = createServer((request, response) =>
+    response.end(request.headers["user-agent"]),
+  );
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const hints = [
+    "architecture",
+    "bitness",
+    "model",
+    "platformVersion",
+    "fullVersionList",
+    "wow64",
+  ];
+  try {
+    const context = await browser.context("reddit");
+    const probe = await context.newPage();
+    await probe.goto("chrome://version");
+    const command = await probe.locator("#command_line").innerText();
+    expect(command).toMatch(/--headless(?:=\S+)?(?:\s|$)/);
+    const native = await probe.evaluate(
+      async (keys) => ({
+        userAgent: navigator.userAgent,
+        platform: navigator.platform,
+        metadata: await (navigator as any).userAgentData.getHighEntropyValues(
+          keys,
+        ),
+      }),
+      hints,
+    );
+    expect(native.userAgent).toContain("HeadlessChrome/");
+    await probe.close();
+    const address = server.address();
+    if (!address || typeof address === "string")
+      throw new Error("Fixture server unavailable");
+    const response = await context.request.get(
+      `http://127.0.0.1:${address.port}/image`,
+      { headers: { "User-Agent": browser.userAgent(context) } },
+    );
+    expect(await response.text()).toBe(
+      native.userAgent.replace("HeadlessChrome/", "Chrome/"),
+    );
+    await response.dispose();
+    await context.addCookies([
+      {
+        name: "reddit_session",
+        value: "fictional-identity-session",
+        domain: ".reddit.com",
+        path: "/",
+      },
+    ]);
+    const evidence: Array<Record<string, string | boolean>> = [];
+    for (const platform of [
+      "reddit",
+      "x",
+      "xiaohongshu",
+      "youtube",
+      "web",
+    ] as const) {
+      await browser.exclusive(
+        platform,
+        new AbortController().signal,
+        async (page) => {
+          const requests: Record<string, string>[] = [];
+          await page.route("https://identity.example/**", async (route) => {
+            requests.push(await route.request().allHeaders());
+            await route.fulfill({
+              contentType: "text/html",
+              body: "<main>Fictional platform identity</main>",
+            });
+          });
+          await browser.operation(platform, page, {
+            action: "navigate",
+            value: "https://identity.example/first",
+          });
+          await browser.operation(platform, page, {
+            action: "navigate",
+            value: "https://identity.example/next",
+          });
+          const identity = await page.evaluate(
+            async (keys) => ({
+              userAgent: navigator.userAgent,
+              platform: navigator.platform,
+              metadata: await (
+                navigator as any
+              ).userAgentData.getHighEntropyValues(keys),
+              webdriver: navigator.webdriver,
+            }),
+            hints,
+          );
+          expect(identity.userAgent).toBe(
+            native.userAgent.replace("HeadlessChrome/", "Chrome/"),
+          );
+          expect(await page.evaluate(() => navigator.appVersion)).not.toContain(
+            "HeadlessChrome",
+          );
+          expect(identity.platform).toBe(native.platform);
+          expect(identity.metadata).toEqual(native.metadata);
+          expect(identity.webdriver).toBe(false);
+          expect(requests).toHaveLength(2);
+          for (const headers of requests) {
+            expect(headers["user-agent"]).toBe(identity.userAgent);
+            expect(headers["sec-ch-ua"]).not.toContain("HeadlessChrome");
+            expect(headers["sec-ch-ua-platform"]).toBe(
+              JSON.stringify(native.metadata.platform),
+            );
+          }
+          expect((await browser.status("reddit")).signedIn).toBe(true);
+          evidence.push({
+            platform,
+            headless: true,
+            consistentHeaders: true,
+            retainedClientHints: true,
+            retainedSession: true,
+          });
+        },
+      );
+    }
+    await info.attach("background-browser-identity", {
+      body: JSON.stringify(evidence, null, 2),
+      contentType: "application/json",
+    });
+  } finally {
+    await browser.shutdown();
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    await rm(root, { recursive: true, force: true });
+  }
+});
 test("task browser defaults to headless and switches only after active work while preserving login", async ({}, info) => {
   const root = await mkdtemp(join(tmpdir(), "postrove-browser-mode-e2e-"));
   let visible = false;
@@ -296,6 +428,68 @@ test("Chrome tools capture observed replies and links, confine actions, and pers
       ),
     ).toBe(true);
     expect((await browser.status("x")).signedIn).toBe(true);
+  } finally {
+    await browser.shutdown();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("snapshots expose Reddit answer bodies beyond the reading link limit", async () => {
+  const root = await mkdtemp(join(tmpdir(), "postrove-shadow-answer-"));
+  const browser = new PlatformBrowser(root, () => {});
+  try {
+    await browser.exclusive(
+      "reddit",
+      new AbortController().signal,
+      async (page) => {
+        await page.route("https://www.reddit.com/**", (route) =>
+          route.fulfill({
+            contentType: "text/html",
+            body: `<main><answer-shell></answer-shell></main><script>
+          const shell = document.querySelector('answer-shell');
+          shell.style.display = 'block';
+          shell.attachShadow({mode:'open'}).innerHTML = '<textarea>Question</textarea><answer-body style="display:block"></answer-body>';
+          shell.shadowRoot.querySelector('answer-body').attachShadow({mode:'open'}).innerHTML = '<style>p{color:black}</style><div class=rendererd-rtjson><p>Opening paragraph about a fictional first project.</p><h2>Scope</h2><p>Final advice appears after the introduction. <a href="https://www.reddit.com/r/testing/comments/abc123/comment/def456/">Original comment</a></p>${Array.from({ length: 13 }, (_, i) => `<a href="https://example.test/${i}">Reference</a>`).join("")}</div>';
+        </script>`,
+          }),
+        );
+        const snapshot = (await browser.operation("reddit", page, {
+          action: "navigate",
+          value: "https://www.reddit.com/answers/",
+        })) as any;
+        const answer = snapshot.elements.find(
+          (node: any) =>
+            node.tag === "DIV" && node.label.startsWith("Opening paragraph"),
+        );
+        expect(answer).toBeTruthy();
+        expect(
+          await page.locator(".rendererd-rtjson").evaluate(isAssistantReply),
+        ).toBe(true);
+        expect(
+          await page
+            .locator(".rendererd-rtjson p")
+            .first()
+            .evaluate(isAssistantReply),
+        ).toBe(false);
+        expect(
+          await page.locator("answer-body").evaluate(isAssistantReply),
+        ).toBe(false);
+        expect(answer.readingContainer).toBe(false);
+        expect(answer.label).toContain("Final advice");
+        expect(answer.label).not.toContain("color:black");
+        const capture = (await browser.operation("reddit", page, {
+          action: "capture",
+          ref: answer.ref,
+        })) as any;
+        expect(capture.capture).toContain("Opening paragraph");
+        expect(capture.capture).toContain("Final advice");
+        expect(capture.capture).not.toContain("Question");
+        expect(answer.textLength).toBe(capture.capture.length);
+        expect(capture.links.map((link: any) => link.url)).toContain(
+          "https://www.reddit.com/r/testing/comments/abc123/comment/def456/",
+        );
+      },
+    );
   } finally {
     await browser.shutdown();
     await rm(root, { recursive: true, force: true });

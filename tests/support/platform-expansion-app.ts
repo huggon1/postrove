@@ -36,11 +36,22 @@ app.setPath("userData", process.env.POSTROVE_BROWSER_FIXTURE_ROOT!);
     undefined,
     { headless: true },
   );
+  const answerTag =
+    advisor.platform === "youtube"
+      ? "model-response-content"
+      : "div class=guides-response-ssr";
+  const answerEnd =
+    advisor.platform === "youtube" ? "model-response-content" : "div";
+  const extraLinks = Array.from(
+    { length: 13 },
+    (_, index) =>
+      `<a href="https://example.test/reference-${index}">Other reference ${index}</a>`,
+  ).join("");
   const context = await browser.context(advisor.platform);
   await context.route("**/*", async (route) =>
     route.fulfill({
       contentType: "text/html",
-      body: `<main><fixture-ai></fixture-ai></main><script>const root=document.querySelector('fixture-ai').attachShadow({mode:'open'});root.innerHTML='<style>model-response-content{display:block}</style><label>Ask AI<textarea aria-label="Ask AI"></textarea></label><button id="send">Send question</button><section id="answer" hidden><model-response-content><div id="body"></div></model-response-content></section>';root.querySelector('#send').onclick=()=>{root.querySelector('#answer').hidden=false;root.querySelector('#body').innerHTML='<p>Complete original answer from this platform.</p><a href="${source}">Observed source</a><a href="https://example.test/wrong">Wrong platform</a>'};</script>`,
+      body: `<main><fixture-ai></fixture-ai></main><script>const root=document.querySelector('fixture-ai').attachShadow({mode:'open'});root.innerHTML='<style>model-response-content{display:block}</style><label>Ask AI<textarea aria-label="Ask AI"></textarea></label><button id="send">Send question</button><section id="answer" hidden><${answerTag}><div id="body"></div></${answerEnd}></section>';root.querySelector('#send').onclick=()=>{root.querySelector('#answer').hidden=false;root.querySelector('#body').innerHTML='<p>Complete original answer from this platform.</p><a href="${source}">Observed source</a><p>Final advice after the opening paragraph.</p>${extraLinks}<a href="https://example.test/wrong">Wrong platform</a>'};</script>`,
     }),
   );
   const agent = new BrowserAgent(

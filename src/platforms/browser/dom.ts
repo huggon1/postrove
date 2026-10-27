@@ -8,6 +8,12 @@ export function isAssistantReply(element: Element): boolean {
   )
     return false;
   if (
+    /(^|\.)reddit\.com$/.test(element.ownerDocument.location?.hostname ?? "")
+  ) {
+    const reply = element.closest(".guides-response-ssr, .rendererd-rtjson");
+    if (reply && reply !== element) return false;
+  }
+  if (
     ["HTML", "BODY", "MAIN", "NAV", "ASIDE", "FORM"].includes(
       element.tagName,
     ) ||
@@ -19,6 +25,14 @@ export function isAssistantReply(element: Element): boolean {
   const roots: (Element | ShadowRoot)[] = [element];
   for (let index = 0; index < roots.length; index++) {
     const root = roots[index];
+    if (
+      /(^|\.)reddit\.com$/.test(
+        element.ownerDocument.location?.hostname ?? "",
+      ) &&
+      root.querySelector(".guides-response-ssr, .rendererd-rtjson") &&
+      !element.matches(".guides-response-ssr, .rendererd-rtjson")
+    )
+      return false;
     if (root instanceof Element && root.matches(mixed)) return false;
     if (root.querySelector(mixed)) return false;
     for (const node of [root, ...root.querySelectorAll("*")])

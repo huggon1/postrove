@@ -14,6 +14,8 @@ On Windows, closing the final window shuts down services and exits the applicati
 
 A website connection owns its shared browser session. Each source-platform/AI route enables its own language experts. X/Grok and YouTube/Gemini offer Chinese and English; Xiaohongshu/点点 offers Chinese; Reddit AI offers English. Gemini routes share Google sign-in. Reddit supports guest questions and optional sign-in. Members opens platform connection cards, a focused sign-in step, login verification, language selection, and sign-out confirmation.
 
+Platform status labels reflect the shared session's sign-in state: Connected after detected sign-in and Disconnected while signed out. The member catalog, connection detail, and Settings use the same labels. Reddit's English expert remains available for guest use while its connection shows Disconnected.
+
 While signed out, the platform connection detail shows one inline account-risk reminder above Open sign-in window, recommending a secondary account. Confirmed sign-in hides the reminder.
 
 Interface language controls application labels. On first startup, the primary system language selects Simplified Chinese for Chinese variants and English for other languages. The application saves this initial selection. Later launches use the saved preference; the user can change it in Settings. Expert language controls the exact question sent to the platform AI. Reading language controls prepared replies and collected material; its default follows the interface language. Main freezes the resolved reading language when accepting a run. Saved content keeps its original language after preference changes.
