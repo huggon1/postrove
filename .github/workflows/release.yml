@@ -34,11 +34,12 @@ jobs:
           grep -Fx "# Postrove ${version}" "docs/releases/${version}.md"
           if [ "${GITHUB_EVENT_NAME}" = push ]; then
             test "${GITHUB_REF_NAME}" = "v${version}"
+          else
+            test "${GITHUB_REF}" = refs/heads/main \
+              || { echo 'Select main for a manual Release run.'; exit 1; }
           fi
           git fetch origin main
-          if [ "${GITHUB_EVENT_NAME}" = push ]; then
-            git merge-base --is-ancestor "${GITHUB_SHA}" origin/main
-          fi
+          git merge-base --is-ancestor "${GITHUB_SHA}" origin/main
       - name: Verify reused package source
         if: github.event_name == 'workflow_dispatch' && inputs.package_run_id != ''
         shell: bash

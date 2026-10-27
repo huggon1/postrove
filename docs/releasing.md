@@ -4,9 +4,9 @@ This document owns release preparation and publication. The [development guide](
 
 ## Prepare a release
 
-1. Finish the release PRs and review both READMEs and `docs/releases/<version>.md`. Set the same stable version in package.json and package-lock.json.
-2. Merge the reviewed changes into main and confirm its Checks workflow passes.
-3. Run the [Release workflow](../.github/workflows/release.yml) manually on that revision. Native macOS and Windows runners build both installation packages, verify packaged startup and persistence, and exercise application replacement and restart through each platform's updater.
+1. Finish the release PRs on `dev` and review both READMEs and `docs/releases/<version>.md`. Set the same stable version in package.json and package-lock.json through a development PR.
+2. Complete the [main promotion](contributing.md#promote-a-batch-to-main), including the full PR gate, main quick checks, and development synchronization. Record the promotion PR and resulting main revision.
+3. Select `main` explicitly when running the [Release workflow](../.github/workflows/release.yml) manually. Confirm the selected main revision matches the release candidate. The workflow validates main ancestry for manual and tag runs; a manual run selecting another branch stops in source validation. Native macOS and Windows runners build both installation packages, verify packaged startup and persistence, and exercise application replacement and restart through each platform's updater.
 4. Record the source revision, workflow runs, package identity, screenshots, live trials, and remaining acceptance items in a local release evidence directory.
 5. Obtain publication approval from the release owner, then tag the approved main revision as `v<version>` and push the tag. The tag run creates a GitHub Release draft with reviewed notes and verified attachments.
 

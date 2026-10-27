@@ -2,6 +2,8 @@
 
 Commands run from the repository root with Node.js 24 or later and npm.
 
+For branch or worktree creation, PRs, batch promotion, and urgent release fixes, follow the [contribution workflow](contributing.md).
+
 ## Run the application from source
 
 ```sh

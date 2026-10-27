@@ -1,28 +1,37 @@
 name: Checks
 on:
   pull_request:
+    branches: [dev, main]
+    types: [opened, synchronize, reopened, edited]
   push:
-    branches: [main]
+    branches: [dev, main]
+  workflow_dispatch:
 permissions:
   contents: read
 concurrency:
-  group: checks-${{ github.event.pull_request.number || github.ref }}
+  group: checks-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 jobs:
   static:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    outputs:
+      tier: ${{ steps.scope.outputs.tier }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
+      - id: scope
+        name: Select check scope
+        run: node scripts/checks/ci.mjs scope
       - run: npm ci
       - run: npm run check
   application:
+    needs: static
     runs-on: macos-15
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -30,7 +39,12 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npm run check:full
+      - name: Application smoke tests
+        if: needs.static.outputs.tier == 'quick'
+        run: npm run test:smoke
+      - name: Full application tests
+        if: needs.static.outputs.tier == 'full'
+        run: npm run test:e2e
       - uses: actions/upload-artifact@v7
         if: always()
         with:
@@ -40,9 +54,11 @@ jobs:
             playwright-report/
           retention-days: 7
   windows:
-    name: Windows x64
+    name: Windows x64 application
+    needs: static
+    if: needs.static.outputs.tier == 'full'
     runs-on: windows-2025
-    timeout-minutes: 45
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -51,19 +67,55 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check
-      - run: npm run prepare:runtime
-      - run: npm run package:windows
-      - run: npm run test:package
-      - run: npm run test:windows-installation
       - run: npm run test:e2e
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: windows-evidence
+          name: windows-application-evidence
           path: |
             test-results/
             playwright-report/
+          if-no-files-found: warn
+          retention-days: 7
+  windows_package:
+    name: Windows x64 package
+    needs: static
+    if: needs.static.outputs.tier == 'full'
+    runs-on: windows-2025
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run prepare:runtime
+      - run: npm run package:windows
+      - run: npm run test:package
+      - run: npm run test:windows-installation
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: windows-package-evidence
+          path: |
             .tmp/package-verification/
             .tmp/windows-installation/
           if-no-files-found: warn
           retention-days: 7
+  gate:
+    name: CI gate
+    if: always()
+    needs: [static, application, windows, windows_package]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Verify required results
+        run: node scripts/checks/ci.mjs gate
+        env:
+          CI_TIER: ${{ needs.static.outputs.tier }}
+          CI_RESULTS: ${{ toJSON(needs) }}

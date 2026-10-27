@@ -127,7 +127,7 @@ test.afterEach(async ({}, info) => {
   await new Promise<void>((resolve) => server.close(() => resolve()));
   await rm(root, { recursive: true, force: true });
 });
-test("browser visibility defaults to background and persists independently of language", async ({}, info) => {
+test("browser visibility defaults to background and persists independently of language", { tag: "@smoke" }, async ({}, info) => {
   let page = await launch();
   await page.getByRole("button", { name: "设置", exact: true }).click();
   await page.getByRole("button", { name: "偏好设置", exact: true }).click();
@@ -223,7 +223,7 @@ await import(${JSON.stringify(pathToFileURL(resolve("dist/main/main.cjs")).href)
     ).modelId,
   ).toBe("fixture");
 });
-test("parsed materials retain their language and partial state across new submissions", async ({}, info) => {
+test("parsed materials retain their language and partial state across new submissions", { tag: "@smoke" }, async ({}, info) => {
   const page = await launch();
   await page
     .getByRole("navigation", { name: "主导航" })

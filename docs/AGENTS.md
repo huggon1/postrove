@@ -15,5 +15,6 @@
 | [Data contracts](data-contracts.md) | Saved fields, message identities, and reset boundaries |
 | [Prompt flow](agent-prompt-flow.md) | Prompt and tool loading |
 | [Development](development.md) | Running, isolated data, and packaging |
+| [Contribution workflow](contributing.md) | Branch bases, PR targets, CI gates, batch promotion, and hotfix synchronization |
 | [Test guide](../tests/README.md) | Verification scope and evidence |
 | Module READMEs | Local responsibilities and source navigation |

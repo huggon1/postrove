@@ -50,11 +50,21 @@ Fixtures use isolated profiles and controlled external responses.
 | `npm run docs:check` | Markdown paths, anchors, and npm commands |
 | `npm run test:rules` | Rule/service checks                       |
 | `npm run test:e2e`   | App and fixture builds, then Playwright   |
+| `npm run test:smoke` | App and fixture builds, then the tagged core application cases |
 | `npm run check:full` | Shared checks and application E2E         |
 
 [Playwright configuration](../playwright.config.ts) owns evidence settings. Screenshots, attachments, and retained failure traces enter `test-results/`; the report enters `playwright-report/`. Tests record fixture and build scope. Live trials establish actual platform login, current page behavior, retrieval quality, and usefulness. Desktop acceptance checks the real export chooser and exported pages.
 
-The [Checks workflow](../.github/workflows/checks.yml) runs shared checks on Linux and application E2E on macOS and Windows. Windows also verifies its NSIS package and installation lifecycle. [Release](../.github/workflows/release.yml) owns both platform packages, signing, and native upgrade verification.
+The `@smoke` cases reuse the application tests for startup, browser-visibility settings across restart, saved language across system-language changes, and reading jobs with controlled source/model responses. `test:smoke` selects these cases with project dependencies disabled. The full suite also runs these cases.
+
+The [Checks workflow](../.github/workflows/checks.yml) selects verification by event:
+
+| Event | Verification |
+| --- | --- |
+| PR targeting `dev`, push to `dev` or `main` | Linux shared checks and macOS smoke cases |
+| PR targeting `main`, manual Checks run | Linux shared checks, full macOS and Windows E2E, and Windows package/installation verification |
+
+Windows application and package checks use separate jobs and evidence artifacts, so a failed stage can be rerun independently. The always-running `CI gate` requires each selected job to succeed and verifies that omitted Windows jobs match the quick scope. Failed, cancelled, missing, and unexpectedly skipped jobs fail the gate. [Contribution workflow](../docs/contributing.md) owns branch and merge rules. [Release](../.github/workflows/release.yml) owns both platform packages, signing, and native upgrade verification.
 
 ## Native update acceptance
 
