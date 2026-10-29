@@ -434,6 +434,68 @@ test("Chrome tools capture observed replies and links, confine actions, and pers
   }
 });
 
+test("Grok snapshots retain complete replies with many inline citations", async () => {
+  const root = await mkdtemp(join(tmpdir(), "postrove-grok-citations-"));
+  const browser = new PlatformBrowser(root, () => {});
+  const citations = Array.from(
+    { length: 13 },
+    (_, index) =>
+      `<a href="https://x.com/fixture/status/${123456789 + index}">Source ${index + 1}</a>`,
+  ).join(" ");
+  try {
+    await browser.exclusive("x", new AbortController().signal, async (page) => {
+      await page.route("https://x.com/**", (route) =>
+        route.fulfill({
+          contentType: "text/html",
+          body: `<main><textarea>Fictional question</textarea><div id="reply">Complete fictional answer with original citations. ${citations} Final advice after every citation.</div><div id="actions">${Array.from({ length: 13 }, (_, index) => `<button>Action ${index}</button>`).join("")}</div></main>`,
+        }),
+      );
+      const snapshot = (await browser.operation("x", page, {
+        action: "navigate",
+        value: "https://x.com/i/grok?conversation=fixture",
+      })) as any;
+      const answer = snapshot.elements.find(
+        (node: any) =>
+          node.readingContainer &&
+          node.label.startsWith("Complete fictional answer"),
+      );
+      expect(answer).toBeTruthy();
+      expect(await page.locator("#reply").evaluate(isAssistantReply)).toBe(
+        true,
+      );
+      expect(await page.locator("main").evaluate(isAssistantReply)).toBe(false);
+      expect(
+        snapshot.elements.some(
+          (node: any) =>
+            node.readingContainer && node.label.startsWith("Action 0"),
+        ),
+      ).toBe(false);
+      const capture = (await browser.operation("x", page, {
+        action: "capture",
+        ref: answer.ref,
+      })) as any;
+      expect(capture.capture).toBe(await page.locator("#reply").innerText());
+      expect(capture.capture).toContain("Final advice after every citation.");
+      expect(capture.capture).not.toContain("Fictional question");
+      expect(capture.links).toHaveLength(13);
+      const ordinaryPage = (await browser.operation("x", page, {
+        action: "navigate",
+        value: "https://x.com/fixture/status/123456789",
+      })) as any;
+      expect(
+        ordinaryPage.elements.some(
+          (node: any) =>
+            node.readingContainer &&
+            node.label.startsWith("Complete fictional answer"),
+        ),
+      ).toBe(false);
+    });
+  } finally {
+    await browser.shutdown();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("snapshots expose Reddit answer bodies beyond the reading link limit", async () => {
   const root = await mkdtemp(join(tmpdir(), "postrove-shadow-answer-"));
   const browser = new PlatformBrowser(root, () => {});

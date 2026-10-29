@@ -648,6 +648,9 @@ export class PlatformBrowser {
       }
     }
     const snapshot = await frame.evaluate(() => {
+      const linkedReply =
+        ["x.com", "www.x.com", "grok.com"].includes(location.hostname) &&
+        /^\/(?:i\/)?grok(?:\/|$)/.test(location.pathname);
       const roots: (Document | ShadowRoot)[] = [document];
       for (let index = 0; index < roots.length; index++)
         for (const node of roots[index].querySelectorAll("*"))
@@ -677,7 +680,12 @@ export class PlatformBrowser {
           return (
             body.length >= 40 &&
             !element.querySelector('input,textarea,[contenteditable="true"]') &&
-            element.querySelectorAll('button,a,[role="button"]').length <= 12 &&
+            // Grok's inline citations are reply content, separate from actions.
+            element.querySelectorAll(
+              linkedReply
+                ? 'button,[role="button"]'
+                : 'button,a,[role="button"]',
+            ).length <= 12 &&
             (element.tagName !== "DIV" ||
               !!element.querySelector("p,table,ul,ol,blockquote") ||
               Array.from(element.childNodes).some(
