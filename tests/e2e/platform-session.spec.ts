@@ -196,3 +196,50 @@ test("existing browser login survives the move from the previous launcher", asyn
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("Bilibili login uses the shared session while logout preserves AI connections", async () => {
+  const root = await mkdtemp(join(tmpdir(), "postrove-bili-session-"));
+  const browser = new PlatformBrowser(root, () => {}, undefined, {
+    headless: false,
+  });
+  try {
+    const context = await browser.context("bilibili");
+    await context.route("**/*", (route) =>
+      route.fulfill({
+        contentType: "text/html",
+        body: "<h1>Controlled sign-in page</h1>",
+      }),
+    );
+    await context.addCookies([
+      {
+        name: "SESSDATA",
+        value: "fictional-bili",
+        domain: ".bilibili.com",
+        path: "/",
+      },
+      { name: "auth_token", value: "fictional-x", domain: ".x.com", path: "/" },
+      { name: "ct0", value: "fictional-x", domain: ".x.com", path: "/" },
+    ]);
+    expect((await browser.status("bilibili")).signedIn).toBe(true);
+    await browser.login("bilibili");
+    const visible = await browser.context("bilibili");
+    expect(
+      visible
+        .pages()
+        .some((page) =>
+          page.url().startsWith("https://passport.bilibili.com/login"),
+        ),
+    ).toBe(true);
+    await browser.logout("bilibili");
+    expect((await browser.status("bilibili")).signedIn).toBe(false);
+    expect((await browser.status("x")).signedIn).toBe(true);
+    const metadata = await readFile(
+      join(root, "shared/postrove-session-status.json"),
+      "utf8",
+    );
+    expect(metadata).not.toContain("fictional-");
+  } finally {
+    await browser.shutdown();
+    await rm(root, { recursive: true, force: true });
+  }
+});

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { transcriptEvidenceSchema } from "./transcript-contracts";
-import { videoIdentity } from "./video-contracts";
+import { videoIdentity, videoMatchesUrl } from "./video-contracts";
 import { youtubeVideo, redditPost } from "./source-profiles";
 export const repositoryUrlSchema = z
   .string()
@@ -232,8 +232,7 @@ export const sourceSchema = z
       source.evidence &&
       ("video" in source.evidence
         ? source.evidence.video.platform !== source.platform ||
-          source.evidence.video.sourceKey !==
-            videoIdentity(source.sourceUrl)?.sourceKey
+          !videoMatchesUrl(source.evidence.video, source.sourceUrl)
         : source.platform !== "youtube" ||
           source.evidence.videoId !== youtubeVideo(source.sourceUrl)?.id)
     )

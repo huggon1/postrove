@@ -1,3 +1,4 @@
+import { bilibiliReadSession } from "./video-session";
 import { capturedText, isAssistantReply } from "../../platforms/browser/dom";
 import type { VideoTranscriptReader } from "./video-transcript";
 import { videoIdentity } from "../../shared/video-contracts";
@@ -513,12 +514,13 @@ export class BrowserAgent {
                     !youtubeVideo(data.operation.value))
                 )
                   throw new Error(
-                    "Transcript reading requires an observed video URL",
+                    "source_scope: Transcript reading requires an observed video URL",
                   );
                 const result = await this.transcripts.read(
                   data.operation.value,
                   readingAttemptId,
                   signal,
+                  bilibiliReadSession(page.context()),
                 );
                 if (result.outcome !== "content") return result;
                 const source = result.source;
