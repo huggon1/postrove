@@ -35,13 +35,8 @@ type Metadata = {
   subtitles?: Record<string, { ext?: string; url?: string }[]>;
   automatic_captions?: Record<string, { ext?: string; url?: string }[]>;
 };
-export type TranscriptResult =
-  | {
-      outcome: "content";
-      source: SourceContent;
-      references: { url: string; title: string }[];
-    }
-  | { outcome: "unavailable"; reason: string };
+export type { VideoTranscriptResult as TranscriptResult } from "./video-transcript";
+import type { VideoTranscriptResult as TranscriptResult } from "./video-transcript";
 type Run = (
   executable: string,
   args: string[],
