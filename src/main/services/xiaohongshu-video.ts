@@ -166,8 +166,10 @@ export class XiaohongshuVideoReader implements VideoTranscriptReader {
         }
         characters += segment.text.length;
         segments.push({
-          ...segment,
           id: `segment-${segments.length + 1}`,
+          start: segment.start,
+          end: segment.end,
+          text: segment.text,
           url: note.requestUrl,
         });
       }

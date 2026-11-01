@@ -16,6 +16,8 @@ The pinned [yt-dlp extractor](https://github.com/yt-dlp/yt-dlp/blob/2026.08.19/y
 
 The reader checkpoints title, written description, and cover before media acquisition. ASR readiness is checked before the media download. The common speech service downloads the allowed media and returns timestamped segments. Evidence identifies `application_asr`, its backend/model, speech coverage, and unknown visual coverage. Segment links retain the full usable note address; segment start/end fields retain time positions.
 
+`transcription.json` preserves the speech service's original result, including `recognizerEnd` estimates beyond the media boundary. Public transcript segments contain their stable ID, bounded start/end times, recognized text, and source link.
+
 Each reading attempt saves its own `xiaohongshu/<note-id>` evidence directory. Repeated calls reuse that attempt's committed outcome. A later attempt retains the earlier directory. Speech progress checkpoints completed segments. Cancellation saves the metadata and completed speech before returning the cancelled task state. A partial speech result keeps its recognized segments and original issue. A completed zero-segment result keeps the written material and records the recognition outcome.
 
 Metadata output has an 8 MiB budget and extraction has a 75-second process budget. The [speech service](speech-processing.md) owns media, duration, chunk, and transcription budgets. Source composition admits up to 20,000 complete segments and one million recognized text characters; an exhausted composition budget records partial speech coverage.

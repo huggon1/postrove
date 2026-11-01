@@ -146,6 +146,52 @@ test("XHS video composes written text, cover and ASR with separate provenance", 
     await f.cleanup();
   }
 });
+test("XHS public evidence keeps bounded times while raw ASR retains recognizer estimates", async () => {
+  const segments = speech.segments.map((segment) => ({
+    ...segment,
+    end: speech.duration!,
+    recognizerEnd: speech.duration! + 0.5,
+  }));
+  const recognized = {
+    ...speech,
+    chunks: speech.chunks.map((chunk) => ({ ...chunk, segments })),
+    segments,
+  };
+  const f = await fixture({
+    speech: {
+      transcribe: async (request) => {
+        await request.onProgress?.({ ...recognized, status: "partial" });
+        return recognized;
+      },
+    },
+  });
+  try {
+    const result = await f.reader.read(
+      url,
+      f.attempt,
+      new AbortController().signal,
+    );
+    assert.equal(result.outcome, "content");
+    if (result.outcome !== "content") return;
+    assert.deepEqual(result.source.evidence?.segments, [
+      {
+        id: "segment-1",
+        start: recognized.segments[0].start,
+        end: recognized.segments[0].end,
+        text: recognized.segments[0].text,
+        url,
+      },
+    ]);
+    assert.equal(result.source.evidence?.transcriptCoverage, "complete");
+    const raw = JSON.parse(
+      await readFile(join(f.directory, "transcription.json"), "utf8"),
+    );
+    assert.equal(raw.segments[0].recognizerEnd, 12.5);
+    assert.deepEqual(raw, recognized);
+  } finally {
+    await f.cleanup();
+  }
+});
 test("XHS silent or music fixture records zero recognized speech segments and retains page content", async () => {
   const f = await fixture({
     speech: {
