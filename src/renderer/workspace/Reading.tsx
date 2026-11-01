@@ -382,10 +382,18 @@ export function ReadingView({
           )}
           {body ? (
             <Markdown images={material?.source?.images}>{body}</Markdown>
-          ) : (
+          ) : material?.issue ? null : (
             <div className="empty-state">
               <BookOpen />
-              <h2>{task?.error || stateLabel(task?.status || "pending")}</h2>
+              <h2>
+                {material
+                  ? stateLabel(
+                      material.state === "processing"
+                        ? "running"
+                        : material.state,
+                    )
+                  : task?.error || stateLabel(task?.status || "pending")}
+              </h2>
             </div>
           )}
         </article>

@@ -120,7 +120,10 @@ for (const language of ["zh-CN", "en"] as const) {
       const selector = reader.getByRole("combobox");
       for (const reference of references) {
         await selector.selectOption(reference.id);
-        await expect(reader).toContainText(reference.issue);
+        await expect(reader.locator(".inline-error")).toContainText(
+          reference.issue,
+        );
+        await expect(reader.locator(".empty-state")).toHaveCount(0);
       }
       await selector.selectOption(
         references.find((item) => item.diagnostic.code === "http_error")!.id,
