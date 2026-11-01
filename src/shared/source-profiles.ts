@@ -87,6 +87,39 @@ export function youtubeVideo(raw: string) {
     locator: seconds > 0 ? `${canonical}&t=${seconds}s` : canonical,
   };
 }
+/** Bilibili part numbers belong to source identity; time is a locator. */
+export function bilibiliVideo(raw: string) {
+  const url = sourceUrl(raw);
+  if (
+    !url ||
+    !["bilibili.com", "www.bilibili.com", "m.bilibili.com"].includes(
+      url.hostname,
+    )
+  )
+    return undefined;
+  const match = url.pathname.match(
+    /^\/video\/(BV[A-Za-z0-9]{10}|av[1-9]\d{0,19})\/?$/,
+  );
+  if (!match) return undefined;
+  const partText = url.searchParams.get("p") ?? "1";
+  if (!/^[1-9]\d{0,5}$/.test(partText)) return undefined;
+  const part = Number(partText),
+    id = match[1];
+  const canonical = `https://www.bilibili.com/video/${id}?p=${part}`;
+  const time = url.searchParams.get("t");
+  const seconds = time && /^\d+(?:\.\d+)?$/.test(time) ? Number(time) : 0;
+  return {
+    id,
+    part,
+    key: `bilibili:video:${id}:p:${part}`,
+    url: canonical,
+    locator:
+      Number.isFinite(seconds) && seconds > 0
+        ? `${canonical}&t=${Math.floor(seconds)}`
+        : canonical,
+  };
+}
+
 export function redditPost(raw: string) {
   const url = sourceUrl(raw);
   if (

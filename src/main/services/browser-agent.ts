@@ -1,5 +1,6 @@
 import { capturedText, isAssistantReply } from "../../platforms/browser/dom";
-import type { YoutubeTranscriptReader } from "./youtube-transcript";
+import type { VideoTranscriptReader } from "./video-transcript";
+import { videoIdentity } from "../../shared/video-contracts";
 import type { TranscriptEvidence } from "../../shared/transcript-contracts";
 import { youtubeVideo } from "../../shared/source-profiles";
 import type { ContentRequest } from "../../shared/content-contracts";
@@ -58,7 +59,7 @@ export class BrowserAgent {
       config: ModelExecutionConfig,
       taskId: string,
     ) => Promise<string>,
-    private transcripts?: YoutubeTranscriptReader,
+    private transcripts?: VideoTranscriptReader,
   ) {}
   async run(
     platform: Platform,
@@ -498,12 +499,18 @@ export class BrowserAgent {
                     routeId ?? platform,
                   ),
                 };
-              if (data.operation.action === "read_youtube_transcript") {
+              if (
+                ["read_youtube_transcript", "read_video_transcript"].includes(
+                  data.operation.action,
+                )
+              ) {
                 if (
                   purpose !== "collect" ||
                   !this.transcripts ||
                   !observed.has(data.operation.value) ||
-                  !youtubeVideo(data.operation.value)
+                  !videoIdentity(data.operation.value) ||
+                  (data.operation.action === "read_youtube_transcript" &&
+                    !youtubeVideo(data.operation.value))
                 )
                   throw new Error(
                     "Transcript reading requires an observed video URL",

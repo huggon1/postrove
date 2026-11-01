@@ -1,3 +1,7 @@
+import {
+  parseVideoArtifactKey,
+  videoPlatforms,
+} from "../../shared/video-contracts";
 import type { TranscriptEvidence } from "../../shared/transcript-contracts";
 import { advisorById, legacyAdvisor } from "../../shared/advisor-contracts";
 import {
@@ -7,6 +11,7 @@ import {
   rm,
   writeFile,
   copyFile,
+  chmod,
   readdir,
 } from "node:fs/promises";
 import { join, basename, resolve, sep } from "node:path";
@@ -239,7 +244,11 @@ export class ResultPublisher {
               rebaseLinks(await localize(source.markdown), "../"),
               { mode: 0o600 },
             );
-          const readerAttempts: { videoId: string; path: string }[] = [];
+          const readerAttempts: {
+            videoId: string;
+            platform: string;
+            path: string;
+          }[] = [];
           const evidenceFiles: { path: string; sha256: string }[] = [];
           const evidenceKeys = new Set(
             (input.evidence ?? []).map((evidence) => evidence.artifactKey),
@@ -249,38 +258,46 @@ export class ResultPublisher {
             input.kind === "reading" &&
             /^[a-f0-9-]{36}$/.test(input.runId)
           ) {
-            try {
-              for (const videoId of await readdir(
-                join(this.evidenceRoot, input.runId, "youtube"),
-              ))
-                if (/^[A-Za-z0-9_-]{11}$/.test(videoId))
-                  evidenceKeys.add(`${input.runId}/youtube/${videoId}`);
-            } catch (error) {
-              if ((error as NodeJS.ErrnoException).code !== "ENOENT")
-                throw error;
+            for (const platform of videoPlatforms) {
+              try {
+                for (const resource of await readdir(
+                  join(this.evidenceRoot, input.runId, platform),
+                )) {
+                  const key = `${input.runId}/${platform}/${resource}`;
+                  if (parseVideoArtifactKey(key)) evidenceKeys.add(key);
+                }
+              } catch (error) {
+                if ((error as NodeJS.ErrnoException).code !== "ENOENT")
+                  throw error;
+              }
             }
           }
           for (const key of evidenceKeys) {
+            const parsed = parseVideoArtifactKey(key);
             if (
               !this.evidenceRoot ||
-              !/^[a-f0-9-]{36}\/youtube\/[A-Za-z0-9_-]{11}$/.test(key)
+              !parsed ||
+              parsed.attemptId !== input.runId
             )
               continue;
-            const videoId = key.split("/")[2];
             const source = join(this.evidenceRoot, key);
-            const target = join(staging, "evidence", "youtube", videoId);
+            const target = join(staging, parsed.path);
             await mkdir(target, { recursive: true, mode: 0o700 });
             for (const file of [
               "metadata.json",
               "captions.json3",
+              "captions.srt",
               "segments.json",
               "references.json",
+              "source.json",
               "reader-attempt.json",
+              "transcription.json",
             ]) {
               try {
                 await copyFile(join(source, file), join(target, file));
+                await chmod(join(target, file), 0o600);
                 evidenceFiles.push({
-                  path: `evidence/youtube/${videoId}/${file}`,
+                  path: `${parsed.path}/${file}`,
                   sha256: createHash("sha256")
                     .update(await readFile(join(target, file)))
                     .digest("hex"),
@@ -291,8 +308,9 @@ export class ResultPublisher {
               }
             }
             readerAttempts.push({
-              videoId,
-              path: `evidence/youtube/${videoId}`,
+              videoId: parsed.resource,
+              platform: parsed.platform,
+              path: parsed.path,
             });
           }
           await writeFile(
@@ -310,23 +328,9 @@ export class ResultPublisher {
                 ...(input.evidence?.length
                   ? {
                       evidence: input.evidence.map(
-                        ({
-                          kind,
-                          captureId,
-                          videoId,
-                          language,
-                          trackKind,
-                          transcriptCoverage,
-                          visualCoverage,
-                        }) => ({
-                          kind,
-                          captureId,
-                          videoId,
-                          language,
-                          trackKind,
-                          transcriptCoverage,
-                          visualCoverage,
-                          path: `evidence/youtube/${videoId}`,
+                        ({ segments, artifactKey, ...evidence }) => ({
+                          ...evidence,
+                          path: parseVideoArtifactKey(artifactKey)?.path,
                         }),
                       ),
                     }
