@@ -306,7 +306,7 @@ export async function runReadingJob(
           chunk.complete = !result.truncated;
           save(material);
           if (result.truncated) {
-            material.diagnostic =
+            const diagnostic =
               result.diagnostic ??
               readingDiagnostic(
                 "model_failed",
@@ -314,17 +314,21 @@ export async function runReadingJob(
                 { failureCode: "model_output_limit" },
                 true,
               );
-            material.issue =
+            material.diagnostic ??= diagnostic;
+            const issue =
               result.issue ??
               localizedText(
                 language,
                 `输出达到模型上限；已保存第 ${chunk.index + 1} 段返回内容，共 ${material.chunks.length} 段`,
                 `Model output reached its limit; returned text for chunk ${chunk.index + 1} of ${material.chunks.length} is saved`,
               );
+            material.issue = material.issue
+              ? `${material.issue} ${issue}`.slice(0, 1500)
+              : issue;
             failures.set(material.id, {
               materialId: material.id,
               stage: "translation",
-              readingDiagnostic: material.diagnostic,
+              readingDiagnostic: diagnostic,
               message: material.issue.slice(0, 500),
             });
             break;
@@ -374,7 +378,8 @@ export async function runReadingJob(
           `${stage === "translation" ? "翻译" : "摘要"}未完成：${reason} 已保存 ${completed}/${material.chunks.length} 段译文和原文。`,
           `${stage === "translation" ? "Translation" : "Introduction"} failed: ${reason} ${completed}/${material.chunks.length} translated chunks and the original source are saved.`,
         );
-        material.diagnostic ??= diagnoseReadingError(error, stage, true);
+        const diagnostic = diagnoseReadingError(error, stage, true);
+        material.diagnostic ??= diagnostic;
         material.issue = material.issue
           ? `${material.issue} ${issue}`.slice(0, 1500)
           : issue;
@@ -382,7 +387,7 @@ export async function runReadingJob(
           failures.set(material.id, {
             materialId: material.id,
             stage,
-            readingDiagnostic: material.diagnostic,
+            readingDiagnostic: diagnostic,
             message: material.issue.slice(0, 500),
             ...(failure
               ? { code: failure.code, diagnostic: failure.diagnostic }
