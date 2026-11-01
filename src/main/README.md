@@ -19,3 +19,5 @@
 | `storage/`                                                                                            | Atomic local stores                                                      |
 
 `services/content-service.ts` runs bounded shared text capabilities. `services/result-publisher.ts` publishes immutable terminal Markdown packages. `storage/advisor-store.ts` saves enabled language experts.
+
+The [speech service](services/speech/index.ts) owns bounded media acquisition, local recognition, and model readiness. [Speech processing](../../docs/speech-processing.md) defines its resource and integration contract.
