@@ -524,6 +524,7 @@ export class BrowserAgent {
                   "account_action_required",
                   "access",
                 );
+                sourceDiagnostics.set(page.url(), lastDiagnostic);
                 return {
                   accessState: "action_required",
                   diagnostic: lastDiagnostic,
@@ -990,6 +991,7 @@ export class BrowserAgent {
                 const access = observedPageDiagnostic(page.url());
                 if (access) {
                   lastDiagnostic = access;
+                  sourceDiagnostics.set(page.url(), access);
                   const accessState =
                     access.code === "account_action_required"
                       ? "action_required"
@@ -1015,8 +1017,21 @@ export class BrowserAgent {
                       (element: { ref: string }) => element.ref,
                     ),
                   );
-                if (data.operation.action === "navigate")
+                if (data.operation.action === "navigate") {
                   navigations.set(data.operation.value, page.url());
+                  if (
+                    purpose === "collect" &&
+                    platform === "youtube" &&
+                    this.transcripts &&
+                    !youtubeReading &&
+                    youtubeVideo(data.operation.value) &&
+                    !sourceDiagnostics.has(data.operation.value)
+                  )
+                    sourceDiagnostics.set(
+                      data.operation.value,
+                      readingDiagnostic("component_missing", "readiness"),
+                    );
+                }
                 let captureId: string | undefined;
                 const openedLinks: { url: string; title: string }[] = [];
                 for (const popup of popups) {
@@ -1212,8 +1227,18 @@ export class BrowserAgent {
                 // A later transport/parser error keeps the last observed access failure.
                 if (!lastDiagnostic || diagnostic.code !== "unknown")
                   lastDiagnostic = diagnostic;
-                if (data.operation.action === "enhanced_read")
-                  sourceDiagnostics.set(data.operation.value, diagnostic);
+                if (
+                  data.operation.action === "enhanced_read" ||
+                  data.operation.action === "navigate"
+                ) {
+                  const previous = sourceDiagnostics.get(data.operation.value);
+                  sourceDiagnostics.set(
+                    data.operation.value,
+                    diagnostic.code === "unknown" && previous
+                      ? previous
+                      : diagnostic,
+                  );
+                }
                 if (!done)
                   worker.postMessage({
                     type: "browser_result",

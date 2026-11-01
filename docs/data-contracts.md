@@ -75,6 +75,8 @@ When saved page text has an earlier source or caption issue, the material retain
 
 The Xiaohongshu `XhsSession` value connects to the local reader component. Website sign-in remains in the shared browser session. A missing component connection records component readiness; a missing `xsec_token` records missing access parameters. Known site navigation identifies sign-in, verification, and account-action states. Navigation and adapter HTTP failures retain their observed status. Caption-tool observations distinguish a missing runtime, absent native captions (`transcript_captions_missing`), and a missing downloaded artifact (`transcript_caption_artifact_missing`). Historical `transcript_unavailable` reasons retain an unknown cause.
 
+Browser observations associate each diagnostic with its observed source address. Material admission resolves the requested address, observed redirects, and canonical source identity to that source's diagnostic. Other materials retain their own observed state.
+
 Workers emit initial materials, individual material updates, phases, execution identity, stage failures, and final results. Main-process validation preserves identity, saved source bytes, and finished chunks. The final report matches saved material state. Stopping retains the saved portion of each material.
 
 ## Task snapshots and activity messages

@@ -39,6 +39,8 @@ Fixtures use isolated profiles and controlled external responses.
 
 `tests/rules/reading-diagnostics.test.ts` covers typed causes, component readiness, access parameters, caption observations, HTTP 403, unknown errors, and legacy issue text. `tests/rules/reading-diagnostic-receipts.test.ts` covers durable task diagnostics and partial processing receipts with original content and completed translations.
 
+`tests/rules/reading-diagnostic-provenance.test.ts` covers later translation and summary failures alongside earlier source issues, including retained original text and truncated output. `tests/rules/reading-source-diagnostics.test.ts` verifies source-scoped observations across redirect aliases, partial content, and uncaptured references.
+
 `tests/rules/model-connections.test.ts` covers saved connection activation, independent editor catalogs, retained execution leases, failed writes, inactive credential replacement, reasoning compatibility, and late check completion after an active configuration change.
 
 [Product identity](e2e/product-identity.spec.ts) opens saved reading and its cached image across two launches, alongside retained connections and browser sessions.

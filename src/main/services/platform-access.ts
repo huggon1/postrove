@@ -10,7 +10,6 @@ import {
 import type { ReadingMaterial } from "../../shared/reading-contracts";
 import { readingMaterialsSchema } from "../../shared/reading-contracts";
 import { webUrlSchema } from "../../shared/source-contracts";
-import { cacheMaterialImage } from "./material-images";
 import type { PlatformBrowser } from "./platform-browser";
 import { randomUUID } from "node:crypto";
 import {
@@ -148,6 +147,12 @@ export class PlatformAccess {
         item === main
           ? mainPage
           : (result.navigations.get(item.url) ?? item.url);
+      const diagnostic =
+        result.sourceDiagnostics?.get(item.url) ??
+        result.sourceDiagnostics?.get(finalUrl) ??
+        [...(result.sourceDiagnostics ?? [])].find(([address]) =>
+          samePage(address, finalUrl),
+        )?.[1];
       if (resolved.has(finalUrl)) continue;
       resolved.add(finalUrl);
       seen.add(item.url);
@@ -170,9 +175,7 @@ export class PlatformAccess {
         material.state = item.error === "pending" ? "pending" : "failed";
         if (item.error !== "pending")
           material.diagnostic =
-            result.sourceDiagnostics?.get(item.url) ??
-            result.diagnostic ??
-            readingDiagnostic("capture_incomplete", "source");
+            diagnostic ?? readingDiagnostic("capture_incomplete", "source");
         material.issue =
           item.error === "pending"
             ? undefined
@@ -197,6 +200,7 @@ export class PlatformAccess {
           let cachedUrl: string | undefined;
           if (this.browser && this.imageRoot) {
             try {
+              const { cacheMaterialImage } = await import("./material-images");
               const context = await this.browser.context(platform);
               cachedUrl = await cacheMaterialImage(
                 context,
@@ -256,8 +260,7 @@ export class PlatformAccess {
         material.source?.completeness !== "complete" &&
         !captures.some((capture: BrowserCapture) => capture.evidence)
       )
-        material.diagnostic ??=
-          result.sourceDiagnostics?.get(item.url) ?? result.diagnostic;
+        material.diagnostic ??= diagnostic;
       materials.push(material);
     }
     readingMaterialsSchema.parse(materials);
