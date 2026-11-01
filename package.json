@@ -7,7 +7,7 @@
   "scripts": {
     "build": "node scripts/app-build/app.mjs",
     "setup:xhs": "node scripts/app-build/with-env-proxy.mjs scripts/app-build/prepare-xhs-runtime.mjs",
-    "prepare:runtime": "npm run setup:xhs && npm run setup:youtube",
+    "prepare:runtime": "npm run setup:xhs && npm run setup:youtube && npm run setup:speech",
     "build:icon": "node scripts/app-build/icon.mjs",
     "package:app": "node scripts/app-build/clean-package.mjs && npm run build && npm run build:icon && electron-builder --mac --arm64 --publish never && node scripts/app-build/checksums.mjs",
     "package:windows": "node scripts/app-build/clean-package.mjs && npm run build && npm run build:icon && electron-builder --win nsis --x64 --publish never && node scripts/app-build/checksums.mjs",
@@ -29,7 +29,9 @@
     "test:package": "node scripts/development/verify-package.mjs",
     "test:windows-installation": "node scripts/development/verify-windows-installation.mjs",
     "test:windows-upgrade": "node scripts/development/verify-windows-upgrade.mjs",
-    "setup:youtube": "node scripts/app-build/with-env-proxy.mjs scripts/app-build/prepare-youtube-runtime.mjs"
+    "setup:youtube": "node scripts/app-build/with-env-proxy.mjs scripts/app-build/prepare-youtube-runtime.mjs",
+    "setup:speech": "node scripts/app-build/with-env-proxy.mjs scripts/app-build/prepare-speech-runtime.mjs",
+    "setup:speech-model": "node scripts/app-build/with-env-proxy.mjs --import tsx scripts/development/prepare-speech-model.ts"
   },
   "dependencies": {
     "@earendil-works/pi-agent-core": "1.1.0",
