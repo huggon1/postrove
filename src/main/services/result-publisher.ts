@@ -287,6 +287,7 @@ export class ResultPublisher {
               "metadata.json",
               "captions.json3",
               "captions.srt",
+              "captions.json",
               "segments.json",
               "references.json",
               "source.json",

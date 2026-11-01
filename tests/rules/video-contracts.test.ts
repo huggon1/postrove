@@ -25,6 +25,10 @@ test("video identity keeps Bilibili parts distinct and timestamps local to that 
     videoIdentity("https://www.bilibili.com/video/av123?p=3")?.id,
     "av123",
   );
+  assert.equal(
+    videoIdentity("https://www.bilibili.com/video/AV123?p=3")?.id,
+    "av123",
+  );
   for (const bad of [
     url.replace("www.bilibili.com", "www.bilibili.com.evil.test"),
     url.replace("https://", "https://user@"),
@@ -62,6 +66,20 @@ test("generic evidence separates native caption and application ASR provenance a
     transcriptEvidenceSchema.safeParse({
       ...evidence,
       segments: [{ ...evidence.segments[0], url: url.replace("p=2", "p=1") }],
+    }).success,
+    false,
+  );
+  assert.equal(
+    transcriptEvidenceSchema.safeParse({
+      ...evidence,
+      artifactKey: `${randomUUID()}/bilibili/other-video`,
+    }).success,
+    false,
+  );
+  assert.equal(
+    videoIdentitySchema.safeParse({
+      ...video,
+      url: `${video.url}&access=private`,
     }).success,
     false,
   );

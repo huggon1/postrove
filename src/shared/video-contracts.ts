@@ -53,6 +53,14 @@ export const videoIdentitySchema = z
     sourceKey: z.string().max(300),
     url: z.string().url(),
     part: z.number().int().positive().max(999999).optional(),
+    aid: z
+      .string()
+      .regex(/^[1-9]\d{0,19}$/)
+      .optional(),
+    bvid: z
+      .string()
+      .regex(/^BV[A-Za-z0-9]{10}$/)
+      .optional(),
     cid: z
       .string()
       .regex(/^[1-9]\d{0,19}$/)
@@ -65,8 +73,15 @@ export const videoIdentitySchema = z
       parsed?.platform === value.platform &&
       parsed.id === value.id &&
       parsed.sourceKey === value.sourceKey &&
+      parsed.url === value.url &&
       parsed.part === value.part &&
-      (value.platform === "bilibili" || value.cid === undefined)
+      (value.platform === "bilibili"
+        ? value.id.startsWith("BV")
+          ? value.bvid === undefined || value.bvid === value.id
+          : value.aid === undefined || value.aid === value.id.slice(2)
+        : value.cid === undefined &&
+          value.aid === undefined &&
+          value.bvid === undefined)
     );
   });
 export type VideoIdentity = z.infer<typeof videoIdentitySchema>;
@@ -101,4 +116,18 @@ export function videoArtifactKey(
   if (!parseVideoArtifactKey(key))
     throw new Error("Invalid video artifact identity");
   return key;
+}
+
+/** BV/av equivalence comes from verified source metadata, while parts stay distinct. */
+export function videoMatchesUrl(video: VideoIdentity, raw: string) {
+  const other = videoIdentity(raw);
+  return (
+    !!other &&
+    other.platform === video.platform &&
+    other.part === video.part &&
+    (other.id === video.id ||
+      (video.platform === "bilibili" &&
+        (other.id === video.bvid ||
+          (video.aid !== undefined && other.id === `av${video.aid}`))))
+  );
 }
