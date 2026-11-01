@@ -67,6 +67,8 @@ One application or Telegram HTTPS URL enters the forwarding queue with task, res
 
 `ReadingMaterial` contains an ID, main or reference role, URL, title, optional source, translation chunks, summary, state, and issue. A chunk saves original text, translated text, and completion. Materials begin with one main item and unique IDs and URLs. Completed material has a source, summary, and completed chunks; partial and failed items preserve available content. Source rejection saves the observed platform reason as the material issue; Xiaohongshu `300031` retains “当前笔记暂时无法浏览”.
 
+`ReadingMaterial.diagnostic` optionally saves a versioned issue code, cause category, observed stage, recovery actions, and bounded HTTP, platform, transport, or model failure codes. The shared `reading-diagnostics.ts` module maps explicit observations and typed errors into this shape. HTTP failures retain their status; unknown failures retain an unknown cause. Saved source content directs translation and summary recovery to `resume_processing`. Historical string `issue` fields retain their bytes; `materialDiagnostic` derives an unknown diagnostic for consumers reading those records. Raw exception text and credentials stay within the private execution boundary.
+
 Workers emit initial materials, individual material updates, phases, execution identity, stage failures, and final results. Main-process validation preserves identity, saved source bytes, and finished chunks. The final report matches saved material state. Stopping retains the saved portion of each material.
 
 ## Task snapshots and activity messages
