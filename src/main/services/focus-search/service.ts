@@ -689,248 +689,37 @@ export class FocusSearchService {
               : Promise.resolve(this.readTask(taskId).question),
       );
       this.preparations.set(taskId, preparations);
-      for (const queued of this.readTask(taskId).sections) {
-        if (controller.signal.aborted) break;
-        const initial = this.readTask(taskId).sections.find(
-          (section) => section.sectionId === queued.sectionId,
-        )!;
-        if (initial.state === "completed" || initial.cancelled) continue;
-        const sectionController = new AbortController();
-        const cancelSection = () => sectionController.abort();
-        controller.signal.addEventListener("abort", cancelSection, {
-          once: true,
-        });
-        this.sectionControllers.set(initial.sectionId, sectionController);
-        await this.store.update((s) => {
-          const section = s.reports
-            .find((r) => r.taskId === taskId)!
-            .sections.find((v) => v.sectionId === initial.sectionId)!;
-          section.state = "running";
-          delete section.error;
-        });
-        this.changed();
-        await this.tasks.receive(taskId, {
-          type: "activity",
-          taskId,
-          action: "search",
-          summary: localizedText(
-            language,
-            `正在搜索 ${initial.platform}`,
-            `Searching ${initial.platform}`,
-          ),
-        });
-        try {
-          if (!initial.checkpoint || initial.checkpoint.state === "prepared") {
-            try {
-              const question = await preparations.get(
-                initial.promptLanguage,
-                sectionController.signal,
-              );
-              sectionController.signal.throwIfAborted();
-              initial.prompt = searchInstruction(
-                initial.platform,
-                question,
-                "all",
-                initial.promptLanguage,
-              );
-              await this.store.update((state) => {
-                state.reports
-                  .find((r) => r.taskId === taskId)!
-                  .sections.find(
-                    (s) => s.sectionId === initial.sectionId,
-                  )!.prompt = initial.prompt;
-              });
-            } catch (error) {
-              await this.store.update((state) => {
-                state.reports
-                  .find((r) => r.taskId === taskId)!
-                  .sections.find(
-                    (s) => s.sectionId === initial.sectionId,
-                  )!.failureStage = "preparation";
-              });
-              throw error;
-            }
-          }
-          sectionController.signal.throwIfAborted();
-          const result = await execution.execute(
-            initial,
-            sectionController.signal,
-            initial.runId ?? taskId,
-            async (progress) => {
-              if (sectionController.signal.aborted) return;
-              await this.store.update((s) => {
-                const section = s.reports
-                  .find((r) => r.taskId === taskId)!
-                  .sections.find((v) => v.sectionId === initial.sectionId)!;
-                Object.assign(section, progress);
-              });
-              if (progress.rawReply)
-                await this.tasks.receive(taskId, {
-                  type: "phase",
-                  taskId,
-                  phase: localizedText(
-                    language,
-                    `提取 ${initial.platform} 引用帖子`,
-                    `Extracting ${initial.platform} citations`,
-                  ),
-                });
-              this.changed();
-            },
-          );
-          if (result.citationExtraction?.state === "failed")
-            result.citationExtraction.error = citationFailureReason(
-              result.citationExtraction.error,
-              language,
+      const connections = new Map<string, Promise<void>>();
+      const runs = this.readTask(taskId).sections.map((section) => {
+        const connectionId =
+          section.connectionId ??
+          advisorById(
+            section.advisorId ??
+              legacyAdvisor(section.platform, section.promptLanguage),
+          ).connectionId;
+        const previous = connections.get(connectionId) ?? Promise.resolve();
+        const bridge = Promise.withResolvers<void>();
+        connections.set(connectionId, bridge.promise);
+        return (async () => {
+          await previous;
+          try {
+            await this.runSection(
+              taskId,
+              section.sectionId,
+              controller,
+              bound,
+              preparations,
+              bridge.resolve,
             );
-          if (sectionController.signal.aborted) continue;
-          await this.store.update((s) => {
-            const section = s.reports
-              .find((r) => r.taskId === taskId)!
-              .sections.find((v) => v.sectionId === initial.sectionId)!;
-            Object.assign(section, result, {
-              state: "running",
-              checkpoint: {
-                state: "answered",
-                conversationUrl: this.readTask(taskId).sections.find(
-                  (s) => s.sectionId === initial.sectionId,
-                )?.checkpoint?.conversationUrl,
-              },
-            });
-            if (result.citationExtraction?.state === "failed")
-              section.failureStage = "sources";
-          });
-          if (
-            result.rawReply &&
-            (execution.content || this.options.prepareReply)
-          ) {
-            try {
-              const targetLanguage = language ?? "zh-CN";
-              const readingReply = execution.content
-                ? await execution.content(
-                    {
-                      operation: "prepare_reading",
-                      text: result.rawReply,
-                      targetLanguage,
-                    },
-                    sectionController.signal,
-                    initial.runId ?? taskId,
-                  )
-                : await this.options.prepareReply!(
-                    result.rawReply,
-                    targetLanguage,
-                    sectionController.signal,
-                  );
-              if (!sectionController.signal.aborted)
-                await this.store.update((state) => {
-                  state.reports
-                    .find((r) => r.taskId === taskId)!
-                    .sections.find(
-                      (s) => s.sectionId === initial.sectionId,
-                    )!.readingReply = readingReply;
-                });
-            } catch {
-              if (!sectionController.signal.aborted)
-                await this.store.update((state) => {
-                  const section = state.reports
-                    .find((r) => r.taskId === taskId)!
-                    .sections.find((s) => s.sectionId === initial.sectionId)!;
-                  section.processingIssue = localizedText(
-                    language,
-                    "阅读版本生成失败",
-                    "Reading version failed",
-                  );
-                  section.failureStage = "processing";
-                });
-            }
+          } finally {
+            bridge.resolve();
           }
-          if (!sectionController.signal.aborted)
-            await this.store.update((state) => {
-              const section = state.reports
-                .find((r) => r.taskId === taskId)!
-                .sections.find((s) => s.sectionId === initial.sectionId)!;
-              section.state = "completed";
-              section.finishedAt = this.now();
-            });
-        } catch (error) {
-          if (sectionController.signal.aborted) continue;
-          const code = error instanceof Error ? error.message : "";
-          const accessMessages: Record<string, string> = {
-            login_required: localizedText(
-              language,
-              "平台需要登录",
-              "Platform sign-in is required",
-            ),
-            verification_required: localizedText(
-              language,
-              "平台需要人工验证",
-              "Platform verification requires user action",
-            ),
-            action_required: localizedText(
-              language,
-              "平台需要你确认账号关联或协议，请在设置中打开平台登录窗口处理",
-              "Platform account or terms confirmation requires your action; open its sign-in window in Settings",
-            ),
-            access_limited: localizedText(
-              language,
-              "平台访问受限",
-              "Platform access is restricted",
-            ),
-            browser_interaction_failed: localizedText(
-              language,
-              "平台页面操作未完成",
-              "Platform browser interaction did not complete",
-            ),
-            model_connection_failed: localizedText(
-              language,
-              "模型连接失败，自动重试后仍无法连接",
-              "Model connection failed after automatic retries",
-            ),
-          };
-          await this.store.update((s) => {
-            const section = s.reports
-              .find((r) => r.taskId === taskId)!
-              .sections.find((v) => v.sectionId === initial.sectionId)!;
-            if (section.rawReply.trim()) {
-              section.state = "completed";
-              delete section.error;
-              section.failureStage = "sources";
-              finishCitation(section, citationFailureReason(code, language));
-              section.finishedAt = this.now();
-              return;
-            }
-            section.state = "failed";
-            section.failureStage ??= [
-              "login_required",
-              "verification_required",
-              "action_required",
-              "access_limited",
-            ].includes(code)
-              ? "platform"
-              : "bridge";
-            section.error =
-              accessMessages[code] ??
-              localizedText(
-                language,
-                "平台获取失败，请检查平台状态和模型连接",
-                "Platform retrieval failed; check the platform and model connection",
-              );
-            section.finishedAt = this.now();
-          });
-        } finally {
-          controller.signal.removeEventListener("abort", cancelSection);
-          this.sectionControllers.delete(initial.sectionId);
-        }
-        const report = this.readTask(taskId);
-        await this.tasks.receive(taskId, {
-          type: "progress",
-          taskId,
-          completed: report.sections.filter(
-            (s) => s.state === "completed" || s.state === "failed",
-          ).length,
-          total: report.sections.length,
-        });
-        this.changed();
-      }
+        })();
+      });
+      // Drain every browser and reading worker before releasing the shared lease.
+      const outcomes = await Promise.allSettled(runs);
+      const failure = outcomes.find((result) => result.status === "rejected");
+      if (failure?.status === "rejected") throw failure.reason;
       if (controller.signal.aborted) return;
       const report = this.readTask(taskId);
       const success = report.sections.filter(
@@ -938,10 +727,12 @@ export class FocusSearchService {
       ).length;
       await this.store.update((s) => {
         const r = s.reports.find((r) => r.taskId === taskId)!;
+        if (controller.signal.aborted || r.status === "stopped") return;
         r.status = searchStatus(r.sections);
         r.taskOutcome = success ? "completed" : "failed";
         r.finishedAt = this.now();
       });
+      if (controller.signal.aborted) return;
       if (!success)
         await this.tasks.receive(taskId, {
           type: "failed",
@@ -963,6 +754,7 @@ export class FocusSearchService {
       if (!controller.signal.aborted) {
         await this.store.update((state) => {
           const report = state.reports.find((r) => r.taskId === taskId)!;
+          if (controller.signal.aborted || report.status === "stopped") return;
           const reason = localizedText(
             language,
             execution ? "搜索执行中断" : "后台模型连接不可用，请检查设置",
@@ -971,6 +763,7 @@ export class FocusSearchService {
               : "Background model unavailable; check Settings",
           );
           for (const section of report.sections) {
+            if (section.cancelled) continue;
             if (section.state !== "completed") {
               section.state = section.rawReply.trim() ? "completed" : "failed";
               section.error = section.rawReply.trim() ? undefined : reason;
@@ -983,6 +776,7 @@ export class FocusSearchService {
           report.taskOutcome = "failed";
           report.finishedAt = this.now();
         });
+        if (controller.signal.aborted) return;
         await this.tasks.receive(taskId, {
           type: "failed",
           taskId,
@@ -1009,6 +803,236 @@ export class FocusSearchService {
         await this.options.publish?.(this.readTask(taskId));
         this.changed();
       }
+    }
+  }
+  private async runSection(
+    taskId: string,
+    sectionId: string,
+    controller: AbortController,
+    execution: SearchExecution,
+    preparations: QuestionPreparationPool,
+    onBridgeFinished: () => void,
+  ) {
+    const language = this.readTask(taskId).outputLanguage;
+    const initial = this.readTask(taskId).sections.find(
+      (section) => section.sectionId === sectionId,
+    )!;
+    if (
+      controller.signal.aborted ||
+      initial.state === "completed" ||
+      initial.cancelled
+    )
+      return;
+    const sectionController = new AbortController();
+    const cancelSection = () => sectionController.abort();
+    controller.signal.addEventListener("abort", cancelSection, {
+      once: true,
+    });
+    this.sectionControllers.set(initial.sectionId, sectionController);
+    const update = (change: (section: SearchSection) => void) =>
+      this.store.update((state) => {
+        const section = state.reports
+          .find((r) => r.taskId === taskId)!
+          .sections.find((s) => s.sectionId === sectionId)!;
+        if (!sectionController.signal.aborted && !section.cancelled)
+          change(section);
+      });
+    try {
+      await update((section) => {
+        section.state = "running";
+        delete section.error;
+      });
+      this.changed();
+      await this.tasks.receive(taskId, {
+        type: "activity",
+        taskId,
+        action: "search",
+        summary: localizedText(
+          language,
+          `正在搜索 ${initial.platform}`,
+          `Searching ${initial.platform}`,
+        ),
+      });
+      if (!initial.checkpoint || initial.checkpoint.state === "prepared") {
+        try {
+          const question = await preparations.get(
+            initial.promptLanguage,
+            sectionController.signal,
+          );
+          sectionController.signal.throwIfAborted();
+          initial.prompt = searchInstruction(
+            initial.platform,
+            question,
+            "all",
+            initial.promptLanguage,
+          );
+          await update((section) => {
+            section.prompt = initial.prompt;
+          });
+        } catch (error) {
+          await update((section) => {
+            section.failureStage = "preparation";
+          });
+          throw error;
+        }
+      }
+      sectionController.signal.throwIfAborted();
+      const result = await execution.execute(
+        initial,
+        sectionController.signal,
+        initial.runId ?? taskId,
+        async (progress) => {
+          if (sectionController.signal.aborted) return;
+          await update((section) => {
+            Object.assign(section, progress);
+          });
+          if (progress.rawReply)
+            await this.tasks.receive(taskId, {
+              type: "phase",
+              taskId,
+              phase: localizedText(
+                language,
+                `提取 ${initial.platform} 引用帖子`,
+                `Extracting ${initial.platform} citations`,
+              ),
+            });
+          this.changed();
+        },
+      );
+      if (result.citationExtraction?.state === "failed")
+        result.citationExtraction.error = citationFailureReason(
+          result.citationExtraction.error,
+          language,
+        );
+      if (sectionController.signal.aborted) return;
+      await update((section) => {
+        Object.assign(section, result, {
+          state: "running",
+          checkpoint: {
+            state: "answered",
+            conversationUrl: section.checkpoint?.conversationUrl,
+          },
+        });
+        if (result.citationExtraction?.state === "failed")
+          section.failureStage = "sources";
+      });
+      onBridgeFinished();
+      sectionController.signal.throwIfAborted();
+      if (result.rawReply && (execution.content || this.options.prepareReply)) {
+        try {
+          const targetLanguage = language ?? "zh-CN";
+          const readingReply = execution.content
+            ? await execution.content(
+                {
+                  operation: "prepare_reading",
+                  text: result.rawReply,
+                  targetLanguage,
+                },
+                sectionController.signal,
+                initial.runId ?? taskId,
+              )
+            : await this.options.prepareReply!(
+                result.rawReply,
+                targetLanguage,
+                sectionController.signal,
+              );
+          if (!sectionController.signal.aborted)
+            await update((section) => {
+              section.readingReply = readingReply;
+            });
+        } catch {
+          if (!sectionController.signal.aborted)
+            await update((section) => {
+              section.processingIssue = localizedText(
+                language,
+                "阅读版本生成失败",
+                "Reading version failed",
+              );
+              section.failureStage = "processing";
+            });
+        }
+      }
+      if (!sectionController.signal.aborted)
+        await update((section) => {
+          section.state = "completed";
+          section.finishedAt = this.now();
+        });
+    } catch (error) {
+      if (sectionController.signal.aborted) return;
+      const code = error instanceof Error ? error.message : "";
+      const accessMessages: Record<string, string> = {
+        login_required: localizedText(
+          language,
+          "平台需要登录",
+          "Platform sign-in is required",
+        ),
+        verification_required: localizedText(
+          language,
+          "平台需要人工验证",
+          "Platform verification requires user action",
+        ),
+        action_required: localizedText(
+          language,
+          "平台需要你确认账号关联或协议，请在设置中打开平台登录窗口处理",
+          "Platform account or terms confirmation requires your action; open its sign-in window in Settings",
+        ),
+        access_limited: localizedText(
+          language,
+          "平台访问受限",
+          "Platform access is restricted",
+        ),
+        browser_interaction_failed: localizedText(
+          language,
+          "平台页面操作未完成",
+          "Platform browser interaction did not complete",
+        ),
+        model_connection_failed: localizedText(
+          language,
+          "模型连接失败，自动重试后仍无法连接",
+          "Model connection failed after automatic retries",
+        ),
+      };
+      await update((section) => {
+        if (section.rawReply.trim()) {
+          section.state = "completed";
+          delete section.error;
+          section.failureStage = "sources";
+          finishCitation(section, citationFailureReason(code, language));
+          section.finishedAt = this.now();
+          return;
+        }
+        section.state = "failed";
+        section.failureStage ??= [
+          "login_required",
+          "verification_required",
+          "action_required",
+          "access_limited",
+        ].includes(code)
+          ? "platform"
+          : "bridge";
+        section.error =
+          accessMessages[code] ??
+          localizedText(
+            language,
+            "平台获取失败，请检查平台状态和模型连接",
+            "Platform retrieval failed; check the platform and model connection",
+          );
+        section.finishedAt = this.now();
+      });
+    } finally {
+      onBridgeFinished();
+      controller.signal.removeEventListener("abort", cancelSection);
+      this.sectionControllers.delete(initial.sectionId);
+      const report = this.readTask(taskId);
+      await this.tasks.receive(taskId, {
+        type: "progress",
+        taskId,
+        completed: report.sections.filter(
+          (s) => s.state === "completed" || s.state === "failed",
+        ).length,
+        total: report.sections.length,
+      });
+      this.changed();
     }
   }
   async cancelSection(taskId: string, sectionId: string) {

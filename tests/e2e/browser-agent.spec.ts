@@ -449,6 +449,7 @@ for (const mode of [
   "sidebar",
   "cancel",
   "worker-exit",
+  "page-close",
 ] as const) {
   test(`citation phase preserves answer and handles ${mode}`, async ({}, info) => {
     const root = await mkdtemp(join(tmpdir(), `postrove-citations-${mode}-`));
@@ -804,7 +805,11 @@ for (const mode of [
         );
       }
       if (mode === "failure") expect(phaseTwoRequests).toBe(3);
-      if (mode === "cancel" || mode === "worker-exit") {
+      if (
+        mode === "cancel" ||
+        mode === "worker-exit" ||
+        mode === "page-close"
+      ) {
         expect(phaseTwoRequests).toBe(0);
         expect(outcome.report.status).toBe(
           mode === "cancel" ? "stopped" : "partial",
@@ -814,7 +819,11 @@ for (const mode of [
           outcome.progress.find((entry: any) => entry.rawReply).rawReply,
         );
         expect(outcome.result.citationExtraction.error).toMatch(
-          mode === "cancel" ? /stopped/i : /worker/i,
+          mode === "cancel"
+            ? /stopped/i
+            : mode === "page-close"
+              ? /interaction/i
+              : /worker/i,
         );
       }
       const files = (await readdir(root, { recursive: true })).filter((name) =>
