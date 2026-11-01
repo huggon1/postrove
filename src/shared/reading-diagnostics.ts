@@ -169,6 +169,7 @@ export function diagnoseReadingError(
 ): ReadingDiagnostic {
   const seen = new Set<unknown>();
   let current = error;
+  let transport: ReadingDiagnostic | undefined;
   while (current && !seen.has(current)) {
     seen.add(current);
     if (current instanceof ReadingFailure) return current.diagnostic;
@@ -202,7 +203,7 @@ export function diagnoseReadingError(
         value.code,
       )
     )
-      return readingDiagnostic(
+      transport ??= readingDiagnostic(
         "network_failed",
         stage,
         { transportCode: value.code },
@@ -210,11 +211,16 @@ export function diagnoseReadingError(
       );
     current = value.cause;
   }
-  return readingDiagnostic(
-    hasSource ? "processing_failed" : "unknown",
-    stage,
-    undefined,
-    hasSource,
+  return (
+    transport ??
+    readingDiagnostic(
+      hasSource && (stage === "translation" || stage === "summary")
+        ? "processing_failed"
+        : "unknown",
+      stage,
+      undefined,
+      hasSource,
+    )
   );
 }
 

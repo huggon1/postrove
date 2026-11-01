@@ -69,6 +69,10 @@ One application or Telegram HTTPS URL enters the forwarding queue with task, res
 
 `ReadingMaterial.diagnostic` optionally saves a versioned issue code, cause category, observed stage, recovery actions, and bounded HTTP, platform, transport, or model failure codes. The shared `reading-diagnostics.ts` module maps explicit observations and typed errors into this shape. HTTP failures retain their status; unknown failures retain an unknown cause. Saved source content directs translation and summary recovery to `resume_processing`. Historical string `issue` fields retain their bytes; `materialDiagnostic` derives an unknown diagnostic for consumers reading those records. Raw exception text and credentials stay within the private execution boundary.
 
+`ForwardingTaskRecord.diagnostic` exposes the terminal diagnostic through task summaries and details. Worker failure receipts carry it as `readingDiagnostic`; their existing model `diagnostic` field keeps its HTTP/provider/transport shape. Main saves source failures before worker dispatch. A retry clears the task diagnostic while each saved material retains its evidence until that stage resumes. Typed reading failures pass through wrapper causes, browser tools, and the collection service with their original stage.
+
+The Xiaohongshu `XhsSession` value connects to the local reader component. Website sign-in remains in the shared browser session. A missing component connection records component readiness; a missing `xsec_token` records missing access parameters. Known site navigation identifies sign-in, verification, and account-action states. Navigation and adapter HTTP failures retain their observed status. Caption-tool observations distinguish a missing runtime, absent native captions, and an extraction failure with an unknown cause.
+
 Workers emit initial materials, individual material updates, phases, execution identity, stage failures, and final results. Main-process validation preserves identity, saved source bytes, and finished chunks. The final report matches saved material state. Stopping retains the saved portion of each material.
 
 ## Task snapshots and activity messages

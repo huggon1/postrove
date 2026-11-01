@@ -1,3 +1,7 @@
+import {
+  ReadingFailure,
+  readingDiagnostic,
+} from "../../shared/reading-diagnostics";
 import { randomBytes } from "node:crypto";
 import { existsSync } from "node:fs";
 import { mkdir, writeFile, rm } from "node:fs/promises";
@@ -47,7 +51,11 @@ export class XhsAuth {
     return this.starting;
   }
   private async start(): Promise<XhsSession> {
-    if (!this.installed()) throw new Error("小红书组件不可用");
+    if (!this.installed())
+      throw new ReadingFailure(
+        readingDiagnostic("component_missing", "readiness"),
+        "小红书组件不可用",
+      );
     await mkdir(this.dataDir, { recursive: true, mode: 0o700 });
     const port = await freePort();
     const connection = {
@@ -99,7 +107,10 @@ export class XhsAuth {
       await delay(1000);
     }
     child.kill();
-    throw new Error("小红书组件启动失败或超时");
+    throw new ReadingFailure(
+      readingDiagnostic("component_unavailable", "readiness"),
+      "小红书组件启动失败或超时",
+    );
   }
   async importBrowserCookies(
     cookies: {

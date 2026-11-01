@@ -1,3 +1,8 @@
+import {
+  ReadingFailure,
+  readingDiagnosticSchema,
+  diagnoseReadingError,
+} from "../../../shared/reading-diagnostics";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { setTimeout as wait } from "node:timers/promises";
@@ -31,8 +36,14 @@ port.on("message", ({ data }) => {
     const item = pending.get(data.requestId);
     if (!item) return;
     pending.delete(data.requestId);
-    if (data.error) item.reject(new Error(data.error));
-    else item.resolve(data.value);
+    if (data.error) {
+      const diagnostic = readingDiagnosticSchema.safeParse(data.diagnostic);
+      item.reject(
+        diagnostic.success
+          ? new ReadingFailure(diagnostic.data, data.error)
+          : new Error(data.error),
+      );
+    } else item.resolve(data.value);
     return;
   }
   if (data.type === "cancel") {
@@ -280,6 +291,8 @@ port.on("message", ({ data }) => {
         : retryableModelFailure(String(error))
           ? "model_connection_failed"
           : "browser_interaction_failed";
+      const diagnostic = diagnoseReadingError(error, "source");
+      diagnostic.evidence = { ...diagnostic.evidence, failureCode: code };
       terminal =
         savedReply && !controller.signal.aborted
           ? {
@@ -291,7 +304,11 @@ port.on("message", ({ data }) => {
                 error: code,
               }),
             }
-          : { type: "failed", message: code };
+          : {
+              type: "failed",
+              message: code,
+              diagnostic,
+            };
     })
     .finally(async () => {
       try {

@@ -1,4 +1,8 @@
 import {
+  readingDiagnostic,
+  diagnoseReadingError,
+} from "../../shared/reading-diagnostics";
+import {
   sourcePlatform,
   youtubeVideo,
   redditPost,
@@ -164,6 +168,11 @@ export class PlatformAccess {
         );
       if (!captures.length) {
         material.state = item.error === "pending" ? "pending" : "failed";
+        if (item.error !== "pending")
+          material.diagnostic =
+            result.sourceDiagnostics?.get(item.url) ??
+            result.diagnostic ??
+            readingDiagnostic("capture_incomplete", "source");
         material.issue =
           item.error === "pending"
             ? undefined
@@ -243,6 +252,12 @@ export class PlatformAccess {
           ).slice(0, 1500),
         });
       }
+      if (
+        material.source?.completeness !== "complete" &&
+        !captures.some((capture: BrowserCapture) => capture.evidence)
+      )
+        material.diagnostic ??=
+          result.sourceDiagnostics?.get(item.url) ?? result.diagnostic;
       materials.push(material);
     }
     readingMaterialsSchema.parse(materials);
@@ -266,10 +281,12 @@ export class PlatformAccess {
           material.title = collected[0].title;
           material.state = material.source ? "pending" : "failed";
           material.issue = collected[0].issue;
-        } catch {
+          material.diagnostic = collected[0].diagnostic;
+        } catch (error) {
           if (signal.aborted) throw new Error("Cancelled");
           material.state = "failed";
           material.issue = "来源读取未完成；主内容与其他材料已保存，可重试";
+          material.diagnostic = diagnoseReadingError(error, "source");
         }
         await onProgress?.(structuredClone(materials), material.id);
       }

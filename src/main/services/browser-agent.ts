@@ -1,3 +1,14 @@
+import {
+  ReadingFailure,
+  readingDiagnostic,
+  readingDiagnosticSchema,
+  diagnoseReadingError,
+  type ReadingDiagnostic,
+} from "../../shared/reading-diagnostics";
+import {
+  observedPageDiagnostic,
+  transcriptDiagnostic,
+} from "../../shared/reading-observations";
 import { capturedText, isAssistantReply } from "../../platforms/browser/dom";
 import type { YoutubeTranscriptReader } from "./youtube-transcript";
 import type { TranscriptEvidence } from "../../shared/transcript-contracts";
@@ -7,7 +18,13 @@ import { randomUUID } from "node:crypto";
 import { advisorRoutes } from "../../shared/advisor-contracts";
 import { join } from "node:path";
 import { utilityProcess } from "electron";
-import type { Page, Frame, JSHandle, ElementHandle } from "playwright-core";
+import type {
+  Page,
+  Frame,
+  JSHandle,
+  ElementHandle,
+  Response,
+} from "playwright-core";
 import { mkdir } from "node:fs/promises";
 import type { ModelExecutionConfig } from "../../shared/model-contracts";
 import {
@@ -88,6 +105,28 @@ export class BrowserAgent {
       const sourceOpened = new Map<string, Set<string>>();
       const readableSources = new Map<string, string>();
       const sourceFailures = new Map<string, string>();
+      const sourceDiagnostics = new Map<string, ReadingDiagnostic>();
+      let lastDiagnostic: ReadingDiagnostic | undefined =
+        purpose === "collect" &&
+        platform === "youtube" &&
+        this.transcripts &&
+        !youtubeReading
+          ? readingDiagnostic("component_missing", "readiness")
+          : undefined;
+      const observeResponse = (response: Response) => {
+        if (
+          response.status() >= 400 &&
+          response.request().isNavigationRequest() &&
+          response.frame() === page.mainFrame()
+        ) {
+          const diagnostic = readingDiagnostic("http_error", "source", {
+            httpStatus: response.status(),
+          });
+          sourceDiagnostics.set(response.url(), diagnostic);
+          lastDiagnostic = diagnostic;
+        }
+      };
+      page.on("response", observeResponse);
       let requestedNote: string | undefined;
       let requestedNoteUrl: string | undefined;
       let lastSourceFailure: string | undefined;
@@ -109,6 +148,13 @@ export class BrowserAgent {
               readableSources.delete(requestedNote);
           }
           lastSourceFailure = message;
+          lastDiagnostic = readingDiagnostic(
+            "source_unavailable",
+            "access",
+            code === "300031" ? { platformCode: code } : undefined,
+          );
+          if (requestedNoteUrl)
+            sourceDiagnostics.set(requestedNoteUrl, lastDiagnostic);
           return {
             sourceError: {
               code: code === "300031" ? code : "source_unavailable",
@@ -353,6 +399,8 @@ export class BrowserAgent {
         sourceOpened: Map<string, Set<string>>;
         readableSources: Map<string, string>;
         sourceFailures: Map<string, string>;
+        sourceDiagnostics: Map<string, ReadingDiagnostic>;
+        diagnostic?: ReadingDiagnostic;
       }>((resolve, reject) => {
         const worker = utilityProcess.fork(this.workerPath, [], {
           stdio: "pipe",
@@ -391,6 +439,8 @@ export class BrowserAgent {
               sourceOpened,
               readableSources,
               sourceFailures,
+              sourceDiagnostics,
+              diagnostic: lastDiagnostic,
             });
         };
         const stop = (reason: Error) => {
@@ -469,8 +519,16 @@ export class BrowserAgent {
                 /^(?:agree(?:\s*(?:and|&)\s*continue)?|accept(?:\s*all)?|link(?:\s+your)?\s+(?:x\s+)?account|同意(?:并继续)?|关联账号)$/i.test(
                   (controls.get(data.operation.ref) ?? "").trim(),
                 )
-              )
-                return { accessState: "action_required" };
+              ) {
+                lastDiagnostic = readingDiagnostic(
+                  "account_action_required",
+                  "access",
+                );
+                return {
+                  accessState: "action_required",
+                  diagnostic: lastDiagnostic,
+                };
+              }
               if (data.operation.action === "structure_content") {
                 const capture = captureData.get(data.operation.captureId);
                 if (!capture || !this.processContent)
@@ -513,7 +571,12 @@ export class BrowserAgent {
                   readingAttemptId,
                   signal,
                 );
-                if (result.outcome !== "content") return result;
+                if (result.outcome !== "content") {
+                  const diagnostic = transcriptDiagnostic(result.reason);
+                  sourceDiagnostics.set(data.operation.value, diagnostic);
+                  lastDiagnostic = diagnostic;
+                  return { ...result, diagnostic };
+                }
                 const source = result.source;
                 return {
                   capture: source.markdown,
@@ -924,27 +987,15 @@ export class BrowserAgent {
                   requestedNoteUrl = value.clickedUrl;
                 }
                 value = { ...value, ...(await observeNote(page)) };
-                const current = new URL(page.url());
-                if (
-                  current.hostname === "accounts.google.com" ||
-                  (current.hostname.endsWith("reddit.com") &&
-                    /^\/(?:login|register)(?:\/|$)/.test(current.pathname))
-                )
-                  value = { ...value, accessState: "login_required" };
-                if (
-                  platform === "x" &&
-                  [
-                    "x.com",
-                    "www.x.com",
-                    "twitter.com",
-                    "www.twitter.com",
-                  ].includes(current.hostname) &&
-                  (current.pathname === "/login" ||
-                    current.pathname === "/i/flow/login" ||
-                    (current.pathname === "/i/jf/onboarding/web" &&
-                      current.searchParams.get("mode") === "login"))
-                )
-                  value = { ...value, accessState: "login_required" };
+                const access = observedPageDiagnostic(page.url());
+                if (access) {
+                  lastDiagnostic = access;
+                  const accessState =
+                    access.code === "account_action_required"
+                      ? "action_required"
+                      : access.code;
+                  value = { ...value, accessState, diagnostic: access };
+                }
                 for (const element of value.elements ?? [])
                   controls.set(element.ref, element.label ?? "");
                 if (
@@ -1157,6 +1208,12 @@ export class BrowserAgent {
                   });
               })
               .catch((error) => {
+                const diagnostic = diagnoseReadingError(error, "source");
+                // A later transport/parser error keeps the last observed access failure.
+                if (!lastDiagnostic || diagnostic.code !== "unknown")
+                  lastDiagnostic = diagnostic;
+                if (data.operation.action === "enhanced_read")
+                  sourceDiagnostics.set(data.operation.value, diagnostic);
                 if (!done)
                   worker.postMessage({
                     type: "browser_result",
@@ -1165,7 +1222,8 @@ export class BrowserAgent {
                       String(error?.message).match(
                         /(?:stale_ref|source_scope|reply_scope|reply_generating):[^\n]+/,
                       )?.[0] ??
-                      "Browser action failed; refresh snapshot or request user login",
+                      "Browser action failed; inspect a fresh snapshot or retry the operation",
+                    diagnostic,
                   });
               });
           } else if (data?.type === "result") {
@@ -1184,9 +1242,22 @@ export class BrowserAgent {
                   "action_required",
                   "browser_interaction_failed",
                 ].includes(output.error) &&
-                !replyCaptureId
+                !replyCaptureId &&
+                !(
+                  purpose === "collect" &&
+                  output.materials?.some((item: any) =>
+                    item.sourceCaptureIds?.some((id: string) =>
+                      captureData.has(id),
+                    ),
+                  )
+                )
               )
-                finish(new Error(lastSourceFailure ?? output.error));
+                finish(
+                  new ReadingFailure(
+                    lastDiagnostic ?? readingDiagnostic("unknown", "source"),
+                    lastSourceFailure ?? output.error,
+                  ),
+                );
               else {
                 if (purpose === "collect") {
                   if (
@@ -1206,10 +1277,28 @@ export class BrowserAgent {
                 output.rawReply = capture;
                 finish(undefined, output);
               }
-            } catch {
-              finish(new Error("Browser agent returned invalid JSON"));
+            } catch (error) {
+              finish(
+                new ReadingFailure(
+                  lastDiagnostic ??
+                    readingDiagnostic("page_parse_failed", "source"),
+                  "Browser agent returned invalid JSON",
+                  { cause: error },
+                ),
+              );
             }
-          } else if (data?.type === "failed") finish(new Error(data.message));
+          } else if (data?.type === "failed") {
+            const received = readingDiagnosticSchema.safeParse(data.diagnostic);
+            finish(
+              new ReadingFailure(
+                lastDiagnostic ??
+                  (received.success
+                    ? received.data
+                    : readingDiagnostic("unknown", "source")),
+                data.message,
+              ),
+            );
+          }
         });
         worker.postMessage({
           config,
@@ -1224,6 +1313,7 @@ export class BrowserAgent {
           youtubeReading,
         });
       }).finally(async () => {
+        page.off("response", observeResponse);
         page.off("popup", trackPopup);
         page.off("framenavigated", navigateDocument);
         await Promise.all(

@@ -1,3 +1,4 @@
+import { readingDiagnosticSchema } from "../../../shared/reading-diagnostics";
 import {
   readingMaterialsSchema,
   readingMaterialSchema,
@@ -27,6 +28,7 @@ const readingFailureSchema = z
     materialId: z.string().min(1).max(100),
     stage: z.enum(["source", "translation", "summary"]),
     message: z.string().min(1).max(500),
+    readingDiagnostic: readingDiagnosticSchema.optional(),
     code: failureCodeSchema.optional(),
     diagnostic: diagnosticSchema.optional(),
   })
@@ -118,6 +120,7 @@ export const forwardingJobEventSchema = z.discriminatedUnion("type", [
       taskId: z.string().uuid(),
       stage: z.enum(["source", "translation", "summary"]),
       message: z.string().min(1).max(500),
+      readingDiagnostic: readingDiagnosticSchema.optional(),
     })
     .strict(),
 ]);
