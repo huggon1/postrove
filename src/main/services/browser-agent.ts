@@ -4,6 +4,7 @@ import type { TranscriptEvidence } from "../../shared/transcript-contracts";
 import { youtubeVideo } from "../../shared/source-profiles";
 import type { ContentRequest } from "../../shared/content-contracts";
 import { randomUUID } from "node:crypto";
+import { advisorRoutes } from "../../shared/advisor-contracts";
 import { join } from "node:path";
 import { utilityProcess } from "electron";
 import type { Page, Frame, JSHandle, ElementHandle } from "playwright-core";
@@ -76,7 +77,7 @@ export class BrowserAgent {
       !!this.transcripts &&
       (await this.transcripts.available());
     await mkdir(this.traceRoot, { recursive: true, mode: 0o700 });
-    return this.browser.exclusive(platform, signal, async (page) => {
+    const run = async (page: Page) => {
       const skills = await platformSkillCatalog(purpose, routeId ?? platform);
       const observed = new Map<string, string>();
       const captures: string[] = [];
@@ -374,6 +375,7 @@ export class BrowserAgent {
           clearTimeout(stopTimer);
           error = stopReason ?? error;
           signal.removeEventListener("abort", abort);
+          page.off("close", closed);
           worker.kill();
           if (error) reject(error);
           else
@@ -398,11 +400,13 @@ export class BrowserAgent {
           stopTimer = setTimeout(() => finish(reason), 35_000);
         };
         const abort = () => stop(new Error("Cancelled"));
+        const closed = () => stop(new Error("browser_interaction_failed"));
         const timer = setTimeout(
           () => stop(new Error("Browser task timed out")),
           8 * 60_000,
         );
         signal.addEventListener("abort", abort, { once: true });
+        page.once("close", closed);
         worker.on("exit", () => finish(new Error("Browser worker stopped")));
         worker.on("message", (data) => {
           if (data?.type === "search_reply") {
@@ -1234,6 +1238,13 @@ export class BrowserAgent {
           [...popups].map((popup) => popup.close().catch(() => {})),
         );
       });
-    });
+    };
+    const connectionId =
+      purpose === "search"
+        ? advisorRoutes.find((route) =>
+            routeId ? route.id === routeId : route.platform === platform,
+          )?.connectionId
+        : undefined;
+    return this.browser.exclusive(platform, signal, run, { connectionId });
   }
 }

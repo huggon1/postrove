@@ -19,7 +19,7 @@ The diagram includes Gemini/YouTube, Reddit AI, source profiles, and platform re
 | Browser worker  | One Pi coding session per bridge or capture job; explicit tools and Skill loading                     |
 | Content worker  | Bounded tool-free text Agents for shared content operations                                           |
 | Reading worker  | Saved material chunks, translation, fidelity correction, introduction, progress                       |
-| Shared Chrome   | Platform login sessions and serialized HTTPS browser access                                           |
+| Shared Chrome   | Platform login sessions, per-connection search lanes, and exclusive browser maintenance               |
 
 `FocusSearchStore` saves topics and schedules in `focus-search.json`. `AdvisorStore` saves enabled language experts in `advisors.json`. Website connections share login across route-and-language experts. The advisor registry binds each route to a source platform and search Skill. Reddit also admits guest use. `ForwardingStore` saves reading tasks and materials in `forwarding.json`; `TaskStore` saves execution events in `tasks.json`. Main validates every update before notifying React. [Data contracts](data-contracts.md) own exact fields and ordering.
 
@@ -29,7 +29,7 @@ A manual or scheduled send resolves enabled experts and freezes role, connection
 
 Each expert receives a separate bridge task. The bridge sees a generic system, prepared question, output contract, browser tools, and the selected route’s Skill summary. It selects and loads that Skill. The Skill supplies the platform's fixed entry address and page guide. The bridge submits the prepared question once and captures the stable answer. Browser snapshots expose Reddit streaming and refreshed answer bodies beyond the general link-count filter. Reply validation requires the complete recognized answer container before Main saves its citation scope.
 
-Main commits the answer and acknowledges it. The same Pi session continues into citation extraction. Captures and observed URLs establish provenance; Main validates the source profile’s original post, comment, or video identity before accepting sources. Main generates a reading version through one shared text operation. Original and reading versions remain separate. Each expert has its own cancellation signal and receipt state. Shared question preparation continues for its remaining consumers, and its workers drain before the topic releases its model lease. The global browser lock serializes access.
+Main commits the answer and acknowledges it. The same Pi session continues into citation extraction. Captures and observed URLs establish provenance; Main validates the source profile’s original post, comment, or video identity before accepting sources. Main generates a reading version through one shared text operation. Original and reading versions remain separate. Each expert has its own cancellation signal and receipt state. Shared question preparation continues for its remaining consumers, and all preparation, bridge, and reading workers drain before the topic releases its model lease. Main sequences topics in its search queue. Within a topic, bridge tasks run concurrently across frozen `connectionId` values; each connection advances to its next language expert after the previous bridge saves its answer and citations. Reading preparation continues independently through the bounded content service.
 
 ## Collection and content capabilities
 
@@ -43,7 +43,7 @@ The reading worker uses the same translation and introduction implementations wi
 
 ## Browser, model, and integration boundaries
 
-`PlatformBrowser` owns Chrome, sessions, constrained operations, and the serial access lock. `BrowserAgent` maps worker calls to validated operations and current-task captures. `PlatformAccess` validates source identity and caches images. Both browser Agent types use explicit `load_platform_skill`; automatic project instruction and extension discovery stays disabled in the Pi session factory.
+`PlatformBrowser` owns Chrome, sessions, constrained operations, and `BrowserTaskQueue`. Search jobs use connection lanes; collection, login, logout, and explicit mode changes form global barriers. A queued barrier waits for active lanes and holds later jobs. Queued cancellation releases its waiting entry immediately. Active pages retain one browser mode until they drain. Shutdown rejects queued jobs and waits for active page cleanup. Session-status writes use a separate serial queue. `BrowserAgent` maps worker calls to validated operations and current-task captures. `PlatformAccess` validates source identity and caches images. Both browser Agent types use explicit `load_platform_skill`; automatic project instruction and extension discovery stays disabled in the Pi session factory.
 
 Background task pages and material-image downloads use the installed Chrome user agent with the Chrome product name. Before page navigation, Main applies that identity with Chrome's reported Client Hints, retaining its versions, architecture, and platform. Each task page owns this identity for its lifetime.
 

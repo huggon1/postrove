@@ -28,7 +28,7 @@ Main saves the platform answer before asking the same browser session to extract
 
 Topic receipts expose Stop for active members, Stop all, result-file access, and native Pi log export. Stopping one member lets the other selected members continue. A captured answer survives cancellation and later citation or translation failure. A submitted checkpoint records the existing conversation; crash recovery observes that conversation before continuing. An unavailable conversation produces a bridge failure. A fresh send creates a new topic.
 
-Browser access uses a shared serial lock. Search and reading enter independent queues. The application retries transient browser/model failures within fixed budgets. Login, verification, and account agreements return an actionable platform state. A reading failure retains saved source content and completed translation chunks.
+Topics run in admission order. Within one topic, different AI connections search concurrently. Language experts sharing an AI connection take turns through answer capture and citation extraction. Reading-version processing runs independently while the next expert searches. Topic completion waits for every expert and its reading processing. Search and reading enter independent queues. Collection, sign-in, sign-out, and explicit browser-mode changes take exclusive browser access. The application retries transient browser/model failures within fixed budgets. Login, verification, and account agreements return an actionable platform state. A reading failure retains saved source content and completed translation chunks.
 
 ## Scheduled messages
 
@@ -56,7 +56,7 @@ Settings contains Inbox connections, AI members, Background models, Preferences,
 
 Each connection's actions menu offers Edit configuration and Remove connection. Model setup separates connection method, native Pi authentication, and model/options. The connection method selects either a built-in provider or a custom service configured with a provider ID and Pi `models.json`. Each method shows its own fields and advances through Continue. Switching methods retains field values and clears the previous method's validation feedback. A new connection ends with Save and use. Editing a saved connection opens its model/options; Save connection updates that connection and retains the active selection. Reauthorization replaces the edited connection on save and preserves its active or inactive status. Authentication controls follow the native provider's text, secret, selection, browser, or device-code prompts.
 
-Main freezes model metadata and options for active execution through a lease. Existing API connections migrate to Pi. Native authorization commits when the user saves the connection. Historical Codex settings remain inactive. Cancellation retains the active connection. Browser visibility applies at the next browser operation. Platform sign-in always opens a visible window.
+Main freezes model metadata and options for active execution through a lease. Existing API connections migrate to Pi. Native authorization commits when the user saves the connection. Historical Codex settings remain inactive. Cancellation retains the active connection. Browser visibility changes apply at the next task admission after active task pages drain; overlapping task pages retain their shared browser mode. Platform sign-in always opens a visible window.
 
 ## Saved results and deletion
 

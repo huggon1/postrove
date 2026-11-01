@@ -368,7 +368,8 @@ app.whenReady().then(async () => {
     | "incomplete"
     | "sidebar"
     | "cancel"
-    | "worker-exit";
+    | "worker-exit"
+    | "page-close";
 }) => {
   const root = app.getPath("userData");
   const fixtureBrowser = new PlatformBrowser(
@@ -420,7 +421,7 @@ app.whenReady().then(async () => {
       join(root, "traces"),
     );
     const access = new PlatformAccess(agent);
-    if (["cancel", "worker-exit"].includes(input.mode)) {
+    if (["cancel", "worker-exit", "page-close"].includes(input.mode)) {
       const store = new FocusSearchStore(
         join(root, `search-${input.mode}.json`),
       );
@@ -452,7 +453,12 @@ app.whenReady().then(async () => {
                   await searchService!.cancel(
                     searchService!.reports()[0].taskId,
                   );
-                else worker!.kill();
+                else if (input.mode === "page-close") {
+                  const page = context
+                    .pages()
+                    .find((page) => !initialPages.has(page));
+                  await page?.close();
+                } else worker!.kill();
               },
             ),
           release: async () => {},
