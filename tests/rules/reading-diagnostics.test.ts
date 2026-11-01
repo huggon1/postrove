@@ -119,7 +119,7 @@ test("page observations distinguish login, verification and account action from 
     undefined,
   );
   assert.equal(
-    transcriptDiagnostic("transcript_unavailable").code,
+    transcriptDiagnostic("transcript_captions_missing").code,
     "captions_missing",
   );
   assert.equal(
@@ -127,6 +127,11 @@ test("page observations distinguish login, verification and account action from 
     "login_required",
   );
   assert.equal(transcriptDiagnostic("bilibili_http_403").category, "unknown");
+  assert.equal(transcriptDiagnostic("transcript_unavailable").code, "unknown");
+  assert.equal(
+    transcriptDiagnostic("transcript_caption_artifact_missing").code,
+    "unknown",
+  );
   assert.equal(
     transcriptDiagnostic("bilibili_subtitles_unavailable").code,
     "captions_missing",

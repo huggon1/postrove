@@ -63,9 +63,18 @@ export function transcriptDiagnostic(reason: string): ReadingDiagnostic {
       httpStatus: Number(httpStatus),
     });
   if (
-    reason === "transcript_unavailable" ||
+    reason === "transcript_captions_missing" ||
     reason === "bilibili_subtitles_unavailable"
   )
     return readingDiagnostic("captions_missing", "captions");
-  return readingDiagnostic("unknown", "captions");
+  const failureCode =
+    /^(?:transcript_|bilibili_|invalid_|empty_)[a-zA-Z0-9_.-]*$/.test(reason) &&
+    reason.length <= 64
+      ? reason
+      : undefined;
+  return readingDiagnostic(
+    "unknown",
+    "captions",
+    failureCode ? { failureCode } : undefined,
+  );
 }
