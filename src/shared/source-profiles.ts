@@ -98,13 +98,15 @@ export function bilibiliVideo(raw: string) {
   )
     return undefined;
   const match = url.pathname.match(
-    /^\/video\/(BV[A-Za-z0-9]{10}|av[1-9]\d{0,19})\/?$/,
+    /^\/video\/(BV[A-Za-z0-9]{10}|av[1-9]\d{0,19})\/?$/i,
   );
   if (!match) return undefined;
   const partText = url.searchParams.get("p") ?? "1";
   if (!/^[1-9]\d{0,5}$/.test(partText)) return undefined;
   const part = Number(partText),
-    id = match[1];
+    id = /^bv/i.test(match[1])
+      ? `BV${match[1].slice(2)}`
+      : `av${match[1].slice(2)}`;
   const canonical = `https://www.bilibili.com/video/${id}?p=${part}`;
   const time = url.searchParams.get("t");
   const seconds = time && /^\d+(?:\.\d+)?$/.test(time) ? Number(time) : 0;
@@ -146,8 +148,9 @@ export function redditPost(raw: string) {
 }
 export function sourcePlatform(
   raw: string,
-): SourceProfileId | "github" | "web" {
+): SourceProfileId | "bilibili" | "github" | "web" {
   if (youtubeVideo(raw)) return "youtube";
+  if (bilibiliVideo(raw)) return "bilibili";
   const url = sourceUrl(raw);
   if (!url) return "web";
   if (

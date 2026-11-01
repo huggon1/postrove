@@ -56,6 +56,7 @@ export const videoTranscriptEvidenceSchema = legacyTranscriptEvidenceSchema
   })
   .superRefine((evidence, ctx) => {
     const key = parseVideoArtifactKey(evidence.artifactKey);
+    const resource = `${evidence.video.id}${evidence.video.part ? `-p${evidence.video.part}` : ""}`;
     const kind =
       evidence.provenance.kind === "human"
         ? "creator"
@@ -63,6 +64,7 @@ export const videoTranscriptEvidenceSchema = legacyTranscriptEvidenceSchema
     if (
       !key ||
       key.platform !== evidence.video.platform ||
+      !(key.resource === resource || key.resource.startsWith(`${resource}-`)) ||
       evidence.videoId !== evidence.video.id ||
       kind !== evidence.trackKind
     )
