@@ -76,7 +76,7 @@ export function parseWhisperOutput(
       from < previousStart ||
       to < from ||
       from < 0 ||
-      to > Math.ceil(Math.max(1, end - start)) * 1000 + 50 ||
+      to > Math.ceil(Math.max(1, end - start)) * 1000 + 1000 ||
       typeof item.text !== "string"
     )
       throw new SpeechError("invalid_output");
@@ -314,12 +314,13 @@ export class SpeechService implements SpeechTranscriber {
             try {
               if ((await stat(`${output}.json`)).size > 1_048_576)
                 throw new SpeechError("output_budget");
-              chunk = parseWhisperOutput(
-                await readFile(`${output}.json`, "utf8"),
-                index,
-                start,
-                end,
+              const raw = await readFile(`${output}.json`, "utf8");
+              await writeFile(
+                join(job, `recognition-${index}-${randomUUID()}.json`),
+                raw,
+                { mode: 0o600 },
               );
+              chunk = parseWhisperOutput(raw, index, start, end);
             } catch (error) {
               throw error instanceof SpeechError
                 ? error

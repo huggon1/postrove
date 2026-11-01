@@ -309,6 +309,45 @@ test("fractional tail timing preserves the recognizer end while clipping to orig
   ]);
 });
 
+test("native timestamp overrun keeps the backend estimate and the bounded chunk end", () => {
+  const chunk = parseWhisperOutput(
+    JSON.stringify({
+      transcription: [
+        { offsets: { from: 26000, to: 31000 }, text: "開放時間" },
+      ],
+    }),
+    1,
+    30,
+    60,
+  );
+  assert.deepEqual(chunk.segments, [
+    {
+      id: "speech-1-0",
+      start: 56,
+      end: 60,
+      recognizerEnd: 61,
+      text: "開放時間",
+    },
+  ]);
+  assert.throws(
+    () =>
+      parseWhisperOutput(
+        JSON.stringify({
+          transcription: [
+            {
+              offsets: { from: 26000, to: 32000 },
+              text: "outside timing budget",
+            },
+          ],
+        }),
+        1,
+        30,
+        60,
+      ),
+    /invalid_output/,
+  );
+});
+
 test("invalid timestamps and unordered output fail validation; empty transcription records no speech", () => {
   assert.throws(
     () =>
