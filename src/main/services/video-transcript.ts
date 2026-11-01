@@ -1,4 +1,5 @@
 import type { SourceContent } from "../../shared/source-contracts";
+import type { XhsVideoContext } from "./xiaohongshu-video";
 import {
   videoIdentity,
   type VideoPlatform,
@@ -14,6 +15,10 @@ export type VideoTranscriptResult =
 /** Main supplies session-bound JSON access; implementations retain only source evidence. */
 export interface VideoReadSession {
   getJson(url: string, signal: AbortSignal): Promise<unknown>;
+  getXiaohongshuContext?(
+    url: string,
+    signal: AbortSignal,
+  ): Promise<XhsVideoContext>;
 }
 export interface VideoTranscriptReader {
   available(): Promise<boolean>;

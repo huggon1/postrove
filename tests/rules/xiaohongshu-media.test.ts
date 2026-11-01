@@ -20,6 +20,7 @@ import {
   resolveXhsNote,
   xhsCookieFile,
   xhsNoteIdentity,
+  runXhsProcess,
   type XhsCookie,
   type XhsProcessRunner,
 } from "../../src/main/services/xiaohongshu-media";
@@ -349,4 +350,46 @@ test("XHS image/text normalization retains the existing body and image order", (
       .map((block) => block.imageId),
     ["xhs-image-0", "xhs-image-1"],
   );
+});
+
+test("XHS native cancellation drains the extractor process tree before settling", async () => {
+  const root = await mkdtemp(join(tmpdir(), "postrove-xhs-process-"));
+  const controller = new AbortController();
+  const pidFile = join(root, "child.pid");
+  const script =
+    "const child = require('node:child_process').spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], {stdio: 'ignore'}); require('node:fs').writeFileSync(process.argv[1], String(child.pid)); setInterval(() => {}, 1000);";
+  const operation = runXhsProcess(
+    process.execPath,
+    ["-e", script, pidFile],
+    root,
+    controller.signal,
+  ).then(
+    () => undefined,
+    (error) => error as Error,
+  );
+  try {
+    let pid = 0;
+    for (let count = 0; count < 100 && !pid; count++) {
+      pid = Number(await readFile(pidFile, "utf8").catch(() => "0"));
+      if (!pid) await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    assert.ok(pid > 0, "Controlled extractor child started");
+    controller.abort();
+    assert.match((await operation)?.message ?? "", /Cancelled/);
+    let alive = true;
+    for (let count = 0; count < 100 && alive; count++) {
+      try {
+        process.kill(pid, 0);
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      } catch (error) {
+        assert.equal((error as NodeJS.ErrnoException).code, "ESRCH");
+        alive = false;
+      }
+    }
+    assert.equal(alive, false, "Extractor descendants exited");
+  } finally {
+    controller.abort();
+    await operation;
+    await rm(root, { recursive: true, force: true });
+  }
 });

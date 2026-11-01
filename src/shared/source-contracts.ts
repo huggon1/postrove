@@ -138,7 +138,7 @@ export const xhsShortUrlSchema = z
       !url.port &&
       !url.username &&
       !url.password &&
-      /^\/[A-Za-z0-9_-]{1,120}\/?$/.test(url.pathname)
+      /^\/(?:[ao]\/)?[A-Za-z0-9_-]{1,120}\/?$/.test(url.pathname)
     );
   }, "请输入小红书短链接");
 export const webUrlSchema = z
@@ -183,6 +183,7 @@ export const blockSchema = z.discriminatedUnion("type", [
 export const sourceSchema = z
   .object({
     sourceUrl: sourceUrlSchema,
+    resolvedSourceUrl: sourceUrlSchema.optional(),
     markdown: z.string().optional(),
     platform: platformSchema,
     title: z.string().max(500).optional(),
@@ -211,7 +212,21 @@ export const sourceSchema = z
   })
   .strict()
   .superRefine((source, ctx) => {
-    const video = videoIdentity(source.sourceUrl);
+    const evidenceUrl = source.resolvedSourceUrl ?? source.sourceUrl;
+    const video = videoIdentity(evidenceUrl);
+    if (
+      source.resolvedSourceUrl &&
+      !(
+        source.platform === "xiaohongshu" &&
+        xhsShortUrlSchema.safeParse(source.sourceUrl).success &&
+        video?.platform === "xiaohongshu"
+      )
+    )
+      ctx.addIssue({
+        code: "custom",
+        message:
+          "Resolved source requires a Xiaohongshu share link and original note",
+      });
     const canonical =
       source.platform === "youtube"
         ? youtubeVideo(source.sourceUrl)
@@ -232,7 +247,7 @@ export const sourceSchema = z
       source.evidence &&
       ("video" in source.evidence
         ? source.evidence.video.platform !== source.platform ||
-          !videoMatchesUrl(source.evidence.video, source.sourceUrl)
+          !videoMatchesUrl(source.evidence.video, evidenceUrl)
         : source.platform !== "youtube" ||
           source.evidence.videoId !== youtubeVideo(source.sourceUrl)?.id)
     )

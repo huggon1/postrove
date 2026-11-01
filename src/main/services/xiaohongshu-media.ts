@@ -220,14 +220,49 @@ export const runXhsProcess: XhsProcessRunner = (
       shell: false,
       windowsHide: true,
       stdio: ["ignore", "pipe", "pipe"],
+      detached: process.platform !== "win32",
     });
     const output: Buffer[] = [];
     let bytes = 0,
       diagnostics = "",
       failure: Error | undefined;
+    let treeStop: Promise<void> | undefined;
     const stop = (error: Error) => {
-      failure ??= error;
-      child.kill("SIGKILL");
+      if (failure) return;
+      failure = error;
+      if (process.platform === "win32" && child.pid) {
+        treeStop = new Promise((resolve) => {
+          const killer = spawn(
+            join(
+              process.env.SystemRoot ?? "C:\\Windows",
+              "System32",
+              "taskkill.exe",
+            ),
+            ["/pid", String(child.pid), "/T", "/F"],
+            {
+              windowsHide: true,
+              stdio: "ignore",
+              timeout: 5_000,
+              env: { SystemRoot: process.env.SystemRoot },
+            },
+          );
+          killer.once("error", () => {
+            child.kill("SIGKILL");
+            resolve();
+          });
+          killer.once("close", () => {
+            child.kill("SIGKILL");
+            resolve();
+          });
+        });
+      } else {
+        try {
+          if (child.pid) process.kill(-child.pid, "SIGKILL");
+          else child.kill("SIGKILL");
+        } catch {
+          child.kill("SIGKILL");
+        }
+      }
     };
     const abort = () => stop(new Error("Cancelled"));
     const timer = setTimeout(() => stop(new XhsMediaError("timeout")), 75_000);
@@ -244,9 +279,10 @@ export const runXhsProcess: XhsProcessRunner = (
     child.on("error", () => {
       failure ??= new XhsMediaError("runtime_unavailable");
     });
-    child.on("close", (code) => {
+    child.on("close", async (code) => {
       clearTimeout(timer);
       signal.removeEventListener("abort", abort);
+      await treeStop;
       if (failure) reject(failure);
       else if (code !== 0)
         reject(new XhsMediaError(classifyXhsFailure(diagnostics)));

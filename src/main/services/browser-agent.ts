@@ -1,5 +1,6 @@
 import { bilibiliReadSession } from "./video-session";
 import { capturedText, isAssistantReply } from "../../platforms/browser/dom";
+import { readXhsVideoContext } from "./xiaohongshu-video-context";
 import type { VideoTranscriptReader } from "./video-transcript";
 import { videoIdentity } from "../../shared/video-contracts";
 import type { TranscriptEvidence } from "../../shared/transcript-contracts";
@@ -37,6 +38,10 @@ export interface BrowserCapture {
   documentGeneration?: number;
   sourceKind?: "reply_inline" | "source_panel";
   evidence?: TranscriptEvidence;
+  readerCoverage?: {
+    completeness: "complete" | "partial" | "unknown";
+    note: string;
+  };
 }
 export type SearchProgress = Partial<
   Pick<
@@ -520,7 +525,11 @@ export class BrowserAgent {
                   data.operation.value,
                   readingAttemptId,
                   signal,
-                  bilibiliReadSession(page.context()),
+                  {
+                    ...bilibiliReadSession(page.context()),
+                    getXiaohongshuContext: (url, signal) =>
+                      readXhsVideoContext(page, url, signal),
+                  },
                 );
                 if (result.outcome !== "content") return result;
                 const source = result.source;
@@ -529,9 +538,13 @@ export class BrowserAgent {
                   markdown: source.markdown,
                   url: source.sourceUrl,
                   sourcePageUrl: source.sourceUrl,
-                  images: [],
+                  images: source.images,
                   links: result.references,
                   evidence: source.evidence,
+                  readerCoverage: {
+                    completeness: source.completeness,
+                    note: source.completenessNote,
+                  },
                 };
               }
               if (data.operation.action === "enhanced_read") {
@@ -1063,6 +1076,9 @@ export class BrowserAgent {
                   captureRecords.set(captureId, value.capture);
                   captureData.set(captureId, {
                     ...(value.evidence ? { evidence: value.evidence } : {}),
+                    ...(value.readerCoverage
+                      ? { readerCoverage: value.readerCoverage }
+                      : {}),
                     pageUrl: value.sourcePageUrl ?? page.url(),
                     documentGeneration:
                       value.documentGeneration ?? documentGeneration,
