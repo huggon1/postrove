@@ -195,6 +195,24 @@ const longSpoken = await new SpeechService({
 await recordCase("long-spoken", longSpoken);
 assert.equal(longSpoken.status, "completed");
 assert.equal(longSpoken.chunks.length, 3);
+assert.deepEqual(
+  longSpoken.chunks.map(({ index, start, end }) => [index, start, end]),
+  [
+    [0, 0, 30],
+    [1, 30, 60],
+    [2, 60, 61],
+  ],
+);
+assert(
+  longSpoken.chunks.every((chunk) =>
+    chunk.segments.every(
+      (segment) =>
+        segment.start >= chunk.start &&
+        segment.start <= segment.end &&
+        segment.end <= chunk.end,
+    ),
+  ),
+);
 assert(longSpoken.segments.some((segment) => segment.start >= 30));
 assert(
   longSpoken.segments.every((segment) => segment.end <= longSpoken.duration!),

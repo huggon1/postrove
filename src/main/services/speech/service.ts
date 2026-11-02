@@ -33,6 +33,8 @@ const defaults: SpeechBudget = {
   retries: 1,
 };
 const active = new Set<string>();
+// v1.8.2 timestamp tokens span WHISPER_CHUNK_SIZE (30 s) after each decoder seek.
+const whisperDecoderWindowMs = 30_000;
 
 export interface SpeechTranscriptionRequest {
   mediaPath: string;
@@ -76,12 +78,14 @@ export function parseWhisperOutput(
       from < previousStart ||
       to < from ||
       from < 0 ||
-      to > Math.ceil(Math.max(1, end - start)) * 1000 + 1000 ||
+      to >
+        Math.ceil(Math.max(1, end - start)) * 1000 + whisperDecoderWindowMs ||
       typeof item.text !== "string"
     )
       throw new SpeechError("invalid_output");
     previousStart = from;
-    if (item.text.trim() && from < (end - start) * 1000)
+    if (item.text.trim()) {
+      if (from >= (end - start) * 1000) throw new SpeechError("invalid_output");
       segments.push({
         id: `speech-${index}-${segments.length}`,
         start: start + from / 1000,
@@ -91,6 +95,7 @@ export function parseWhisperOutput(
           : {}),
         text: item.text,
       });
+    }
   }
   const detectedLanguage = input.result?.language;
   if (detectedLanguage !== undefined && !/^[a-z]{2,3}$/.test(detectedLanguage))
