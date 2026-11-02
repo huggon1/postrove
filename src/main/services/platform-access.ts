@@ -1,3 +1,4 @@
+import { videoIdentity, videoMatchesUrl } from "../../shared/video-contracts";
 import {
   readingDiagnostic,
   diagnoseReadingError,
@@ -39,6 +40,8 @@ function samePage(left: string, right: string) {
   b.hash = "";
   if (a.href === b.href) return true;
   const canonical = youtubeVideo(right) || redditPost(right);
+  const video = videoIdentity(right);
+  if (video) return videoIdentity(left)?.sourceKey === video.sourceKey;
   if (canonical)
     return (youtubeVideo(left) || redditPost(left))?.key === canonical.key;
   const platform = xPostUrlSchema.safeParse(right).success
@@ -104,10 +107,20 @@ export class PlatformAccess {
     if (main.role !== "main" || main.url !== url)
       throw new Error("Main material identity changed");
     const mainPage = result.navigations.get(browserUrl.href) ?? browserUrl.href;
+    const verifiedVideo = [...result.captureData.values()].find(
+      (capture: BrowserCapture) =>
+        capture.evidence &&
+        "video" in capture.evidence &&
+        videoMatchesUrl(capture.evidence.video, url) &&
+        videoMatchesUrl(capture.evidence.video, mainPage),
+    );
     if (
-      (platform === "youtube" || platform === "reddit") &&
-      canonicalPost(platform, mainPage)?.key !==
-        canonicalPost(platform, url)?.key
+      (platform === "youtube" ||
+        platform === "reddit" ||
+        platform === "bilibili") &&
+      (videoIdentity(mainPage)?.sourceKey ?? redditPost(mainPage)?.key) !==
+        (videoIdentity(url)?.sourceKey ?? redditPost(url)?.key) &&
+      !verifiedVideo
     )
       throw new Error("Original source identity changed");
     const provenance = new Set<string>([
@@ -169,7 +182,11 @@ export class PlatformAccess {
         .map((id: string) => result.captureData.get(id))
         .filter(
           (capture: BrowserCapture | undefined) =>
-            capture && samePage(capture.pageUrl, finalUrl),
+            capture &&
+            (samePage(capture.pageUrl, finalUrl) ||
+              (capture.evidence &&
+                "video" in capture.evidence &&
+                videoMatchesUrl(capture.evidence.video, finalUrl))),
         );
       if (!captures.length) {
         material.state = item.error === "pending" ? "pending" : "failed";
@@ -225,9 +242,22 @@ export class PlatformAccess {
             0,
             300,
           ),
-          ...(platform === "youtube" || platform === "reddit"
-            ? { sourceKey: canonicalPost(platform, finalUrl)?.key }
-            : {}),
+          ...(videoIdentity(item.url) &&
+          (sourcePlatform(finalUrl) === "bilibili" ||
+            captures.some(
+              (capture: BrowserCapture) =>
+                capture.evidence && "video" in capture.evidence,
+            ))
+            ? { sourceKey: videoIdentity(item.url)!.sourceKey }
+            : sourcePlatform(finalUrl) === "youtube" ||
+                sourcePlatform(finalUrl) === "reddit"
+              ? {
+                  sourceKey: canonicalPost(
+                    sourcePlatform(finalUrl) as "youtube" | "reddit",
+                    finalUrl,
+                  )?.key,
+                }
+              : {}),
           fetchedAt: new Date().toISOString(),
           markdown,
           contentBlocks: Array.from(

@@ -159,7 +159,9 @@ export function ReadingLibrary({
                   <BookOpen weight="duotone" />
                 )}
                 <span className="reading-origin">
-                  {item.platform === "web" || item.platform === "github"
+                  {item.platform === "web" ||
+                  item.platform === "github" ||
+                  item.platform === "bilibili"
                     ? new URL(item.sourceUrl).hostname.replace(/^www\./, "")
                     : t(sourceProfiles[item.platform].name)}
                 </span>

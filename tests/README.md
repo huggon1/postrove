@@ -43,6 +43,8 @@ Fixtures use isolated profiles and controlled external responses.
 
 `tests/rules/model-connections.test.ts` covers saved connection activation, independent editor catalogs, retained execution leases, failed writes, inactive credential replacement, reasoning compatibility, and late check completion after an active configuration change.
 
+[Speech processing](../docs/speech-processing.md#verification-scope) owns local audio rule checks and native runtime verification, including the bounded Windows speech workflow and its public short-audio evidence.
+
 [Product identity](e2e/product-identity.spec.ts) opens saved reading and its cached image across two launches, alongside retained connections and browser sessions.
 
 `tests/rules/parallel-search.test.ts` covers four concurrent AI connections, serial language bridges, independent reading processing, topic admission order, partial failures, saved-answer retention, late progress after Stop, and worker cleanup before model-lease release. `tests/rules/browser-task-queue.test.ts` covers connection fairness, global maintenance barriers, queued cancellation, failure release, and shutdown draining.
@@ -88,3 +90,5 @@ The release package smoke check covers these failure cases:
 - A language change or scheduled message lost after restart fails the profile persistence check.
 
 The check launches each platform's packaged executable twice with a fresh local profile and saves screenshots and a JSON result. Signing and native upgrade have their own checks. Live platform retrieval and the downloaded installer's first-open approval belong to [release acceptance](../docs/releasing.md#acceptance-and-publication).
+
+`tests/rules/video-contracts.test.ts` covers generic video identity, part-specific timestamps, legacy YouTube evidence, application-ASR provenance, attempt publication, and connection-file exclusion. `tests/rules/bilibili-transcript.test.ts` covers native SRT, BV/av aliases, part/CID verification, explicit subtitle extraction, caption-access states, session fallback, cancellation, and scoped requests. The platform-expansion E2E exercises observed-URL admission and Bilibili caption material through the real Agent worker; the platform-session E2E exercises Bilibili login and scoped logout with controlled pages. Live subtitle availability and account access have separate acceptance evidence.

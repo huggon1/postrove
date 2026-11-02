@@ -2,6 +2,8 @@ import {
   ReadingFailure,
   readingDiagnostic,
 } from "../shared/reading-diagnostics";
+import { BilibiliTranscriptReader } from "./services/bilibili-transcript";
+import { VideoTranscriptReaders } from "./services/video-transcript";
 import { YoutubeTranscriptReader } from "./services/youtube-transcript";
 import { FeishuService } from "./integrations/feishu/service";
 import { FeishuAdapter } from "./integrations/feishu/adapter";
@@ -39,6 +41,7 @@ import {
   channels,
   modelChannels,
   platformConnectionChannels,
+  readingSiteChannels,
   xChannels,
   xhsChannels,
 } from "../shared/ipc-contracts";
@@ -237,7 +240,13 @@ export async function initializeServices(
         { config, release: async () => {} },
         taskId,
       ),
-    transcripts,
+    new VideoTranscriptReaders({
+      youtube: transcripts,
+      bilibili: new BilibiliTranscriptReader(
+        runtimeLayout.runtimeRoot,
+        transcripts.evidenceRoot,
+      ),
+    }),
   );
 
   const platformAccess = new PlatformAccess(browserAgent, browser, imageRoot);
@@ -886,6 +895,28 @@ export async function initializeServices(
         if (channel === platformConnectionChannels.login)
           await browser.login(connection.site);
         else await browser.logout(connection.site);
+        return { ok: true, value: undefined };
+      } catch {
+        return { ok: false, message: "平台登录操作未完成，请稍后重试" };
+      }
+    });
+
+  for (const channel of Object.values(readingSiteChannels))
+    handle(channel, async (event, ...args: unknown[]) => {
+      if (
+        !event.senderFrame ||
+        event.senderFrame !== event.sender.mainFrame ||
+        event.senderFrame.url !== expected ||
+        args.length !== 1 ||
+        args[0] !== "bilibili"
+      )
+        return { ok: false, message: "无效的请求" };
+      try {
+        if (channel === readingSiteChannels.status)
+          return { ok: true, value: await browser.status("bilibili") };
+        if (channel === readingSiteChannels.login)
+          await browser.login("bilibili");
+        else await browser.logout("bilibili");
         return { ok: true, value: undefined };
       } catch {
         return { ok: false, message: "平台登录操作未完成，请稍后重试" };

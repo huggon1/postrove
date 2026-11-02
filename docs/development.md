@@ -25,7 +25,7 @@ In Windows PowerShell, set the same profile with `$env:POSTROVE_TEST_DATA = "$PW
 
 ## Work with platform content
 
-Install Google Chrome and configure the platform connection in Members. Shared Chrome retains site sessions under the selected profile. Reddit supports guest use. `npm run setup:xhs` prepares the optional Xiaohongshu note reader. `npm run setup:youtube` downloads and verifies pinned yt-dlp and Deno for original YouTube captions; browser capture supplies fallback. `npm run prepare:runtime` prepares both packaged readers.
+Install Google Chrome and configure the platform connection in Members. Shared Chrome retains site sessions under the selected profile. Reddit supports guest use. `npm run setup:xhs` prepares the optional Xiaohongshu note reader. `npm run setup:youtube` downloads and verifies pinned yt-dlp and Deno for original YouTube captions and Bilibili native captions; browser capture supplies fallback. Bilibili caption reading reuses the shared browser session when its subtitle endpoint requires sign-in. `npm run prepare:runtime` prepares both packaged readers.
 
 ## Check types or build output
 
