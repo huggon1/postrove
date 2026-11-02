@@ -1,3 +1,8 @@
+import {
+  ReadingFailure,
+  readingDiagnostic,
+  diagnoseReadingError,
+} from "../../../shared/reading-diagnostics";
 import { z } from "zod";
 import {
   sourceSchema,
@@ -29,9 +34,24 @@ async function api(
     body: JSON.stringify(body),
     signal: AbortSignal.any([signal, AbortSignal.timeout(75_000)]),
   });
-  if (!response.ok) throw new Error(`小红书服务返回 ${response.status}`);
+  if (!response.ok)
+    throw new ReadingFailure(
+      readingDiagnostic("http_error", "source", {
+        httpStatus: response.status,
+      }),
+      `小红书服务返回 ${response.status}`,
+    );
   const value = object(await response.json());
-  if (value.success !== true) throw new Error("小红书服务未返回内容");
+  if (value.success !== true) {
+    if (String(value.code) === "300031")
+      throw new ReadingFailure(
+        readingDiagnostic("source_unavailable", "source", {
+          platformCode: "300031",
+        }),
+        "当前笔记暂时无法浏览（300031）",
+      );
+    throw new Error("小红书服务未返回内容");
+  }
   return value;
 }
 const imageList = (raw: unknown) =>
@@ -60,10 +80,17 @@ export function normalizeXhsDetail(raw: unknown, id: string) {
     object(object(outer.data).data).note || object(outer.data).note,
   );
   if (note.type === "video" || note.video)
-    throw new Error("暂不支持小红书视频笔记");
+    throw new ReadingFailure(
+      readingDiagnostic("content_not_supported", "source"),
+      "暂不支持小红书视频笔记",
+    );
   const text = string(note.desc);
   const title = string(note.title || note.displayTitle).slice(0, 500);
-  if (!text && !title) throw new Error("小红书笔记正文为空");
+  if (!text && !title)
+    throw new ReadingFailure(
+      readingDiagnostic("page_parse_failed", "source"),
+      "小红书笔记正文为空",
+    );
   const images = imageList(note.imageList || note.image_list);
   const author = object(note.user);
   return sourceSchema.parse({
@@ -106,7 +133,12 @@ export function createXhsAdapter(
           message: "不是受支持的小红书笔记链接",
         };
       if (!session)
-        return { ...base, outcome: "not_covered", message: "小红书尚未登录" };
+        return {
+          ...base,
+          outcome: "not_covered",
+          message: "小红书组件尚未连接",
+          diagnostic: readingDiagnostic("component_unavailable", "readiness"),
+        };
       const id = idFromUrl(parsed.data);
       const token =
         tokens.get(id) || new URL(url).searchParams.get("xsec_token");
@@ -115,6 +147,7 @@ export function createXhsAdapter(
           ...base,
           outcome: "not_covered",
           message: "链接缺少访问参数 xsec_token；请粘贴完整分享链接",
+          diagnostic: readingDiagnostic("access_parameters_missing", "access"),
         };
       try {
         const raw = await api(session, "feeds/detail", signal, {
@@ -133,11 +166,16 @@ export function createXhsAdapter(
           outcome: "content",
           content: normalizeXhsDetail(raw, id),
         };
-      } catch {
+      } catch (error) {
+        if (signal.aborted) throw error;
         return {
           ...base,
           outcome: "failed",
-          message: "小红书笔记读取未完成；请检查登录或笔记可见性",
+          message:
+            error instanceof ReadingFailure
+              ? error.message
+              : "小红书笔记读取未完成",
+          diagnostic: diagnoseReadingError(error, "source"),
         };
       }
     },

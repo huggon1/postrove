@@ -497,6 +497,9 @@ test("reading resumes saved chunks from the captured version and only retries un
   assert.equal(saved.chunks[0].complete, true);
   assert.equal(saved.chunks[1].complete, false);
   assert.equal(saved.source?.markdown, original);
+  assert.equal(saved.diagnostic?.stage, "translation");
+  assert.ok(saved.diagnostic?.actions.includes("resume_processing"));
+  assert.equal(partial.failure?.readingDiagnostic?.stage, "translation");
   events.length = 0;
   await runReadingJob(
     { ...command, resume: { materials: [saved] } },
@@ -515,6 +518,7 @@ test("reading resumes saved chunks from the captured version and only retries un
   assert.ok(completed?.type === "result");
   assert.deepEqual(attempts, [0, 1, 1]);
   assert.equal(completed.draft.materials[0].state, "completed");
+  assert.equal(completed.draft.materials[0].diagnostic, undefined);
   assert.equal(completed.draft.materials[0].chunks[0].translated, "第一部分。");
 });
 

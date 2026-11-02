@@ -365,7 +365,7 @@ export class YoutubeTranscriptReader {
       if (metadata.id !== video.id)
         throw new Error("transcript_identity_changed");
       const track = selectTranscriptTrack(metadata);
-      if (!track) throw new Error("transcript_unavailable");
+      if (!track) throw new Error("transcript_captions_missing");
       await this.run(
         executable,
         [
@@ -386,7 +386,8 @@ export class YoutubeTranscriptReader {
       const names = (await readdir(directory)).filter((name) =>
         /^captions\.[A-Za-z0-9_-]+\.json3$/.test(name),
       );
-      if (names.length !== 1) throw new Error("transcript_unavailable");
+      if (names.length !== 1)
+        throw new Error("transcript_caption_artifact_missing");
       if ((await stat(join(directory, names[0]))).size > 20 * 1024 * 1024)
         throw new Error("transcript_output_limit");
       await chmod(join(directory, names[0]), 0o600);

@@ -3,6 +3,10 @@ import { VideoTranscriptReaders } from "./services/video-transcript";
 import { XiaohongshuMediaReader } from "./services/xiaohongshu-media";
 import { XiaohongshuVideoReader } from "./services/xiaohongshu-video";
 import { SpeechService } from "./services/speech";
+import {
+  ReadingFailure,
+  readingDiagnostic,
+} from "../shared/reading-diagnostics";
 import { YoutubeTranscriptReader } from "./services/youtube-transcript";
 import { FeishuService } from "./integrations/feishu/service";
 import { FeishuAdapter } from "./integrations/feishu/adapter";
@@ -204,13 +208,19 @@ export async function initializeServices(
     join(app.getPath("userData"), "browser-traces"),
     async (url, signal) => {
       if (!xhsAuth!.installed())
-        throw new Error("Xiaohongshu enhancement is unavailable");
+        throw new ReadingFailure(
+          readingDiagnostic("component_missing", "readiness"),
+          "小红书组件不可用",
+        );
       const source = await createXhsAdapter(await xhsAuth!.connect(), {
         id: new URL(url).pathname.split("/").filter(Boolean).at(-1)!,
         token: new URL(url).searchParams.get("xsec_token") ?? "",
       }).read("enhanced-reading", url, signal);
       if (source.outcome !== "content")
-        throw new Error("Enhanced reading is unavailable");
+        throw new ReadingFailure(
+          source.diagnostic ?? readingDiagnostic("unknown", "source"),
+          source.message,
+        );
       const content = source.content;
       return {
         capture: content.contentBlocks

@@ -376,6 +376,13 @@ test("observed X login redirect preserves login_required and its native trace", 
       contentType: "application/json",
     });
     expect(outcome).toBe("login_required");
+    expect(
+      await app.evaluate(() => (globalThis as any).lastReadingDiagnostic),
+    ).toMatchObject({
+      code: "login_required",
+      stage: "access",
+      actions: ["sign_in"],
+    });
     expect(requests).toBe(2);
     const files = (await readdir(root, { recursive: true })).filter((name) =>
       name.endsWith("session.html"),

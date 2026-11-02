@@ -197,6 +197,9 @@ test("reading recovers bounded model failures and reports saved incomplete work"
       const task = await saved(id);
       expect(task.report).toBeTruthy();
       expect(task.failureStage).toBe(stage);
+      expect(task.diagnostic.stage).toBe(stage);
+      expect(task.diagnostic.actions).toContain("resume_processing");
+      expect(task.materials[0].diagnostic).toEqual(task.diagnostic);
       expect(task.materials[0].source.markdown).toContain(`SOURCE:${name}`);
       expect(task.message).toMatch(
         stage === "summary" ? /introduction/i : /translation/i,
