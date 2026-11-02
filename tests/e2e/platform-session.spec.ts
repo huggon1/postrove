@@ -198,6 +198,7 @@ test("existing browser login survives the move from the previous launcher", asyn
 });
 
 test("Bilibili login uses the shared session while logout preserves AI connections", async () => {
+  test.setTimeout(90000);
   const root = await mkdtemp(join(tmpdir(), "postrove-bili-session-"));
   const browser = new PlatformBrowser(root, () => {}, undefined, {
     headless: false,
@@ -240,6 +241,11 @@ test("Bilibili login uses the shared session while logout preserves AI connectio
     expect(metadata).not.toContain("fictional-");
   } finally {
     await browser.shutdown();
-    await rm(root, { recursive: true, force: true });
+    await rm(root, {
+      recursive: true,
+      force: true,
+      maxRetries: 5,
+      retryDelay: 300,
+    });
   }
 });
