@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { transcriptEvidenceSchema } from "./transcript-contracts";
+import { videoIdentity, videoMatchesUrl } from "./video-contracts";
 import { youtubeVideo, redditPost } from "./source-profiles";
 export const repositoryUrlSchema = z
   .string()
@@ -155,6 +156,7 @@ export const platformSchema = z.enum([
   "x",
   "xiaohongshu",
   "youtube",
+  "bilibili",
   "reddit",
   "web",
 ]);
@@ -209,12 +211,18 @@ export const sourceSchema = z
   })
   .strict()
   .superRefine((source, ctx) => {
+    const video = videoIdentity(source.sourceUrl);
     const canonical =
       source.platform === "youtube"
         ? youtubeVideo(source.sourceUrl)
         : source.platform === "reddit"
           ? redditPost(source.sourceUrl)
-          : undefined;
+          : source.platform === "bilibili" ||
+              (source.platform === "xiaohongshu" &&
+                source.evidence &&
+                "video" in source.evidence)
+            ? video && { key: video.sourceKey }
+            : undefined;
     if (source.sourceKey && (!canonical || source.sourceKey !== canonical.key))
       ctx.addIssue({
         code: "custom",
@@ -222,8 +230,11 @@ export const sourceSchema = z
       });
     if (
       source.evidence &&
-      (source.platform !== "youtube" ||
-        source.evidence.videoId !== youtubeVideo(source.sourceUrl)?.id)
+      ("video" in source.evidence
+        ? source.evidence.video.platform !== source.platform ||
+          !videoMatchesUrl(source.evidence.video, source.sourceUrl)
+        : source.platform !== "youtube" ||
+          source.evidence.videoId !== youtubeVideo(source.sourceUrl)?.id)
     )
       ctx.addIssue({
         code: "custom",

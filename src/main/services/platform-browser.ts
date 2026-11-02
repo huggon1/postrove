@@ -8,19 +8,27 @@ import type { XhsAuth } from "./xhs-auth";
 import { ChromeProfiles, chromeExecutable } from "./chrome-profiles";
 import { BrowserTaskQueue } from "./browser-task-queue";
 type BrowserSite = Platform | "gemini";
-type LoginSite = "x" | "xiaohongshu" | "gemini" | "reddit";
-const loginSites = ["x", "xiaohongshu", "gemini", "reddit"] as const;
+type LoginSite = "x" | "xiaohongshu" | "gemini" | "reddit" | "bilibili";
+const loginSites = [
+  "x",
+  "xiaohongshu",
+  "gemini",
+  "reddit",
+  "bilibili",
+] as const;
 const loginUrls: Record<LoginSite, string> = {
   x: "https://x.com/i/flow/login",
   xiaohongshu: "https://www.xiaohongshu.com/explore",
   gemini: "https://gemini.google.com/app",
   reddit: "https://www.reddit.com/login/",
+  bilibili: "https://passport.bilibili.com/login",
 };
 const sessionDomains: Record<LoginSite, RegExp> = {
   x: /(^|\.)x\.com$/,
   xiaohongshu: /(^|\.)xiaohongshu\.com$/,
   gemini: /(^|\.)google\.com$/,
   reddit: /(^|\.)reddit\.com$/,
+  bilibili: /(^|\.)bilibili\.com$/,
 };
 function signedIn(
   site: LoginSite,
@@ -34,7 +42,9 @@ function signedIn(
         ? [["web_session"]]
         : site === "gemini"
           ? [["__Secure-1PSID", "__Secure-3PSID", "SID"]]
-          : [["reddit_session"]];
+          : site === "bilibili"
+            ? [["SESSDATA"]]
+            : [["reddit_session"]];
   return groups.every((names) =>
     cookies.some(
       (c) =>
