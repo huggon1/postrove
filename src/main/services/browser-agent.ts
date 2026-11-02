@@ -1,3 +1,4 @@
+import { bilibiliReadSession } from "./video-session";
 import {
   ReadingFailure,
   readingDiagnostic,
@@ -9,8 +10,9 @@ import {
   observedPageDiagnostic,
   transcriptDiagnostic,
 } from "../../shared/reading-observations";
-import { bilibiliReadSession } from "./video-session";
 import { capturedText, isAssistantReply } from "../../platforms/browser/dom";
+import { readXhsVideoContext } from "./xiaohongshu-video-context";
+import { xiaohongshuVideoDiagnostic } from "./video-diagnostics";
 import type { VideoTranscriptReader } from "./video-transcript";
 import { videoIdentity } from "../../shared/video-contracts";
 import type { TranscriptEvidence } from "../../shared/transcript-contracts";
@@ -54,6 +56,11 @@ export interface BrowserCapture {
   documentGeneration?: number;
   sourceKind?: "reply_inline" | "source_panel";
   evidence?: TranscriptEvidence;
+  readerCoverage?: {
+    completeness: "complete" | "partial" | "unknown";
+    note: string;
+  };
+  readerDiagnostic?: ReadingDiagnostic;
 }
 export type SearchProgress = Partial<
   Pick<
@@ -575,16 +582,36 @@ export class BrowserAgent {
                   throw new Error(
                     "source_scope: Transcript reading requires an observed video URL",
                   );
-                const result = await this.transcripts.read(
-                  data.operation.value,
-                  readingAttemptId,
-                  signal,
-                  bilibiliReadSession(page.context()),
-                );
-                if (result.outcome !== "content") {
-                  const diagnostic = transcriptDiagnostic(result.reason);
-                  sourceDiagnostics.set(data.operation.value, diagnostic);
+                const requestedUrl = data.operation.value;
+                const result = await this.transcripts
+                  .read(data.operation.value, readingAttemptId, signal, {
+                    ...bilibiliReadSession(page.context()),
+                    getXiaohongshuContext: (url, signal) =>
+                      readXhsVideoContext(page, url, signal),
+                  })
+                  .catch((error) => {
+                    if (signal.aborted) throw error;
+                    return {
+                      outcome: "unavailable" as const,
+                      reason: "video_reader_failed",
+                      diagnostic: diagnoseReadingError(error, "source"),
+                    };
+                  });
+                const observation =
+                  result.diagnostic ??
+                  (result.outcome === "unavailable"
+                    ? videoIdentity(requestedUrl)?.platform === "xiaohongshu"
+                      ? xiaohongshuVideoDiagnostic(result.reason)
+                      : transcriptDiagnostic(result.reason)
+                    : undefined);
+                const diagnostic = observation
+                  ? readingDiagnosticSchema.parse(observation)
+                  : undefined;
+                if (diagnostic) {
+                  sourceDiagnostics.set(requestedUrl, diagnostic);
                   lastDiagnostic = diagnostic;
+                }
+                if (result.outcome !== "content") {
                   return { ...result, diagnostic };
                 }
                 const source = result.source;
@@ -593,9 +620,14 @@ export class BrowserAgent {
                   markdown: source.markdown,
                   url: source.sourceUrl,
                   sourcePageUrl: source.sourceUrl,
-                  images: [],
+                  images: source.images,
                   links: result.references,
                   evidence: source.evidence,
+                  ...(diagnostic ? { readerDiagnostic: diagnostic } : {}),
+                  readerCoverage: {
+                    completeness: source.completeness,
+                    note: source.completenessNote,
+                  },
                 };
               }
               if (data.operation.action === "enhanced_read") {
@@ -1129,6 +1161,12 @@ export class BrowserAgent {
                   captureRecords.set(captureId, value.capture);
                   captureData.set(captureId, {
                     ...(value.evidence ? { evidence: value.evidence } : {}),
+                    ...(value.readerCoverage
+                      ? { readerCoverage: value.readerCoverage }
+                      : {}),
+                    ...(value.readerDiagnostic
+                      ? { readerDiagnostic: value.readerDiagnostic }
+                      : {}),
                     pageUrl: value.sourcePageUrl ?? page.url(),
                     documentGeneration:
                       value.documentGeneration ?? documentGeneration,

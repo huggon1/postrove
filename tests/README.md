@@ -6,6 +6,8 @@
 
 Fixtures use isolated profiles and controlled external responses.
 
+[Xiaohongshu video fixtures](e2e/xiaohongshu-video.spec.ts) verify the task document, observed URL admission, guest cookies, share-link identity, ASR evidence, and metadata retention after media failure. Their process/model/audio boundaries use controlled responses. [Media rules](rules/xiaohongshu-media.test.ts) cover extraction and existing image/text behavior; [video rules](rules/xiaohongshu-video.test.ts) cover partial speech, zero segments, readiness, cancellation, and saved attempts. Live source acceptance has its own [scope](../docs/xiaohongshu-video.md#verification-scope).
+
 | Test                                                            | Scope                                                                                                                                                                                                                                                |
 | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [application updates](e2e/application-updates.spec.ts)          | Version visibility, download cancellation, installation errors, shared queue hold, and queued search restart                                                                                                                                         |

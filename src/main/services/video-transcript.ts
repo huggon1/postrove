@@ -1,19 +1,26 @@
 import type { SourceContent } from "../../shared/source-contracts";
+import type { ReadingDiagnostic } from "../../shared/reading-diagnostics";
+import type { XhsVideoContext } from "./xiaohongshu-video";
 import {
   videoIdentity,
   type VideoPlatform,
 } from "../../shared/video-contracts";
 
-export type VideoTranscriptResult =
+export type VideoTranscriptResult = (
   | {
       outcome: "content";
       source: SourceContent;
       references: { url: string; title: string }[];
     }
-  | { outcome: "unavailable"; reason: string };
+  | { outcome: "unavailable"; reason: string }
+) & { diagnostic?: ReadingDiagnostic };
 /** Main supplies session-bound JSON access; implementations retain only source evidence. */
 export interface VideoReadSession {
   getJson(url: string, signal: AbortSignal): Promise<unknown>;
+  getXiaohongshuContext?(
+    url: string,
+    signal: AbortSignal,
+  ): Promise<XhsVideoContext>;
 }
 export interface VideoTranscriptReader {
   available(): Promise<boolean>;

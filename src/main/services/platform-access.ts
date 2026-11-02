@@ -234,21 +234,37 @@ export class PlatformAccess {
             ...(cachedUrl ? { cachedUrl } : {}),
           });
         }
+        const xhsSource = videoIdentity(finalUrl)?.platform === "xiaohongshu";
+        const sourceUrl = item.url;
+        const readerCoverage = captures.find(
+          (capture: BrowserCapture) => capture.readerCoverage,
+        )?.readerCoverage;
         material.source = sourceSchema.parse({
-          sourceUrl: item.url,
-          platform: item === main ? platform : sourcePlatform(item.url),
+          sourceUrl,
+          ...(xhsSource && !videoIdentity(sourceUrl)
+            ? { resolvedSourceUrl: finalUrl }
+            : {}),
+          platform: xhsSource
+            ? "xiaohongshu"
+            : item === main
+              ? platform
+              : sourcePlatform(item.url),
           title: material.title,
           sourceIdentity: String(item.sourceIdentity ?? material.title).slice(
             0,
             300,
           ),
-          ...(videoIdentity(item.url) &&
+          ...((videoIdentity(item.url) ||
+            (xhsSource && videoIdentity(finalUrl))) &&
           (sourcePlatform(finalUrl) === "bilibili" ||
             captures.some(
               (capture: BrowserCapture) =>
                 capture.evidence && "video" in capture.evidence,
             ))
-            ? { sourceKey: videoIdentity(item.url)!.sourceKey }
+            ? {
+                sourceKey: (videoIdentity(item.url) || videoIdentity(finalUrl))!
+                  .sourceKey,
+              }
             : sourcePlatform(finalUrl) === "youtube" ||
                 sourcePlatform(finalUrl) === "reddit"
               ? {
@@ -268,11 +284,11 @@ export class PlatformAccess {
             }),
           ),
           images: storedImages,
-          completeness: ["complete", "partial", "unknown"].includes(
-            item.completeness,
-          )
-            ? item.completeness
-            : "unknown",
+          completeness:
+            readerCoverage?.completeness ??
+            (["complete", "partial", "unknown"].includes(item.completeness)
+              ? item.completeness
+              : "unknown"),
           ...(captures.find((capture: BrowserCapture) => capture.evidence)
             ?.evidence
             ? {
@@ -282,15 +298,21 @@ export class PlatformAccess {
               }
             : {}),
           completenessNote: String(
-            item.completenessNote ?? "Captured readable page body",
+            readerCoverage?.note ??
+              item.completenessNote ??
+              "Captured readable page body",
           ).slice(0, 1500),
         });
       }
+      const readerDiagnostic = captures.find(
+        (capture: BrowserCapture) => capture.readerDiagnostic,
+      )?.readerDiagnostic;
       if (
-        material.source?.completeness !== "complete" &&
-        !captures.some((capture: BrowserCapture) => capture.evidence)
+        readerDiagnostic ||
+        (material.source?.completeness !== "complete" &&
+          !captures.some((capture: BrowserCapture) => capture.evidence))
       )
-        material.diagnostic ??= diagnostic;
+        material.diagnostic ??= readerDiagnostic ?? diagnostic;
       materials.push(material);
     }
     readingMaterialsSchema.parse(materials);

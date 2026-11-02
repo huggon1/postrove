@@ -1,9 +1,12 @@
+import { BilibiliTranscriptReader } from "./services/bilibili-transcript";
+import { VideoTranscriptReaders } from "./services/video-transcript";
+import { XiaohongshuMediaReader } from "./services/xiaohongshu-media";
+import { XiaohongshuVideoReader } from "./services/xiaohongshu-video";
+import { SpeechService } from "./services/speech";
 import {
   ReadingFailure,
   readingDiagnostic,
 } from "../shared/reading-diagnostics";
-import { BilibiliTranscriptReader } from "./services/bilibili-transcript";
-import { VideoTranscriptReaders } from "./services/video-transcript";
 import { YoutubeTranscriptReader } from "./services/youtube-transcript";
 import { FeishuService } from "./integrations/feishu/service";
 import { FeishuAdapter } from "./integrations/feishu/adapter";
@@ -195,6 +198,10 @@ export async function initializeServices(
     imageRoot,
     transcripts.evidenceRoot,
   );
+  const speech = new SpeechService({
+    runtimeRoot: runtimeLayout.runtimeRoot,
+    dataDir: app.getPath("userData"),
+  });
   const browserAgent = new BrowserAgent(
     browser,
     join(__dirname, "../worker/jobs/browser/worker-entry.mjs"),
@@ -246,6 +253,12 @@ export async function initializeServices(
         runtimeLayout.runtimeRoot,
         transcripts.evidenceRoot,
       ),
+      xiaohongshu: new XiaohongshuVideoReader(transcripts.evidenceRoot, {
+        media: new XiaohongshuMediaReader(runtimeLayout.runtimeRoot),
+        speech,
+        acquire: ({ url, allowedHosts, headers, signal }) =>
+          speech.acquireMedia({ url, allowedHosts, headers, signal }),
+      }),
     }),
   );
 

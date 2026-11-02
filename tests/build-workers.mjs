@@ -6,6 +6,7 @@ await build({
   entryPoints: {
     "browser-app": "tests/support/browser-app.ts",
     "platform-expansion-app": "tests/support/platform-expansion-app.ts",
+    "xiaohongshu-app": "tests/support/xiaohongshu-app.ts",
     "pi-model-worker": "tests/support/pi-model-worker.ts",
     "worker-network-app": "tests/support/worker-network-app.ts",
     forwarding: "tests/support/forwarding.ts",
