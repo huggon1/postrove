@@ -23,6 +23,7 @@ import {
   type SpeechProcessRunner,
 } from "../../src/main/services/speech";
 import { storeBytes } from "../../src/main/services/speech/media";
+import nativeWindowOverrun from "../fixtures/whisper-window-overrun.json";
 
 const ready = async () =>
   ({ backend: "whisper.cpp", runtime: "ready", model: "ready" }) as const;
@@ -335,7 +336,7 @@ test("native timestamp overrun keeps the backend estimate and the bounded chunk 
         JSON.stringify({
           transcription: [
             {
-              offsets: { from: 26000, to: 32000 },
+              offsets: { from: 26000, to: 60001 },
               text: "outside timing budget",
             },
           ],
@@ -348,7 +349,137 @@ test("native timestamp overrun keeps the backend estimate and the bounded chunk 
   );
 });
 
+test("captured native window overrun preserves every recognized segment inside its source chunk", () => {
+  const chunk = parseWhisperOutput(
+    JSON.stringify(nativeWindowOverrun),
+    1,
+    30,
+    60,
+  );
+  assert.equal(chunk.segments.length, nativeWindowOverrun.transcription.length);
+  assert.deepEqual(
+    chunk.segments.map((segment) => segment.text),
+    nativeWindowOverrun.transcription.map((segment) => segment.text),
+  );
+  assert.deepEqual(chunk.segments.at(-1), {
+    id: "speech-1-5",
+    start: 56.5,
+    end: 60,
+    recognizerEnd: 61.5,
+    text: nativeWindowOverrun.transcription.at(-1)!.text,
+  });
+  assert(
+    chunk.segments.every(
+      (segment) => segment.start >= chunk.start && segment.end <= chunk.end,
+    ),
+  );
+});
+
+test("native overrun completes all source chunks and checkpoint replay preserves the raw estimate", async (t) => {
+  const f = await fixture(t, 61);
+  let recognized = 0;
+  const service = f.create({
+    budget: { chunkSeconds: 30 },
+    run: async (request) => {
+      if (!request.args.includes("-oj")) return f.run(request);
+      const index = recognized++;
+      const transcription =
+        index === 1
+          ? nativeWindowOverrun
+          : {
+              result: { language: "zh" },
+              transcription: [
+                {
+                  offsets: { from: 0, to: index === 0 ? 28000 : 1000 },
+                  text: "已保存原文",
+                },
+              ],
+            };
+      await writeFile(
+        `${request.args[request.args.indexOf("-of") + 1]}.json`,
+        JSON.stringify(transcription),
+      );
+    },
+  });
+  const result = await service.transcribe({
+    mediaPath: f.input,
+    language: "zh",
+    signal: f.signal,
+  });
+  assert.equal(result.status, "completed");
+  assert.equal(result.issue, undefined);
+  assert.deepEqual(
+    result.chunks.map(({ index, start, end }) => [index, start, end]),
+    [
+      [0, 0, 30],
+      [1, 30, 60],
+      [2, 60, 61],
+    ],
+  );
+  assert.equal(result.chunks[1].segments.at(-1)?.recognizerEnd, 61.5);
+  const replay = await service.transcribe({
+    mediaPath: f.input,
+    language: "zh",
+    signal: f.signal,
+  });
+  assert.equal(replay.status, "completed");
+  assert.deepEqual(replay.chunks, result.chunks);
+  assert.equal(recognized, 3);
+});
+
+test("recognized text starting beyond real audio returns invalid_output instead of no_speech", async (t) => {
+  const raw = JSON.stringify({
+    transcription: [{ offsets: { from: 45000, to: 50000 }, text: "nonempty" }],
+  });
+  assert.throws(() => parseWhisperOutput(raw, 0, 0, 30), /invalid_output/);
+  assert.throws(
+    () =>
+      parseWhisperOutput(
+        JSON.stringify({
+          transcription: [
+            { offsets: { from: 30000, to: 30500 }, text: "boundary" },
+          ],
+        }),
+        0,
+        0,
+        30,
+      ),
+    /invalid_output/,
+  );
+  const f = await fixture(t, 30);
+  const service = f.create({
+    budget: { chunkSeconds: 30 },
+    run: async (request) => {
+      if (!request.args.includes("-oj")) return f.run(request);
+      await writeFile(
+        `${request.args[request.args.indexOf("-of") + 1]}.json`,
+        raw,
+      );
+    },
+  });
+  const result = await service.transcribe({
+    mediaPath: f.input,
+    signal: f.signal,
+  });
+  assert.equal(result.status, "unavailable");
+  assert.equal(result.issue?.code, "invalid_output");
+  assert.deepEqual(result.chunks, []);
+  assert.deepEqual(result.segments, []);
+});
+
 test("invalid timestamps and unordered output fail validation; empty transcription records no speech", () => {
+  for (const transcription of [
+    [{ offsets: { from: 200, to: 100 }, text: "reversed" }],
+    [
+      { offsets: { from: 100, to: 200 }, text: "first" },
+      { offsets: { from: 50, to: 250 }, text: "unordered" },
+    ],
+    [{ offsets: { from: 0, to: null }, text: "invalid number" }],
+  ])
+    assert.throws(
+      () => parseWhisperOutput(JSON.stringify({ transcription }), 0, 0, 1),
+      /invalid_output/,
+    );
   assert.throws(
     () =>
       parseWhisperOutput(
