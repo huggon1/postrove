@@ -99,6 +99,48 @@ try {
   {
     const cmake = process.env.POSTROVE_SPEECH_CMAKE ?? "cmake";
     const build = join(stage, "whisper-build");
+    let windowsToolchain = [];
+    if (target === "win32-x64") {
+      const vswhere = join(
+        process.env["ProgramFiles(x86)"] ?? "C:\\Program Files (x86)",
+        "Microsoft Visual Studio",
+        "Installer",
+        "vswhere.exe",
+      );
+      const installations = JSON.parse(
+        execFileSync(
+          vswhere,
+          [
+            "-latest",
+            "-products",
+            "*",
+            "-requires",
+            "Microsoft.VisualStudio.Component.VC.Tools.x86.x64",
+            "-format",
+            "json",
+          ],
+          { encoding: "utf8" },
+        ),
+      );
+      const instance = installations[0];
+      const generators = {
+        17: "Visual Studio 17 2022",
+        18: "Visual Studio 18 2026",
+      };
+      const generator =
+        generators[instance?.installationVersion?.split(".")[0]];
+      if (!generator || !instance?.installationPath)
+        throw new Error(
+          "Windows speech build requires a supported Visual Studio C++ installation",
+        );
+      windowsToolchain = [
+        "-G",
+        generator,
+        "-A",
+        "x64",
+        `-DCMAKE_GENERATOR_INSTANCE=${instance.installationPath}`,
+      ];
+    }
     run(
       cmake,
       [
@@ -108,23 +150,19 @@ try {
         build,
         "-DCMAKE_BUILD_TYPE=Release",
         "-DCMAKE_POLICY_VERSION_MINIMUM=3.5",
-        "-DBUILD_SHARED_LIBS=OFF",
+        `-DBUILD_SHARED_LIBS=${target === "win32-x64" ? "ON" : "OFF"}`,
         "-DGGML_METAL=OFF",
         "-DGGML_NATIVE=OFF",
         "-DWHISPER_BUILD_TESTS=OFF",
         ...(target === "darwin-arm64"
           ? ["-DCMAKE_OSX_DEPLOYMENT_TARGET=12.0"]
           : [
-              "-G",
-              "Visual Studio 17 2022",
-              "-A",
-              "x64",
+              ...windowsToolchain,
               "-DCMAKE_POLICY_DEFAULT_CMP0091=NEW",
               "-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded",
-              "-DGGML_AVX=OFF",
-              "-DGGML_AVX2=OFF",
-              "-DGGML_FMA=OFF",
-              "-DGGML_F16C=OFF",
+              "-DGGML_BACKEND_DL=ON",
+              "-DGGML_CPU_ALL_VARIANTS=ON",
+              "-DGGML_OPENMP=OFF",
             ]),
       ],
       stage,
@@ -152,6 +190,24 @@ try {
         target === "darwin-arm64" ? "whisper-cli" : "whisper-cli.exe",
       ),
     );
+    if (target === "win32-x64") {
+      const binaries = join(build, "bin", "Release");
+      const libraries = (await readdir(binaries)).filter((name) =>
+        /^(?:whisper|ggml(?:-.*)?)\.dll$/i.test(name),
+      );
+      if (
+        ![
+          "whisper.dll",
+          "ggml.dll",
+          "ggml-base.dll",
+          "ggml-cpu-x64.dll",
+          "ggml-cpu-haswell.dll",
+        ].every((name) => libraries.includes(name))
+      )
+        throw new Error("Windows speech CPU variant libraries are incomplete");
+      for (const name of libraries)
+        await copyFile(join(binaries, name), join(output, name));
+    }
   }
   if (target === "darwin-arm64") {
     const archive = await download(pins.ffmpegSource, "ffmpeg.tar.xz");

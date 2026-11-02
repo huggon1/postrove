@@ -31,7 +31,8 @@
     "test:windows-upgrade": "node scripts/development/verify-windows-upgrade.mjs",
     "setup:youtube": "node scripts/app-build/with-env-proxy.mjs scripts/app-build/prepare-youtube-runtime.mjs",
     "setup:speech": "node scripts/app-build/with-env-proxy.mjs scripts/app-build/prepare-speech-runtime.mjs",
-    "setup:speech-model": "node scripts/app-build/with-env-proxy.mjs --import tsx scripts/development/prepare-speech-model.ts"
+    "setup:speech-model": "node scripts/app-build/with-env-proxy.mjs --import tsx scripts/development/prepare-speech-model.ts",
+    "verify:speech-runtime": "node scripts/app-build/with-env-proxy.mjs --import tsx scripts/development/verify-speech-runtime.ts"
   },
   "dependencies": {
     "@earendil-works/pi-agent-core": "1.1.0",

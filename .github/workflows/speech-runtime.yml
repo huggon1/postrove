@@ -1,0 +1,64 @@
+name: Speech runtime
+on:
+  pull_request:
+    branches: [dev, main]
+    paths:
+      - src/main/services/speech/**
+      - src/shared/speech-*
+      - scripts/app-build/prepare-speech-runtime.mjs
+      - scripts/development/*speech*.ts
+      - .github/workflows/speech-runtime.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: speech-runtime-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  windows_speech:
+    name: Windows x64 native speech
+    runs-on: windows-2025
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Inspect native toolchain
+        shell: pwsh
+        run: |
+          cmake --version
+          & "${env:ProgramFiles(x86)}/Microsoft Visual Studio/Installer/vswhere.exe" -all -products '*' -format json
+      - run: npm run setup:speech
+      - name: Verify native speech with an isolated profile
+        shell: pwsh
+        run: npm run verify:speech-runtime -- --profile "$pwd/tmp/speech-runtime-profile" --output "$pwd/tmp/speech-runtime-evidence"
+      - name: Measure the short native recognizer process
+        shell: pwsh
+        run: |
+          $model = (Get-Content src/shared/speech-runtime.json | ConvertFrom-Json).model.file
+          $media = (Get-Content tmp/speech-runtime-evidence/short-chinese.json | ConvertFrom-Json).sample.sha256
+          $arguments = @('-m', "$pwd/tmp/speech-runtime-profile/speech/models/$model", '-f', "$pwd/tmp/speech-runtime-profile/speech/media/$media", '-l', 'zh', '-oj', '-of', "$pwd/tmp/speech-runtime-evidence/measured", '-t', '4', '-ng', '-np')
+          $watch = [System.Diagnostics.Stopwatch]::StartNew()
+          $child = Start-Process -FilePath "$pwd/.runtime/speech/win32-x64/whisper-cli.exe" -ArgumentList $arguments -PassThru -NoNewWindow -RedirectStandardError "$pwd/tmp/speech-runtime-evidence/recognizer.log"
+          $peak = 0L
+          while (!$child.HasExited) {
+            $child.Refresh()
+            $peak = [Math]::Max($peak, $child.WorkingSet64)
+            Start-Sleep -Milliseconds 25
+          }
+          $child.WaitForExit()
+          $watch.Stop()
+          if ($child.ExitCode -ne 0) { throw 'Native recognizer measurement failed' }
+          $recognized = (Get-Content tmp/speech-runtime-evidence/measured.json | ConvertFrom-Json).transcription.text -join ''
+          @{ elapsedMs = $watch.ElapsedMilliseconds; peakSampledWorkingSetBytes = $peak; sampleIntervalMs = 25; recognizedText = $recognized } | ConvertTo-Json | Set-Content tmp/speech-runtime-evidence/resources.json
+          Remove-Item tmp/speech-runtime-evidence/measured.json
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: windows-native-speech-evidence
+          path: tmp/speech-runtime-evidence/*.json
+          if-no-files-found: warn
+          retention-days: 7

@@ -40,6 +40,8 @@ Fixtures use isolated profiles and controlled external responses.
 
 `tests/rules/model-connections.test.ts` covers saved connection activation, independent editor catalogs, retained execution leases, failed writes, inactive credential replacement, reasoning compatibility, and late check completion after an active configuration change.
 
+[Speech processing](../docs/speech-processing.md#verification-scope) owns local audio rule checks and native runtime verification, including the bounded Windows speech workflow and its public short-audio evidence.
+
 [Product identity](e2e/product-identity.spec.ts) opens saved reading and its cached image across two launches, alongside retained connections and browser sessions.
 
 `tests/rules/parallel-search.test.ts` covers four concurrent AI connections, serial language bridges, independent reading processing, topic admission order, partial failures, saved-answer retention, late progress after Stop, and worker cleanup before model-lease release. `tests/rules/browser-task-queue.test.ts` covers connection fairness, global maintenance barriers, queued cancellation, failure release, and shutdown draining.

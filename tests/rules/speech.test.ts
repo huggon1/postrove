@@ -289,6 +289,65 @@ test("bounded process retries discard stale JSON and retain completed evidence",
   assert.deepEqual(result.segments, []);
 });
 
+test("fractional tail timing preserves the recognizer end while clipping to original media", () => {
+  const result = parseWhisperOutput(
+    JSON.stringify({
+      transcription: [{ offsets: { from: 0, to: 2000 }, text: "下午五點" }],
+    }),
+    2,
+    4,
+    5.592,
+  );
+  assert.deepEqual(result.segments, [
+    {
+      id: "speech-2-0",
+      start: 4,
+      end: 5.592,
+      recognizerEnd: 6,
+      text: "下午五點",
+    },
+  ]);
+});
+
+test("native timestamp overrun keeps the backend estimate and the bounded chunk end", () => {
+  const chunk = parseWhisperOutput(
+    JSON.stringify({
+      transcription: [
+        { offsets: { from: 26000, to: 31000 }, text: "開放時間" },
+      ],
+    }),
+    1,
+    30,
+    60,
+  );
+  assert.deepEqual(chunk.segments, [
+    {
+      id: "speech-1-0",
+      start: 56,
+      end: 60,
+      recognizerEnd: 61,
+      text: "開放時間",
+    },
+  ]);
+  assert.throws(
+    () =>
+      parseWhisperOutput(
+        JSON.stringify({
+          transcription: [
+            {
+              offsets: { from: 26000, to: 32000 },
+              text: "outside timing budget",
+            },
+          ],
+        }),
+        1,
+        30,
+        60,
+      ),
+    /invalid_output/,
+  );
+});
+
 test("invalid timestamps and unordered output fail validation; empty transcription records no speech", () => {
   assert.throws(
     () =>

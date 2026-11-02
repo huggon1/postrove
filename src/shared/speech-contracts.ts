@@ -23,6 +23,8 @@ export interface SpeechSegment {
   id: string;
   start: number;
   end: number;
+  /** Original-media recognizer end, retained when its estimate extends past the chunk. */
+  recognizerEnd?: number;
   /** Exact recognized text, including source punctuation and whitespace. */
   text: string;
 }
