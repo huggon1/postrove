@@ -231,3 +231,126 @@ app.whenReady().then(async () => {
     await browser.shutdown();
   }
 };
+
+(globalThis as any).collectBilibiliVideo = async (input: {
+  endpoint: string;
+  av: boolean;
+}) => {
+  const { BilibiliTranscriptReader } =
+    await import("../../src/main/services/bilibili-transcript");
+  const { VideoTranscriptReaders } =
+    await import("../../src/main/services/video-transcript");
+  const bvid = "BV1234567890",
+    canonical = `https://www.bilibili.com/video/${bvid}?p=2`;
+  const url = input.av ? "https://www.bilibili.com/video/av123?p=2" : canonical;
+  const root = app.getPath("userData"),
+    attemptId = randomUUID(),
+    runtime = join(root, "runtime");
+  await mkdir(join(runtime, "youtube"), { recursive: true });
+  await writeFile(
+    join(runtime, "youtube/runtime.json"),
+    JSON.stringify(youtubeRuntimeVersion),
+  );
+  await writeFile(
+    join(
+      runtime,
+      "youtube",
+      process.platform === "win32" ? "yt-dlp.exe" : "yt-dlp",
+    ),
+    "controlled reader boundary",
+    { mode: 0o700 },
+  );
+  let extractions = 0;
+  const reader = new BilibiliTranscriptReader(
+    runtime,
+    join(root, "evidence"),
+    async () => {
+      extractions++;
+      return JSON.stringify({
+        id: `${bvid}_p2`,
+        subtitles: {
+          "ai-zh": [
+            {
+              ext: "srt",
+              data: "1\n00:00:01,000 --> 00:00:03,000\nBilibili native caption.\n",
+            },
+          ],
+        },
+      });
+    },
+  );
+  const browser = new PlatformBrowser(
+    join(root, "browser"),
+    () => {},
+    undefined,
+    { headless: true },
+  );
+  const context = await browser.context("bilibili");
+  await context.route("**/*", (route) =>
+    route.fulfill({
+      contentType: "text/html",
+      body: `<article><h1>Bilibili fixture</h1><p>Observed creator metadata.</p><a href="${canonical}">Selected part</a></article>`,
+    }),
+  );
+  // Resolve the controlled redirect through Chrome; the Agent observes its final address.
+  const operate = browser.operation.bind(browser);
+  browser.operation = (platform, page, raw, purpose) => {
+    const operation = raw as { action?: string; value?: string };
+    return operate(
+      platform,
+      page,
+      operation.action === "navigate" && operation.value === url && input.av
+        ? { ...operation, value: canonical }
+        : raw,
+      purpose,
+    );
+  };
+  const transcripts = new VideoTranscriptReaders({
+    bilibili: {
+      available: () => reader.available(),
+      read: (raw, attempt, signal) =>
+        reader.read(raw, attempt, signal, {
+          getJson: async () => ({
+            code: 0,
+            data: {
+              bvid,
+              aid: 123,
+              title: "Bilibili fixture",
+              owner: { name: "Fixture creator" },
+              pages: [{ page: 2, cid: 789, duration: 10 }],
+            },
+          }),
+        }),
+    },
+  });
+  const agent = new BrowserAgent(
+    browser,
+    join(process.cwd(), "dist/worker/jobs/browser/worker-entry.mjs"),
+    join(root, "traces"),
+    undefined,
+    undefined,
+    undefined,
+    transcripts,
+  );
+  try {
+    const materials = await new PlatformAccess(agent).collect(
+      randomUUID(),
+      url,
+      {
+        method: "generic_api",
+        modelId: "fixture",
+        api: "openai-completions",
+        baseUrl: input.endpoint,
+        credential: "fictional",
+      },
+      new AbortController().signal,
+      false,
+      undefined,
+      undefined,
+      attemptId,
+    );
+    return { materials, extractions };
+  } finally {
+    await browser.shutdown();
+  }
+};
