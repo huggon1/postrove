@@ -67,6 +67,16 @@ One application or Telegram HTTPS URL enters the forwarding queue with task, res
 
 `ReadingMaterial` contains an ID, main or reference role, URL, title, optional source, translation chunks, summary, state, and issue. A chunk saves original text, translated text, and completion. Materials begin with one main item and unique IDs and URLs. Completed material has a source, summary, and completed chunks; partial and failed items preserve available content. Source rejection saves the observed platform reason as the material issue; Xiaohongshu `300031` retains “当前笔记暂时无法浏览”.
 
+`ReadingMaterial.diagnostic` optionally saves a versioned issue code, cause category, observed stage, recovery actions, and bounded HTTP, platform, transport, or model failure codes. The shared `reading-diagnostics.ts` module maps explicit observations and typed errors into this shape. HTTP failures retain their status; unknown failures retain an unknown cause. Saved source content directs translation and summary recovery to `resume_processing`. Historical string `issue` fields retain their bytes; `materialDiagnostic` derives an unknown diagnostic for consumers reading those records. Raw exception text and credentials stay within the private execution boundary.
+
+`ForwardingTaskRecord.diagnostic` exposes the terminal diagnostic through task summaries and details. Worker failure receipts carry it as `readingDiagnostic`; their existing model `diagnostic` field keeps its HTTP/provider/transport shape. Main saves source failures before worker dispatch. A retry clears the task diagnostic while each saved material retains its evidence until that stage resumes. Typed reading failures pass through wrapper causes, browser tools, and the collection service with their original stage.
+
+When saved page text has an earlier source or caption issue, the material retains that diagnostic while a later translation or summary failure writes its own stage and `resume_processing` action to the worker failure receipt. Truncated translation retains the source issue, returned text, and unfinished chunk state.
+
+The Xiaohongshu `XhsSession` value connects to the local reader component. Website sign-in remains in the shared browser session. A missing component connection records component readiness; a missing `xsec_token` records missing access parameters. Known site navigation identifies sign-in, verification, and account-action states. Navigation and adapter HTTP failures retain their observed status. Caption-tool observations distinguish a missing runtime, absent native captions (`transcript_captions_missing`), and a missing downloaded artifact (`transcript_caption_artifact_missing`). Historical `transcript_unavailable` reasons retain an unknown cause.
+
+Browser observations associate each diagnostic with its observed source address. Material admission resolves the requested address, observed redirects, and canonical source identity to that source's diagnostic. Other materials retain their own observed state.
+
 Workers emit initial materials, individual material updates, phases, execution identity, stage failures, and final results. Main-process validation preserves identity, saved source bytes, and finished chunks. The final report matches saved material state. Stopping retains the saved portion of each material.
 
 ## Task snapshots and activity messages

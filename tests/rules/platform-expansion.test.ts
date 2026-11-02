@@ -191,7 +191,10 @@ test("original caption selection excludes translated tracks and normalizes only 
   );
 });
 
-async function readerFixture(failure = false) {
+async function readerFixture(
+  failure = false,
+  options: { noTrack?: boolean; noCaptionFile?: boolean } = {},
+) {
   const root = await mkdtemp(join(tmpdir(), "postrove-transcript-"));
   const runtime = join(root, "runtime", "youtube");
   await mkdir(runtime, { recursive: true });
@@ -220,16 +223,19 @@ async function readerFixture(failure = false) {
           language: "en",
           duration: 10,
           description: "[Material](https://example.test/article)",
-          subtitles: {
-            en: [
-              {
-                ext: "json3",
-                url: "https://www.youtube.com/api/timedtext?lang=en",
+          subtitles: options.noTrack
+            ? {}
+            : {
+                en: [
+                  {
+                    ext: "json3",
+                    url: "https://www.youtube.com/api/timedtext?lang=en",
+                  },
+                ],
               },
-            ],
-          },
         });
-      await writeFile(join(directory, "captions.en.json3"), captions);
+      if (!options.noCaptionFile)
+        await writeFile(join(directory, "captions.en.json3"), captions);
       return "";
     },
   );
@@ -390,5 +396,28 @@ test("saved reader failures support browser fallback and cancellation preserves 
     );
   } finally {
     await rm(f.root, { recursive: true, force: true });
+  }
+});
+
+test("caption inventory absence differs from a missing downloaded artifact", async () => {
+  for (const options of [{ noTrack: true }, { noCaptionFile: true }]) {
+    const f = await readerFixture(false, options);
+    try {
+      const result = await f.reader.read(
+        videoUrl,
+        randomUUID(),
+        new AbortController().signal,
+      );
+      assert.equal(result.outcome, "unavailable");
+      if (result.outcome !== "unavailable") continue;
+      assert.equal(
+        result.reason,
+        "noTrack" in options
+          ? "transcript_captions_missing"
+          : "transcript_caption_artifact_missing",
+      );
+    } finally {
+      await rm(f.root, { recursive: true, force: true });
+    }
   }
 });

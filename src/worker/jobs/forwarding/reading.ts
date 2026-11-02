@@ -1,3 +1,10 @@
+import { readingDiagnosticMessage } from "../../../shared/reading-diagnostic-messages";
+import {
+  readingDiagnostic,
+  diagnoseReadingError,
+  materialDiagnostic,
+  type ReadingDiagnostic,
+} from "../../../shared/reading-diagnostics";
 import { randomUUID } from "node:crypto";
 import type { ModelExecutionConfig } from "../../../shared/model-contracts";
 import type { ReadingMaterial } from "../../../shared/reading-contracts";
@@ -24,7 +31,12 @@ export interface ReadingDependencies {
     material: ReadingMaterial,
     text: string,
     index: number,
-  ): Promise<{ text: string; truncated: boolean; issue?: string }>;
+  ): Promise<{
+    text: string;
+    truncated: boolean;
+    issue?: string;
+    diagnostic?: ReadingDiagnostic;
+  }>;
   summarize(material: ReadingMaterial): Promise<string>;
 }
 
@@ -132,7 +144,15 @@ export async function runReadingJob(
         );
         return { text: translated, truncated: false };
       } catch (error) {
-        if (partial) return { text: partial, truncated: true };
+        if (partial) {
+          const diagnostic = diagnoseReadingError(error, "translation", true);
+          return {
+            text: partial,
+            truncated: true,
+            diagnostic,
+            issue: readingDiagnosticMessage(diagnostic, language),
+          };
+        }
         throw error;
       }
     },
@@ -212,9 +232,20 @@ export async function runReadingJob(
       if (signal.aborted) throw new Error("cancelled");
       if (material.state === "completed") continue;
       if (!material.source) {
+        material.diagnostic ??=
+          materialDiagnostic(material) ??
+          readingDiagnostic("capture_incomplete", "source");
+        material.issue ??= localizedText(
+          language,
+          "来源读取未完成",
+          "Source collection is incomplete",
+        );
+        material.state = "failed";
+        save(material);
         failures.set(material.id, {
           materialId: material.id,
           stage: "source",
+          readingDiagnostic: materialDiagnostic(material),
           message: (
             material.issue ??
             localizedText(
@@ -229,7 +260,13 @@ export async function runReadingJob(
       let stage: "translation" | "summary" = "translation";
       try {
         material.state = "processing";
-        material.issue = undefined;
+        if (
+          !material.diagnostic ||
+          ["translation", "summary"].includes(material.diagnostic.stage)
+        ) {
+          material.issue = undefined;
+          material.diagnostic = undefined;
+        }
         save(material);
         if (!material.chunks.length) {
           const body =
@@ -269,16 +306,29 @@ export async function runReadingJob(
           chunk.complete = !result.truncated;
           save(material);
           if (result.truncated) {
-            material.issue =
+            const diagnostic =
+              result.diagnostic ??
+              readingDiagnostic(
+                "model_failed",
+                "translation",
+                { failureCode: "model_output_limit" },
+                true,
+              );
+            material.diagnostic ??= diagnostic;
+            const issue =
               result.issue ??
               localizedText(
                 language,
                 `输出达到模型上限；已保存第 ${chunk.index + 1} 段返回内容，共 ${material.chunks.length} 段`,
                 `Model output reached its limit; returned text for chunk ${chunk.index + 1} of ${material.chunks.length} is saved`,
               );
+            material.issue = material.issue
+              ? `${material.issue} ${issue}`.slice(0, 1500)
+              : issue;
             failures.set(material.id, {
               materialId: material.id,
               stage: "translation",
+              readingDiagnostic: diagnostic,
               message: material.issue.slice(0, 500),
             });
             break;
@@ -328,6 +378,8 @@ export async function runReadingJob(
           `${stage === "translation" ? "翻译" : "摘要"}未完成：${reason} 已保存 ${completed}/${material.chunks.length} 段译文和原文。`,
           `${stage === "translation" ? "Translation" : "Introduction"} failed: ${reason} ${completed}/${material.chunks.length} translated chunks and the original source are saved.`,
         );
+        const diagnostic = diagnoseReadingError(error, stage, true);
+        material.diagnostic ??= diagnostic;
         material.issue = material.issue
           ? `${material.issue} ${issue}`.slice(0, 1500)
           : issue;
@@ -335,6 +387,7 @@ export async function runReadingJob(
           failures.set(material.id, {
             materialId: material.id,
             stage,
+            readingDiagnostic: diagnostic,
             message: material.issue.slice(0, 500),
             ...(failure
               ? { code: failure.code, diagnostic: failure.diagnostic }
@@ -344,7 +397,17 @@ export async function runReadingJob(
       }
     }
     const source = materials[0].source;
-    if (!source) throw new Error("Main source unavailable");
+    if (!source) {
+      const failure = failures.get(materials[0].id);
+      emit({
+        type: "failed",
+        taskId: command.taskId,
+        stage: "source",
+        message: failure?.message ?? "Main source unavailable",
+        readingDiagnostic: materialDiagnostic(materials[0]),
+      });
+      return;
+    }
     emit({
       type: "result",
       taskId: command.taskId,
@@ -362,12 +425,13 @@ export async function runReadingJob(
           }
         : {}),
     });
-  } catch {
+  } catch (error) {
     if (!signal.aborted)
       emit({
         type: "failed",
         taskId: command.taskId,
         stage: "source",
+        readingDiagnostic: diagnoseReadingError(error, "source"),
         message: localizedText(
           language,
           "材料读取未完成；可查看已保存内容和原文",

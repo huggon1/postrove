@@ -1,3 +1,10 @@
+import {
+  readingDiagnostic,
+  diagnoseReadingError,
+  materialDiagnostic,
+  type ReadingDiagnostic,
+} from "../../../shared/reading-diagnostics";
+import { readingDiagnosticMessage } from "../../../shared/reading-diagnostic-messages";
 import { youtubeVideo, redditPost } from "../../../shared/source-profiles";
 import type {
   BotForwardingSubmission,
@@ -152,6 +159,12 @@ export class ForwardingPipelineService {
           task.finishedAt = now();
           task.message = "应用关闭时任务中断，已保存内容可阅读";
           task.failureStage = stage;
+          task.diagnostic = readingDiagnostic(
+            task.source ? "processing_failed" : "unknown",
+            stage,
+            undefined,
+            !!task.source,
+          );
           addForwardingActivity(task, {
             kind: "recovered",
             summary: task.message,
@@ -354,6 +367,7 @@ export class ForwardingPipelineService {
       task.phase = "等待处理";
       task.message = undefined;
       task.failureStage = undefined;
+      task.diagnostic = undefined;
       task.finishedAt = undefined;
       addForwardingActivity(task, {
         kind: "phase",
@@ -429,6 +443,7 @@ export class ForwardingPipelineService {
         ...(task.finishedAt ? { finishedAt: task.finishedAt } : {}),
         updatedAt: task.updatedAt,
         ...(task.message ? { message: task.message } : {}),
+        ...(task.diagnostic ? { diagnostic: task.diagnostic } : {}),
       }));
   }
 
@@ -582,16 +597,33 @@ export class ForwardingPipelineService {
               material.source = collected[0].source;
               material.state = material.source ? "pending" : "failed";
               material.issue = collected[0].issue;
+              material.diagnostic = collected[0].diagnostic;
               await this.receive(taskId, {
                 type: "material",
                 taskId,
                 resultId: task.resultId,
                 material,
               });
-            } catch {}
+            } catch (error) {
+              if (entry.controller.signal.aborted) throw error;
+              material.diagnostic = diagnoseReadingError(error, "source");
+              material.issue = readingDiagnosticMessage(
+                material.diagnostic,
+                task.outputLanguage ?? "zh-CN",
+              );
+              material.state = "failed";
+              await this.receive(taskId, {
+                type: "material",
+                taskId,
+                resultId: task.resultId,
+                material,
+              });
+            }
           }
         }
       }
+      browserReading = false;
+      stage = "translation";
       const worker = (entry.worker = this.dependencies.spawn(
         entry.lease.config,
       ));
@@ -651,31 +683,25 @@ export class ForwardingPipelineService {
       command.config.credential = "";
       this.dependencies.changed();
     } catch (error) {
+      const current = this.dependencies.store
+        .snapshot()
+        .tasks.find((task) => task.taskId === taskId);
+      const failureStage = browserReading
+        ? "source"
+        : stage === "source"
+          ? "translation"
+          : stage;
+      const diagnostic = !entry.lease
+        ? readingDiagnostic("model_not_ready", "readiness")
+        : diagnoseReadingError(error, failureStage, !!current?.source);
       await this.failTask(
         taskId,
-        browserReading ? "source" : stage === "source" ? "translation" : stage,
-        browserReading
-          ? String(error instanceof Error ? error.message : error).startsWith(
-              "source_unavailable:",
-            )
-            ? localizedText(
-                this.dependencies.store
-                  .snapshot()
-                  .tasks.find((task) => task.taskId === taskId)
-                  ?.outputLanguage ??
-                  this.dependencies.language?.() ??
-                  "zh-CN",
-                String(error instanceof Error ? error.message : error)
-                  .replace(/^source_unavailable:\s*/, "")
-                  .slice(0, 500),
-                String(error).includes("300031")
-                  ? "Xiaohongshu source is currently unavailable (300031: 当前笔记暂时无法浏览)."
-                  : "Xiaohongshu source is currently unavailable.",
-              )
-            : "来源读取未完成，请检查平台登录、浏览器或来源类型后重试"
-          : stage === "source"
-            ? "无法启动转发任务；请检查模型连接后重试"
-            : "转发任务未完成，已保存内容可阅读",
+        failureStage,
+        readingDiagnosticMessage(
+          diagnostic,
+          current?.outputLanguage ?? this.dependencies.language?.() ?? "zh-CN",
+        ),
+        diagnostic,
       );
     }
   }
@@ -820,7 +846,12 @@ export class ForwardingPipelineService {
       return;
     }
     if (event.type === "failed") {
-      await this.failTask(taskId, event.stage, event.message);
+      await this.failTask(
+        taskId,
+        event.stage,
+        event.message,
+        event.readingDiagnostic,
+      );
       return;
     }
     if (event.type === "phase") {
@@ -874,6 +905,9 @@ export class ForwardingPipelineService {
                 ? "translation"
                 : "summary"
             : undefined);
+        task.diagnostic = incomplete.length
+          ? (event.failure?.readingDiagnostic ?? materialDiagnostic(failed))
+          : undefined;
         task.message = incomplete.length
           ? (event.failure?.message ??
             failed.issue?.slice(0, 500) ??
@@ -906,6 +940,7 @@ export class ForwardingPipelineService {
     taskId: string,
     stage: "source" | "translation" | "summary",
     message: string,
+    diagnostic?: ReadingDiagnostic,
   ) {
     let changed = false;
     await this.dependencies.store.update((state) => {
@@ -916,6 +951,23 @@ export class ForwardingPipelineService {
       task.finishedAt = now();
       task.failureStage = stage;
       task.message = message.slice(0, 500);
+      task.diagnostic =
+        diagnostic ??
+        readingDiagnostic(
+          task.source ? "processing_failed" : "unknown",
+          stage,
+          undefined,
+          !!task.source,
+        );
+      if (task.materials) {
+        const material = task.materials.find(
+          (item) => item.state !== "completed",
+        );
+        if (material && !material.diagnostic) {
+          material.diagnostic = task.diagnostic;
+          material.issue ??= task.message;
+        }
+      }
       addForwardingActivity(task, {
         kind: "failed",
         summary: task.message,
@@ -995,6 +1047,12 @@ export class ForwardingPipelineService {
             task.phase = "上次解析中断";
             task.finishedAt = now();
             task.failureStage = stage;
+            task.diagnostic = readingDiagnostic(
+              task.source ? "processing_failed" : "unknown",
+              stage,
+              undefined,
+              !!task.source,
+            );
             task.message = "应用退出时任务中断；已保存阶段可用于重试";
             addForwardingActivity(task, {
               kind: "recovered",

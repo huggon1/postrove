@@ -1,3 +1,4 @@
+import type { ReadingDiagnostic } from "./reading-diagnostics";
 import type { BotOrigin } from "./bot-contracts";
 import type { Language } from "./language";
 import type { ReadingMaterial } from "./reading-contracts";
@@ -36,6 +37,7 @@ export interface ForwardingTaskSummary {
   finishedAt?: string;
   updatedAt: string;
   message?: string;
+  diagnostic?: ReadingDiagnostic;
 }
 export interface ForwardingTaskDetail {
   task: {
@@ -56,6 +58,7 @@ export interface ForwardingTaskDetail {
     finishedAt?: string;
     updatedAt: string;
     message?: string;
+    diagnostic?: ReadingDiagnostic;
     failureStage?: "source" | "translation" | "summary";
   };
   partial: { materials?: ReadingMaterial[]; source?: SourceContent };
