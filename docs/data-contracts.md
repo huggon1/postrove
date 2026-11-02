@@ -77,6 +77,8 @@ The Xiaohongshu `XhsSession` value connects to the local reader component. Websi
 
 Browser observations associate each diagnostic with its observed source address. Material admission resolves the requested address, observed redirects, and canonical source identity to that source's diagnostic. Other materials retain their own observed state.
 
+Video tools save diagnostics under the exact requested source address. A video reader can return a typed diagnostic alongside partial content. Its capture carries that observation through material admission even when completed transcript segments are present. Xiaohongshu attempts save the diagnostic and original issue stage with their checkpoints; repeated calls restore that saved observation. Speech-resource setup uses reading-component recovery, while translation and summary failures retain their separate processing receipts.
+
 Workers emit initial materials, individual material updates, phases, execution identity, stage failures, and final results. Main-process validation preserves identity, saved source bytes, and finished chunks. The final report matches saved material state. Stopping retains the saved portion of each material.
 
 ## Task snapshots and activity messages

@@ -83,10 +83,36 @@ test("XHS video context uses the task document, preserves guest cookies and sepa
 });
 
 for (const scenario of [
-  { short: true, mediaFailure: false },
-  { short: false, mediaFailure: true },
+  {
+    short: true,
+    mediaFailure: false,
+    speechFailure: false,
+    referenceFailure: false,
+    label: "short-link speech identity",
+  },
+  {
+    short: false,
+    mediaFailure: true,
+    speechFailure: false,
+    referenceFailure: false,
+    label: "page content after media failure",
+  },
+  {
+    short: false,
+    mediaFailure: false,
+    speechFailure: true,
+    referenceFailure: false,
+    label: "partial speech and its own diagnostic",
+  },
+  {
+    short: false,
+    mediaFailure: false,
+    speechFailure: false,
+    referenceFailure: true,
+    label: "another video's diagnostic at its requested address",
+  },
 ]) {
-  test(`XHS video Agent retains ${scenario.short ? "short-link speech identity" : "page content after media failure"}`, async ({}, info) => {
+  test(`XHS video Agent retains ${scenario.label}`, async ({}, info) => {
     const root = await mkdtemp(join(tmpdir(), "postrove-xhs-agent-"));
     const full =
       "https://www.xiaohongshu.com/explore/abcdef1234567890abcdef12?xsec_token=fictional-browser-access";
@@ -124,6 +150,12 @@ for (const scenario of [
         !results.some((value: any) => value.url === full)
       ) {
         args = { action: "wait", value: "0.25" };
+      } else if (
+        scenario.referenceFailure &&
+        !results.some((value: any) => value.reason === "need_login_subtitle")
+      ) {
+        name = "read_video_transcript";
+        args = { url: "https://www.bilibili.com/video/BV1234567890?p=2&t=31" };
       } else if (!capture) {
         name = "read_video_transcript";
         args = { url: full };
@@ -204,6 +236,24 @@ for (const scenario of [
           "Recognized spoken fixture content.",
         );
         expect(material.source.evidence.segments[0].url).toBe(full);
+      }
+      if (scenario.mediaFailure || scenario.speechFailure) {
+        expect(result.diagnostics[full].stage).toBe(
+          scenario.mediaFailure ? "access" : "transcription",
+        );
+        expect(result.diagnostics[full].evidence.failureCode).toBe(
+          scenario.mediaFailure
+            ? "access_parameters_invalid"
+            : "process_failed",
+        );
+        expect(material.diagnostic).toEqual(result.diagnostics[full]);
+      } else expect(material.diagnostic).toBeUndefined();
+      if (scenario.referenceFailure) {
+        expect(result.diagnostics[result.reference].code).toBe(
+          "login_required",
+        );
+        expect(result.diagnostics[result.reference].stage).toBe("captions");
+        expect(result.diagnostics[full]).toBeUndefined();
       }
       await info.attach("controlled-xhs-reading.json", {
         body: JSON.stringify(result, null, 2),

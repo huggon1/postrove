@@ -22,12 +22,15 @@ app.whenReady().then(async () => {
   endpoint: string;
   short: boolean;
   mediaFailure: boolean;
+  speechFailure?: boolean;
+  referenceFailure?: boolean;
 }) => {
   const root = app.getPath("userData"),
     id = "abcdef1234567890abcdef12",
     attemptId = randomUUID();
   const url = `https://www.xiaohongshu.com/explore/${id}?xsec_token=fictional-browser-access`;
   const intake = input.short ? "https://xhslink.com/o/fictional" : url;
+  const reference = "https://www.bilibili.com/video/BV1234567890?p=2&t=31";
   const runtime = join(root, "runtime"),
     runtimeDirectory = join(runtime, "youtube");
   await mkdir(runtimeDirectory, { recursive: true });
@@ -67,7 +70,7 @@ app.whenReady().then(async () => {
         })
       : route.fulfill({
           contentType: "text/html; charset=utf-8",
-          body: `<article><h1>Video note fixture</h1><p>Written page description</p></article><script>window.__INITIAL_STATE__=${JSON.stringify({ note: { noteDetailMap: { [id]: { note: { noteId: id, type: "video", title: "Video note fixture", desc: "Written page description", user: { nickname: "Fixture" }, imageList: [{ urlDefault: "https://example.test/cover.jpg" }] } } } } })}</script>`,
+          body: `<article><h1>Video note fixture</h1><p>Written page description</p>${input.referenceFailure ? `<a href="${reference}">Reference video</a>` : ""}</article><script>window.__INITIAL_STATE__=${JSON.stringify({ note: { noteDetailMap: { [id]: { note: { noteId: id, type: "video", title: "Video note fixture", desc: "Written page description", user: { nickname: "Fixture" }, imageList: [{ urlDefault: "https://example.test/cover.jpg" }] } } } } })}</script>`,
         }),
   );
   let extractions = 0;
@@ -93,7 +96,10 @@ app.whenReady().then(async () => {
     acquire: async () => ({ path: join(root, "fictional.mp4") }),
     speech: {
       transcribe: async () => ({
-        status: "completed",
+        status: input.speechFailure ? "partial" : "completed",
+        ...(input.speechFailure
+          ? { issue: { code: "process_failed" as const } }
+          : {}),
         provenance: "application_asr",
         backend: "whisper.cpp",
         runtimeVersion: "fixture",
@@ -120,8 +126,28 @@ app.whenReady().then(async () => {
     undefined,
     undefined,
     undefined,
-    new VideoTranscriptReaders({ xiaohongshu: reader }),
+    new VideoTranscriptReaders({
+      xiaohongshu: reader,
+      ...(input.referenceFailure
+        ? {
+            bilibili: {
+              available: async () => true,
+              read: async () => ({
+                outcome: "unavailable" as const,
+                reason: "need_login_subtitle",
+              }),
+            },
+          }
+        : {}),
+    }),
   );
+  const diagnostics: Record<string, unknown> = {};
+  const run = agent.run.bind(agent);
+  agent.run = async (...args) => {
+    const result = await run(...args);
+    Object.assign(diagnostics, Object.fromEntries(result.sourceDiagnostics));
+    return result;
+  };
   try {
     const materials = await new PlatformAccess(agent).collect(
       randomUUID(),
@@ -139,7 +165,7 @@ app.whenReady().then(async () => {
       undefined,
       attemptId,
     );
-    return { materials, extractions, intake, url };
+    return { materials, extractions, intake, url, reference, diagnostics };
   } finally {
     await browser.shutdown();
   }

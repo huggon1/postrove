@@ -10,6 +10,7 @@ import {
 } from "../../src/main/services/xiaohongshu-video";
 import type { SpeechResult } from "../../src/shared/speech-contracts";
 import { sourceSchema } from "../../src/shared/source-contracts";
+import { readingDiagnostic } from "../../src/shared/reading-diagnostics";
 const id = "abcdef1234567890abcdef12",
   url = `https://www.xiaohongshu.com/explore/${id}?xsec_token=fictional-access`;
 const metadata = {
@@ -246,6 +247,13 @@ test("XHS media rejection retains same-note metadata and the original source sta
     assert.equal(result.outcome, "content");
     if (result.outcome !== "content") return;
     assert.match(result.source.completenessNote, /access_parameters_invalid/);
+    assert.equal(result.diagnostic?.stage, "access");
+    assert.deepEqual(result.diagnostic?.actions, ["provide_access_link"]);
+    assert.deepEqual(
+      (await f.reader.read(url, f.attempt, new AbortController().signal))
+        .diagnostic,
+      result.diagnostic,
+    );
     assert.equal(f.downloads(), 0);
     assert.match(result.source.markdown!, /Written description/);
   } finally {
@@ -267,6 +275,8 @@ test("XHS observed login and verification challenges retain their specific cause
         new AbortController().signal,
       );
       assert.equal(result.outcome, "content");
+      assert.equal(result.diagnostic?.code, accessIssue);
+      assert.equal(result.diagnostic?.stage, "access");
       if (result.outcome === "content")
         assert.match(result.source.completenessNote, new RegExp(accessIssue));
       assert.equal(f.reads(), 0);
@@ -297,6 +307,9 @@ test("XHS missing ASR model is separate from website access and skips the media 
       new AbortController().signal,
     );
     assert.equal(result.outcome, "content");
+    assert.equal(result.diagnostic?.stage, "readiness");
+    assert.deepEqual(result.diagnostic?.actions, ["setup_component"]);
+    assert.equal(result.diagnostic?.evidence?.failureCode, "model_missing");
     if (result.outcome === "content")
       assert.match(result.source.completenessNote, /model_missing/);
     assert.equal(f.downloads(), 0);
@@ -329,6 +342,8 @@ test("XHS completed chunks survive a later speech failure", async () => {
     assert.equal(result.source.evidence?.transcriptCoverage, "partial");
     assert.match(result.source.markdown!, /这是口述内容/);
     assert.match(result.source.completenessNote, /process_failed/);
+    assert.equal(result.diagnostic?.stage, "transcription");
+    assert.equal(result.diagnostic?.evidence?.failureCode, "process_failed");
   } finally {
     await f.cleanup();
   }
@@ -415,12 +430,136 @@ test("XHS unrelated metadata, unknown failures and invalid attempt identities re
     assert.deepEqual(result, {
       outcome: "unavailable",
       reason: "xiaohongshu_identity_changed",
+      diagnostic: readingDiagnostic("unknown", "source", {
+        failureCode: "xiaohongshu_identity_changed",
+      }),
     });
     assert.equal(f.reads(), 0);
     await assert.rejects(
       f.reader.read(url, "../escape", new AbortController().signal),
       /identity/,
     );
+  } finally {
+    await f.cleanup();
+  }
+});
+
+for (const stage of ["translation", "summary"] as const) {
+  test(`XHS partial speech diagnosis survives a later ${stage} failure`, async () => {
+    const f = await fixture({
+      speech: {
+        transcribe: async () => ({
+          ...speech,
+          status: "partial",
+          issue: { code: "process_failed" },
+        }),
+      },
+    });
+    try {
+      const captured = await f.reader.read(
+        url,
+        f.attempt,
+        new AbortController().signal,
+      );
+      assert.equal(captured.outcome, "content");
+      if (captured.outcome !== "content") return;
+      const { runReadingJob } =
+        await import("../../src/worker/jobs/forwarding/reading");
+      const { ExecutionFailure } =
+        await import("../../src/shared/task-failure");
+      const events: any[] = [];
+      await runReadingJob(
+        {
+          taskId: randomUUID(),
+          resultId: randomUUID(),
+          sourceUrl: url,
+          outputLanguage: "en",
+          config: {
+            method: "generic_api",
+            modelId: "fixture",
+            api: "openai-completions",
+            baseUrl: "http://127.0.0.1:9/v1",
+            credential: "fictional",
+          },
+          resume: {
+            materials: [
+              {
+                id: "main",
+                role: "main",
+                url,
+                title: "Fixture",
+                state: "partial",
+                source: captured.source,
+                diagnostic: captured.diagnostic,
+                issue: "Saved speech process observation",
+                summary: "",
+                chunks: [
+                  {
+                    index: 0,
+                    original: "First",
+                    translated: "Saved first",
+                    complete: true,
+                  },
+                  {
+                    index: 1,
+                    original: "Second",
+                    translated: "",
+                    complete: false,
+                  },
+                ],
+              },
+            ],
+          },
+        },
+        (event) => events.push(event),
+        new AbortController().signal,
+        {
+          translate: async () => {
+            if (stage === "translation")
+              throw new ExecutionFailure("model_network");
+            return { text: "Translated second", truncated: false };
+          },
+          summarize: async () => {
+            throw new ExecutionFailure("model_network");
+          },
+        },
+      );
+      const result = events.findLast((event) => event.type === "result");
+      assert.equal(result.failure.readingDiagnostic.stage, stage);
+      assert.ok(
+        result.failure.readingDiagnostic.actions.includes("resume_processing"),
+      );
+      assert.deepEqual(
+        result.draft.materials[0].diagnostic,
+        captured.diagnostic,
+      );
+      assert.equal(
+        result.draft.materials[0].chunks[0].translated,
+        "Saved first",
+      );
+      assert.match(result.draft.materials[0].source.markdown, /这是口述内容/);
+    } finally {
+      await f.cleanup();
+    }
+  });
+}
+
+test("XHS media transfer failure preserves the media stage independently of login", async () => {
+  const f = await fixture({
+    acquire: async () => {
+      throw new Error("download_failed");
+    },
+  });
+  try {
+    const result = await f.reader.read(
+      url,
+      f.attempt,
+      new AbortController().signal,
+    );
+    assert.equal(result.outcome, "content");
+    assert.equal(result.diagnostic?.stage, "media");
+    assert.equal(result.diagnostic?.code, "unknown");
+    assert.equal(result.diagnostic?.evidence?.failureCode, "download_failed");
   } finally {
     await f.cleanup();
   }

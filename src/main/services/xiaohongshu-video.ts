@@ -6,6 +6,12 @@ import {
   type SourceContent,
 } from "../../shared/source-contracts";
 import { videoArtifactKey, videoIdentity } from "../../shared/video-contracts";
+import {
+  readingDiagnosticSchema,
+  readingStageSchema,
+  type ReadingStage,
+} from "../../shared/reading-diagnostics";
+import { xiaohongshuVideoDiagnostic } from "./video-diagnostics";
 import type {
   SpeechReadiness,
   SpeechResult,
@@ -106,6 +112,22 @@ export class XiaohongshuVideoReader implements VideoTranscriptReader {
     await mkdir(directory, { recursive: true, mode: 0o700 });
     try {
       const saved = JSON.parse(await readFile(stateFile, "utf8"));
+      const savedDiagnostic = readingDiagnosticSchema.safeParse(
+        saved.diagnostic,
+      );
+      const savedStage = readingStageSchema.safeParse(saved.issueStage);
+      const diagnostic = savedDiagnostic.success
+        ? savedDiagnostic.data
+        : saved.issue
+          ? xiaohongshuVideoDiagnostic(
+              saved.issue,
+              savedStage.success
+                ? savedStage.data
+                : saved.speechIssue
+                  ? "transcription"
+                  : "source",
+            )
+          : undefined;
       if (saved.state === "completed" || saved.state === "partial")
         return {
           outcome: "content",
@@ -113,9 +135,14 @@ export class XiaohongshuVideoReader implements VideoTranscriptReader {
             JSON.parse(await readFile(join(directory, "source.json"), "utf8")),
           ),
           references: [],
+          ...(diagnostic ? { diagnostic } : {}),
         };
       if (saved.state === "unavailable")
-        return { outcome: "unavailable", reason: saved.reason };
+        return {
+          outcome: "unavailable",
+          reason: saved.reason,
+          ...(diagnostic ? { diagnostic } : {}),
+        };
       // An interrupted attempt can still have a committed metadata/speech checkpoint.
       try {
         return {
@@ -124,6 +151,7 @@ export class XiaohongshuVideoReader implements VideoTranscriptReader {
             JSON.parse(await readFile(join(directory, "source.json"), "utf8")),
           ),
           references: [],
+          ...(diagnostic ? { diagnostic } : {}),
         };
       } catch {
         return { outcome: "unavailable", reason: "xiaohongshu_interrupted" };
@@ -134,6 +162,9 @@ export class XiaohongshuVideoReader implements VideoTranscriptReader {
     let metadata: XhsVideoMetadata | undefined;
     let speech: SpeechResult | undefined;
     let issue: string | undefined;
+    let issueStage: ReadingStage = "source";
+    const diagnostic = () =>
+      issue ? xiaohongshuVideoDiagnostic(issue, issueStage) : undefined;
     let cookies: string = "absent";
     const publish = async () => {
       if (!metadata) return undefined;
@@ -151,6 +182,7 @@ export class XiaohongshuVideoReader implements VideoTranscriptReader {
           segments.length >= 20_000
         ) {
           issue = "speech_output_budget";
+          issueStage = "transcription";
           break;
         }
         if (
@@ -162,6 +194,7 @@ export class XiaohongshuVideoReader implements VideoTranscriptReader {
           segment.text.length > 300_000
         ) {
           issue = "speech_invalid_output";
+          issueStage = "transcription";
           break;
         }
         characters += segment.text.length;
@@ -291,6 +324,8 @@ export class XiaohongshuVideoReader implements VideoTranscriptReader {
           cover: !!metadata?.images.length,
         },
         issue,
+        issueStage,
+        diagnostic: diagnostic(),
       });
     await state({ state: "running" });
     try {
@@ -309,6 +344,7 @@ export class XiaohongshuVideoReader implements VideoTranscriptReader {
       await publish();
       if (context.accessIssue) {
         issue = context.accessIssue;
+        issueStage = "access";
       } else {
         const media = await this.dependencies.media.read({
           url: note.requestUrl,
@@ -321,6 +357,7 @@ export class XiaohongshuVideoReader implements VideoTranscriptReader {
         cookies = media.cookies;
         issue = media.issue;
         await publish();
+        if (media.media) issueStage = "readiness";
         const readiness = media.media
           ? await this.dependencies.speech.check?.()
           : undefined;
@@ -330,11 +367,13 @@ export class XiaohongshuVideoReader implements VideoTranscriptReader {
         )
           issue = readiness.issue ?? "speech_runtime_missing";
         else if (media.media) {
+          issueStage = "media";
           const acquired = await this.dependencies.acquire({
             ...media.media,
             directory: join(directory, "media"),
             signal,
           });
+          issueStage = "transcription";
           speech = await this.dependencies.speech.transcribe({
             mediaPath: acquired.path,
             signal,
@@ -368,10 +407,18 @@ export class XiaohongshuVideoReader implements VideoTranscriptReader {
     });
     if (signal.aborted) throw new Error("Cancelled");
     return source
-      ? { outcome: "content", source, references: [] }
+      ? {
+          outcome: "content",
+          source,
+          references: [],
+          ...(diagnostic() ? { diagnostic: diagnostic() } : {}),
+        }
       : {
           outcome: "unavailable",
           reason: issue ?? "xiaohongshu_media_unavailable",
+          diagnostic:
+            diagnostic() ??
+            xiaohongshuVideoDiagnostic("xiaohongshu_media_unavailable"),
         };
   }
 }

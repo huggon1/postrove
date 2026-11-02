@@ -304,11 +304,15 @@ export class PlatformAccess {
           ).slice(0, 1500),
         });
       }
+      const readerDiagnostic = captures.find(
+        (capture: BrowserCapture) => capture.readerDiagnostic,
+      )?.readerDiagnostic;
       if (
-        material.source?.completeness !== "complete" &&
-        !captures.some((capture: BrowserCapture) => capture.evidence)
+        readerDiagnostic ||
+        (material.source?.completeness !== "complete" &&
+          !captures.some((capture: BrowserCapture) => capture.evidence))
       )
-        material.diagnostic ??= diagnostic;
+        material.diagnostic ??= readerDiagnostic ?? diagnostic;
       materials.push(material);
     }
     readingMaterialsSchema.parse(materials);
