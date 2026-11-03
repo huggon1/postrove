@@ -100,7 +100,7 @@ export function createBrowserTools(
       name: "read_youtube_transcript",
       label: "Read YouTube transcript",
       description:
-        "Read original captions and metadata for a YouTube video observed in this task. Returns a captureId, timestamped original text and actual coverage, or a saved unavailable state for browser fallback. Repeated requests in one attempt reuse the saved result.",
+        "Read a YouTube video observed in this task. Prefers original captions and transcribes accessible audio locally when captions are absent. Returns a captureId, timestamped text, provenance, actual coverage and any setup diagnostic. Captured metadata survives unavailable speech resources. Completed captures reuse their saved result.",
       parameters: Type.Object({ url: Type.String() }),
       execute: async (_id, params) =>
         result(
@@ -115,7 +115,7 @@ export function createBrowserTools(
       name: "read_video_transcript",
       label: "Read video transcript",
       description:
-        "Read native captions for a video URL observed in this task. Returns its captureId, verified video/part identity, transcript provenance and timed segments, or the saved unavailable state. Application speech recognition has separate provenance. Repeated reads reuse the attempt's saved result.",
+        "Read timestamped text for a video URL observed in this task. Prefers native captions; YouTube and Bilibili fall back to local speech transcription when captions are absent. Xiaohongshu video uses local speech transcription. Returns its captureId, verified video/part identity, provenance, actual coverage and any setup diagnostic. Metadata survives unavailable speech resources. Completed captures reuse their saved result.",
       parameters: Type.Object({ url: Type.String() }),
       execute: async (_id, params) =>
         result(

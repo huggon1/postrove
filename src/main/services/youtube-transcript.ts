@@ -17,6 +17,9 @@ import {
   type SourceContent,
 } from "../../shared/source-contracts";
 import { youtubeVideo } from "../../shared/source-profiles";
+import { videoIdentity } from "../../shared/video-contracts";
+import { readVideoCheckpoint } from "./video-checkpoint";
+import type { VideoSpeechFallback } from "./video-speech";
 import { transcriptSegmentSchema } from "../../shared/transcript-contracts";
 
 export const youtubeRuntimeVersion = {
@@ -239,6 +242,7 @@ export class YoutubeTranscriptReader {
     private runtimeRoot: string,
     readonly evidenceRoot: string,
     private run: TranscriptRun = runTranscriptProcess,
+    private speech?: Pick<VideoSpeechFallback, "read" | "ready">,
   ) {}
   available() {
     return (this.readiness ??= (async () => {
@@ -293,19 +297,34 @@ export class YoutubeTranscriptReader {
     const stateFile = join(directory, "reader-attempt.json");
     try {
       const saved = JSON.parse(await readFile(stateFile, "utf8"));
-      if (saved.state === "completed")
-        return {
-          outcome: "content",
-          source: sourceSchema.parse(
-            JSON.parse(await readFile(join(directory, "source.json"), "utf8")),
-          ),
-          references: JSON.parse(
-            await readFile(join(directory, "references.json"), "utf8"),
-          ),
-        };
-      if (saved.state === "unavailable")
-        return { outcome: "unavailable", reason: saved.reason };
-      return { outcome: "unavailable", reason: "transcript_interrupted" };
+      const resumeSpeech =
+        saved.state === "completed" &&
+        saved.diagnostic?.category === "readiness" &&
+        (await this.speech?.ready());
+      if (!resumeSpeech) {
+        if (saved.state === "completed")
+          return {
+            outcome: "content",
+            source: sourceSchema.parse(
+              JSON.parse(
+                await readFile(join(directory, "source.json"), "utf8"),
+              ),
+            ),
+            references: JSON.parse(
+              await readFile(join(directory, "references.json"), "utf8"),
+            ),
+            ...(saved.diagnostic ? { diagnostic: saved.diagnostic } : {}),
+          };
+        const checkpoint = await readVideoCheckpoint(
+          directory,
+          videoIdentity(video.url)!,
+          key,
+        );
+        if (checkpoint) return checkpoint;
+        if (saved.state === "unavailable")
+          return { outcome: "unavailable", reason: saved.reason };
+        return { outcome: "unavailable", reason: "transcript_interrupted" };
+      }
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     }
@@ -365,7 +384,28 @@ export class YoutubeTranscriptReader {
       if (metadata.id !== video.id)
         throw new Error("transcript_identity_changed");
       const track = selectTranscriptTrack(metadata);
-      if (!track) throw new Error("transcript_captions_missing");
+      if (!track) {
+        if (!this.speech) throw new Error("transcript_captions_missing");
+        const result = await this.speech.read({
+          video: videoIdentity(video.url)!,
+          metadata: {
+            title: String(metadata.title || video.url),
+            uploader: metadata.channel || metadata.uploader,
+            description: metadata.description,
+            duration: metadata.duration,
+          },
+          directory,
+          artifactKey: key,
+          signal,
+        });
+        await writeFile(
+          join(directory, "references.json"),
+          JSON.stringify(result.outcome === "content" ? result.references : []),
+          { mode: 0o600 },
+        );
+        await saveState({ state: "completed", diagnostic: result.diagnostic });
+        return result;
+      }
       await this.run(
         executable,
         [
