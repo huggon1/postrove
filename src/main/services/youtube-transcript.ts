@@ -35,14 +35,9 @@ type Metadata = {
   subtitles?: Record<string, { ext?: string; url?: string }[]>;
   automatic_captions?: Record<string, { ext?: string; url?: string }[]>;
 };
-export type TranscriptResult =
-  | {
-      outcome: "content";
-      source: SourceContent;
-      references: { url: string; title: string }[];
-    }
-  | { outcome: "unavailable"; reason: string };
-type Run = (
+export type { VideoTranscriptResult as TranscriptResult } from "./video-transcript";
+import type { VideoTranscriptResult as TranscriptResult } from "./video-transcript";
+export type TranscriptRun = (
   executable: string,
   args: string[],
   directory: string,
@@ -160,7 +155,12 @@ export function normalizeTranscript(
   if (!segments.length) throw new Error("empty_captions");
   return segments;
 }
-const runProcess: Run = (executable, args, directory, signal) =>
+export const runTranscriptProcess: TranscriptRun = (
+  executable,
+  args,
+  directory,
+  signal,
+) =>
   new Promise((resolve, reject) => {
     if (signal.aborted) return reject(new Error("Cancelled"));
     const env: NodeJS.ProcessEnv = {
@@ -238,7 +238,7 @@ export class YoutubeTranscriptReader {
   constructor(
     private runtimeRoot: string,
     readonly evidenceRoot: string,
-    private run: Run = runProcess,
+    private run: TranscriptRun = runTranscriptProcess,
   ) {}
   available() {
     return (this.readiness ??= (async () => {
@@ -365,7 +365,7 @@ export class YoutubeTranscriptReader {
       if (metadata.id !== video.id)
         throw new Error("transcript_identity_changed");
       const track = selectTranscriptTrack(metadata);
-      if (!track) throw new Error("transcript_unavailable");
+      if (!track) throw new Error("transcript_captions_missing");
       await this.run(
         executable,
         [
@@ -386,7 +386,8 @@ export class YoutubeTranscriptReader {
       const names = (await readdir(directory)).filter((name) =>
         /^captions\.[A-Za-z0-9_-]+\.json3$/.test(name),
       );
-      if (names.length !== 1) throw new Error("transcript_unavailable");
+      if (names.length !== 1)
+        throw new Error("transcript_caption_artifact_missing");
       if ((await stat(join(directory, names[0]))).size > 20 * 1024 * 1024)
         throw new Error("transcript_output_limit");
       await chmod(join(directory, names[0]), 0o600);

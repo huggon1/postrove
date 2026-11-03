@@ -110,6 +110,21 @@ export function createBrowserTools(
           }),
         ),
     });
+  if (youtubeReading)
+    tools.push({
+      name: "read_video_transcript",
+      label: "Read video transcript",
+      description:
+        "Read native captions for a video URL observed in this task. Returns its captureId, verified video/part identity, transcript provenance and timed segments, or the saved unavailable state. Application speech recognition has separate provenance. Repeated reads reuse the attempt's saved result.",
+      parameters: Type.Object({ url: Type.String() }),
+      execute: async (_id, params) =>
+        result(
+          await operate({
+            action: "read_video_transcript",
+            value: (params as { url: string }).url,
+          }),
+        ),
+    });
   tools.push({
     name: "structure_content",
     label: "Structure captured content",

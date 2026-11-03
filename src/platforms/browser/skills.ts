@@ -1,6 +1,7 @@
 import { advisorRoutes } from "../../shared/advisor-contracts";
 import geminiSearch from "./skills/gemini-youtube-search/SKILL.md";
 import redditSearch from "./skills/reddit-search/SKILL.md";
+import bilibiliReading from "./skills/bilibili-reading/SKILL.md";
 import youtubeReading from "./skills/youtube-reading/SKILL.md";
 import redditReading from "./skills/reddit-reading/SKILL.md";
 import xSearch from "./skills/x-search/SKILL.md";
@@ -36,6 +37,7 @@ const contents = [
   geminiSearch,
   redditSearch,
   youtubeReading,
+  bilibiliReading,
   redditReading,
   xhsSearch,
   xReading,

@@ -1,3 +1,8 @@
+import { videoIdentity, videoMatchesUrl } from "../../shared/video-contracts";
+import {
+  readingDiagnostic,
+  diagnoseReadingError,
+} from "../../shared/reading-diagnostics";
 import {
   sourcePlatform,
   youtubeVideo,
@@ -6,7 +11,6 @@ import {
 import type { ReadingMaterial } from "../../shared/reading-contracts";
 import { readingMaterialsSchema } from "../../shared/reading-contracts";
 import { webUrlSchema } from "../../shared/source-contracts";
-import { cacheMaterialImage } from "./material-images";
 import type { PlatformBrowser } from "./platform-browser";
 import { randomUUID } from "node:crypto";
 import {
@@ -36,6 +40,8 @@ function samePage(left: string, right: string) {
   b.hash = "";
   if (a.href === b.href) return true;
   const canonical = youtubeVideo(right) || redditPost(right);
+  const video = videoIdentity(right);
+  if (video) return videoIdentity(left)?.sourceKey === video.sourceKey;
   if (canonical)
     return (youtubeVideo(left) || redditPost(left))?.key === canonical.key;
   const platform = xPostUrlSchema.safeParse(right).success
@@ -101,10 +107,20 @@ export class PlatformAccess {
     if (main.role !== "main" || main.url !== url)
       throw new Error("Main material identity changed");
     const mainPage = result.navigations.get(browserUrl.href) ?? browserUrl.href;
+    const verifiedVideo = [...result.captureData.values()].find(
+      (capture: BrowserCapture) =>
+        capture.evidence &&
+        "video" in capture.evidence &&
+        videoMatchesUrl(capture.evidence.video, url) &&
+        videoMatchesUrl(capture.evidence.video, mainPage),
+    );
     if (
-      (platform === "youtube" || platform === "reddit") &&
-      canonicalPost(platform, mainPage)?.key !==
-        canonicalPost(platform, url)?.key
+      (platform === "youtube" ||
+        platform === "reddit" ||
+        platform === "bilibili") &&
+      (videoIdentity(mainPage)?.sourceKey ?? redditPost(mainPage)?.key) !==
+        (videoIdentity(url)?.sourceKey ?? redditPost(url)?.key) &&
+      !verifiedVideo
     )
       throw new Error("Original source identity changed");
     const provenance = new Set<string>([
@@ -144,6 +160,12 @@ export class PlatformAccess {
         item === main
           ? mainPage
           : (result.navigations.get(item.url) ?? item.url);
+      const diagnostic =
+        result.sourceDiagnostics?.get(item.url) ??
+        result.sourceDiagnostics?.get(finalUrl) ??
+        [...(result.sourceDiagnostics ?? [])].find(([address]) =>
+          samePage(address, finalUrl),
+        )?.[1];
       if (resolved.has(finalUrl)) continue;
       resolved.add(finalUrl);
       seen.add(item.url);
@@ -160,10 +182,17 @@ export class PlatformAccess {
         .map((id: string) => result.captureData.get(id))
         .filter(
           (capture: BrowserCapture | undefined) =>
-            capture && samePage(capture.pageUrl, finalUrl),
+            capture &&
+            (samePage(capture.pageUrl, finalUrl) ||
+              (capture.evidence &&
+                "video" in capture.evidence &&
+                videoMatchesUrl(capture.evidence.video, finalUrl))),
         );
       if (!captures.length) {
         material.state = item.error === "pending" ? "pending" : "failed";
+        if (item.error !== "pending")
+          material.diagnostic =
+            diagnostic ?? readingDiagnostic("capture_incomplete", "source");
         material.issue =
           item.error === "pending"
             ? undefined
@@ -188,6 +217,7 @@ export class PlatformAccess {
           let cachedUrl: string | undefined;
           if (this.browser && this.imageRoot) {
             try {
+              const { cacheMaterialImage } = await import("./material-images");
               const context = await this.browser.context(platform);
               cachedUrl = await cacheMaterialImage(
                 context,
@@ -204,17 +234,46 @@ export class PlatformAccess {
             ...(cachedUrl ? { cachedUrl } : {}),
           });
         }
+        const xhsSource = videoIdentity(finalUrl)?.platform === "xiaohongshu";
+        const sourceUrl = item.url;
+        const readerCoverage = captures.find(
+          (capture: BrowserCapture) => capture.readerCoverage,
+        )?.readerCoverage;
         material.source = sourceSchema.parse({
-          sourceUrl: item.url,
-          platform: item === main ? platform : sourcePlatform(item.url),
+          sourceUrl,
+          ...(xhsSource && !videoIdentity(sourceUrl)
+            ? { resolvedSourceUrl: finalUrl }
+            : {}),
+          platform: xhsSource
+            ? "xiaohongshu"
+            : item === main
+              ? platform
+              : sourcePlatform(item.url),
           title: material.title,
           sourceIdentity: String(item.sourceIdentity ?? material.title).slice(
             0,
             300,
           ),
-          ...(platform === "youtube" || platform === "reddit"
-            ? { sourceKey: canonicalPost(platform, finalUrl)?.key }
-            : {}),
+          ...((videoIdentity(item.url) ||
+            (xhsSource && videoIdentity(finalUrl))) &&
+          (sourcePlatform(finalUrl) === "bilibili" ||
+            captures.some(
+              (capture: BrowserCapture) =>
+                capture.evidence && "video" in capture.evidence,
+            ))
+            ? {
+                sourceKey: (videoIdentity(item.url) || videoIdentity(finalUrl))!
+                  .sourceKey,
+              }
+            : sourcePlatform(finalUrl) === "youtube" ||
+                sourcePlatform(finalUrl) === "reddit"
+              ? {
+                  sourceKey: canonicalPost(
+                    sourcePlatform(finalUrl) as "youtube" | "reddit",
+                    finalUrl,
+                  )?.key,
+                }
+              : {}),
           fetchedAt: new Date().toISOString(),
           markdown,
           contentBlocks: Array.from(
@@ -225,11 +284,11 @@ export class PlatformAccess {
             }),
           ),
           images: storedImages,
-          completeness: ["complete", "partial", "unknown"].includes(
-            item.completeness,
-          )
-            ? item.completeness
-            : "unknown",
+          completeness:
+            readerCoverage?.completeness ??
+            (["complete", "partial", "unknown"].includes(item.completeness)
+              ? item.completeness
+              : "unknown"),
           ...(captures.find((capture: BrowserCapture) => capture.evidence)
             ?.evidence
             ? {
@@ -239,10 +298,21 @@ export class PlatformAccess {
               }
             : {}),
           completenessNote: String(
-            item.completenessNote ?? "Captured readable page body",
+            readerCoverage?.note ??
+              item.completenessNote ??
+              "Captured readable page body",
           ).slice(0, 1500),
         });
       }
+      const readerDiagnostic = captures.find(
+        (capture: BrowserCapture) => capture.readerDiagnostic,
+      )?.readerDiagnostic;
+      if (
+        readerDiagnostic ||
+        (material.source?.completeness !== "complete" &&
+          !captures.some((capture: BrowserCapture) => capture.evidence))
+      )
+        material.diagnostic ??= readerDiagnostic ?? diagnostic;
       materials.push(material);
     }
     readingMaterialsSchema.parse(materials);
@@ -266,10 +336,12 @@ export class PlatformAccess {
           material.title = collected[0].title;
           material.state = material.source ? "pending" : "failed";
           material.issue = collected[0].issue;
-        } catch {
+          material.diagnostic = collected[0].diagnostic;
+        } catch (error) {
           if (signal.aborted) throw new Error("Cancelled");
           material.state = "failed";
           material.issue = "来源读取未完成；主内容与其他材料已保存，可重试";
+          material.diagnostic = diagnoseReadingError(error, "source");
         }
         await onProgress?.(structuredClone(materials), material.id);
       }

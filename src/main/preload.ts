@@ -10,12 +10,16 @@ import {
   telegramChannels,
   modelChannels,
   platformConnectionChannels,
+  readingSiteChannels,
   xChannels,
   xhsChannels,
   type DesktopBridge,
 } from "../shared/ipc-contracts";
 
 const bridge: DesktopBridge = {
+  readingSiteStatus: (id) => ipcRenderer.invoke(readingSiteChannels.status, id),
+  loginReadingSite: (id) => ipcRenderer.invoke(readingSiteChannels.login, id),
+  logoutReadingSite: (id) => ipcRenderer.invoke(readingSiteChannels.logout, id),
   platformStatus: (id) =>
     ipcRenderer.invoke(platformConnectionChannels.status, id),
   loginPlatform: (id) =>

@@ -1,3 +1,4 @@
+import { readingDiagnosticSchema } from "../../../shared/reading-diagnostics";
 import { botOriginSchema } from "../../../shared/bot-contracts";
 import { readingMaterialsSchema } from "../../../shared/reading-contracts";
 import { promptExecutionSchema } from "../../../shared/execution-contracts";
@@ -81,6 +82,7 @@ const forwardingTaskSchema = z
     createdAt: z.string().datetime(),
     finishedAt: z.string().datetime().optional(),
     failureStage: z.enum(["source", "translation", "summary"]).optional(),
+    diagnostic: readingDiagnosticSchema.optional(),
     xhsAccessTokenCiphertext: z.string().max(4096).optional(),
     updatedAt: z.string().datetime(),
     message: z.string().max(500).optional(),

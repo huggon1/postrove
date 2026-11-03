@@ -1,3 +1,12 @@
+import { BilibiliTranscriptReader } from "./services/bilibili-transcript";
+import { VideoTranscriptReaders } from "./services/video-transcript";
+import { XiaohongshuMediaReader } from "./services/xiaohongshu-media";
+import { XiaohongshuVideoReader } from "./services/xiaohongshu-video";
+import { SpeechService } from "./services/speech";
+import {
+  ReadingFailure,
+  readingDiagnostic,
+} from "../shared/reading-diagnostics";
 import { YoutubeTranscriptReader } from "./services/youtube-transcript";
 import { FeishuService } from "./integrations/feishu/service";
 import { FeishuAdapter } from "./integrations/feishu/adapter";
@@ -35,6 +44,7 @@ import {
   channels,
   modelChannels,
   platformConnectionChannels,
+  readingSiteChannels,
   xChannels,
   xhsChannels,
 } from "../shared/ipc-contracts";
@@ -188,19 +198,29 @@ export async function initializeServices(
     imageRoot,
     transcripts.evidenceRoot,
   );
+  const speech = new SpeechService({
+    runtimeRoot: runtimeLayout.runtimeRoot,
+    dataDir: app.getPath("userData"),
+  });
   const browserAgent = new BrowserAgent(
     browser,
     join(__dirname, "../worker/jobs/browser/worker-entry.mjs"),
     join(app.getPath("userData"), "browser-traces"),
     async (url, signal) => {
       if (!xhsAuth!.installed())
-        throw new Error("Xiaohongshu enhancement is unavailable");
+        throw new ReadingFailure(
+          readingDiagnostic("component_missing", "readiness"),
+          "小红书组件不可用",
+        );
       const source = await createXhsAdapter(await xhsAuth!.connect(), {
         id: new URL(url).pathname.split("/").filter(Boolean).at(-1)!,
         token: new URL(url).searchParams.get("xsec_token") ?? "",
       }).read("enhanced-reading", url, signal);
       if (source.outcome !== "content")
-        throw new Error("Enhanced reading is unavailable");
+        throw new ReadingFailure(
+          source.diagnostic ?? readingDiagnostic("unknown", "source"),
+          source.message,
+        );
       const content = source.content;
       return {
         capture: content.contentBlocks
@@ -227,7 +247,19 @@ export async function initializeServices(
         { config, release: async () => {} },
         taskId,
       ),
-    transcripts,
+    new VideoTranscriptReaders({
+      youtube: transcripts,
+      bilibili: new BilibiliTranscriptReader(
+        runtimeLayout.runtimeRoot,
+        transcripts.evidenceRoot,
+      ),
+      xiaohongshu: new XiaohongshuVideoReader(transcripts.evidenceRoot, {
+        media: new XiaohongshuMediaReader(runtimeLayout.runtimeRoot),
+        speech,
+        acquire: ({ url, allowedHosts, headers, signal }) =>
+          speech.acquireMedia({ url, allowedHosts, headers, signal }),
+      }),
+    }),
   );
 
   const platformAccess = new PlatformAccess(browserAgent, browser, imageRoot);
@@ -876,6 +908,28 @@ export async function initializeServices(
         if (channel === platformConnectionChannels.login)
           await browser.login(connection.site);
         else await browser.logout(connection.site);
+        return { ok: true, value: undefined };
+      } catch {
+        return { ok: false, message: "平台登录操作未完成，请稍后重试" };
+      }
+    });
+
+  for (const channel of Object.values(readingSiteChannels))
+    handle(channel, async (event, ...args: unknown[]) => {
+      if (
+        !event.senderFrame ||
+        event.senderFrame !== event.sender.mainFrame ||
+        event.senderFrame.url !== expected ||
+        args.length !== 1 ||
+        args[0] !== "bilibili"
+      )
+        return { ok: false, message: "无效的请求" };
+      try {
+        if (channel === readingSiteChannels.status)
+          return { ok: true, value: await browser.status("bilibili") };
+        if (channel === readingSiteChannels.login)
+          await browser.login("bilibili");
+        else await browser.logout("bilibili");
         return { ok: true, value: undefined };
       } catch {
         return { ok: false, message: "平台登录操作未完成，请稍后重试" };
