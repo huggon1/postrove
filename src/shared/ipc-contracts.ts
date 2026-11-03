@@ -1,4 +1,5 @@
 import type { PlatformConnectionId } from "./advisor-contracts";
+import type { CapabilityView, SpeechInstallView } from "./capability-contracts";
 import type {
   BotChannel,
   BotCredentialsByChannel,
@@ -115,6 +116,11 @@ export const channels = {
 } as const;
 
 export interface DesktopBridge {
+  capabilityView(): Promise<CapabilityView>;
+  openChromeDownload(): Promise<void>;
+  speechInstallView(): Promise<SpeechInstallView>;
+  installSpeech(): Promise<SpeechInstallView>;
+  cancelSpeechInstall(): Promise<SpeechInstallView>;
   advisorSettings(): Promise<ModelReply<AdvisorSettings>>;
   saveAdvisorSettings(
     input: Pick<AdvisorSettings, "enabled">,

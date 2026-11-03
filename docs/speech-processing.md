@@ -48,6 +48,12 @@ The service divides normalized audio into consecutive chunks. The final chunk ke
 
 Each finished chunk commits atomically before progress notification. Cancellation terminates the current process and waits for its exit before removing temporary audio. `cancelled`, `partial`, and `unavailable` results retain every completed chunk in memory and on disk. A later call with the same media checksum, model, language, pipeline version, and chunk size reuses validated chunk checkpoints. A process failure retries within its fixed budget; each recognition attempt starts with a fresh output file. Invalid output, missing resources, and exhausted budgets return their own issue codes.
 
+## Application installation
+
+Settings → Speech to text invokes the Main-owned `SpeechInstaller`. It verifies the packaged runtime before downloading the pinned model through Main's shared environment and system-proxy policy. The renderer receives actual transferred bytes and the preparing, downloading, verifying, ready, cancelled, and failed states. Concurrent start requests share the active installation. Cancellation aborts the transfer and drains staging cleanup; retry starts a fresh verified transfer. Completed verified models survive cancellation and failed replacement attempts. Starting the application checks existing resources; installation begins after the user's action.
+
+The capability map reads the same resource state. YouTube and Bilibili readers call `VideoSpeechFallback` when their native-caption result is empty. YouTube downloads bounded audio with the packaged yt-dlp; Bilibili obtains its media address through the source-bound application session. Both retain metadata checkpoints, explicit application-ASR provenance, original-media timestamps, and partial results. Source access failures retain their source diagnosis.
+
 ## Runtime and model preparation
 
 ```sh
@@ -66,7 +72,7 @@ macOS preparation requires Xcode command-line tools, CMake, and Make. Windows pr
 
 Runtime preparation checks archive digests before extraction, records installed-file digests, and replaces the target directory after executable verification. `check()` validates target, versions, installed-file digests, and the model checksum independently. Runtime/model status remains separate from website access and background text-model checks.
 
-Model download is an explicit operation. Calling `transcribe` checks the saved resources. The model download streams a pinned resource into the selected profile and verifies its exact size and SHA-256 before replacing the saved model. A failed or cancelled download retains the previous model file. The model-preparation command requires an absolute profile path; the application can bind `downloadModel(signal)` to an approved setup control.
+Model download is an explicit operation. Calling `transcribe` checks the saved resources. The model download streams a pinned resource into the selected profile and verifies its exact size and SHA-256 before replacing the saved model. A failed or cancelled download retains the previous model file. The model-preparation command requires an absolute profile path; the application binds `downloadModel(signal)` to the installation control. Model transfer has a 30-minute timeout and accepts cancellation throughout the transfer.
 
 The default resource is the multilingual `small-q5_1` model, about 181 MiB on disk. Recognition keeps the original language. The model pin identifies the exact quantized bytes used by each result.
 

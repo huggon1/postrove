@@ -3,6 +3,10 @@ import { VideoTranscriptReaders } from "./services/video-transcript";
 import { XiaohongshuMediaReader } from "./services/xiaohongshu-media";
 import { XiaohongshuVideoReader } from "./services/xiaohongshu-video";
 import { SpeechService } from "./services/speech";
+import { SpeechInstaller } from "./services/speech/installer";
+import { VideoSpeechFallback } from "./services/video-speech";
+import { capabilityChannels } from "../shared/capability-contracts";
+import { chromeExecutable } from "./services/chrome-profiles";
 import {
   ReadingFailure,
   readingDiagnostic,
@@ -189,19 +193,26 @@ export async function initializeServices(
     () => models!.acquire(),
     join(app.getPath("userData"), "browser-traces"),
   );
+  const speech = new SpeechService({
+    runtimeRoot: runtimeLayout.runtimeRoot,
+    dataDir: app.getPath("userData"),
+  });
+  const speechFallback = new VideoSpeechFallback(
+    runtimeLayout.runtimeRoot,
+    speech,
+  );
   const transcripts = new YoutubeTranscriptReader(
     runtimeLayout.runtimeRoot,
     join(app.getPath("userData"), "capture-evidence"),
+    undefined,
+    speechFallback,
   );
   const results = new ResultPublisher(
     join(app.getPath("userData"), "results"),
     imageRoot,
     transcripts.evidenceRoot,
   );
-  const speech = new SpeechService({
-    runtimeRoot: runtimeLayout.runtimeRoot,
-    dataDir: app.getPath("userData"),
-  });
+  const speechInstaller = new SpeechInstaller(speech.runtime, changed);
   const browserAgent = new BrowserAgent(
     browser,
     join(__dirname, "../worker/jobs/browser/worker-entry.mjs"),
@@ -252,6 +263,8 @@ export async function initializeServices(
       bilibili: new BilibiliTranscriptReader(
         runtimeLayout.runtimeRoot,
         transcripts.evidenceRoot,
+        undefined,
+        speechFallback,
       ),
       xiaohongshu: new XiaohongshuVideoReader(transcripts.evidenceRoot, {
         media: new XiaohongshuMediaReader(runtimeLayout.runtimeRoot),
@@ -582,6 +595,35 @@ export async function initializeServices(
     join(__dirname, "../renderer/index.html"),
   ).href;
   stage("task_ipc");
+  for (const [key, channel] of Object.entries(capabilityChannels))
+    handle(channel, async (event, ...args: unknown[]) => {
+      if (
+        !event.senderFrame ||
+        event.senderFrame !== event.sender.mainFrame ||
+        event.senderFrame.url !== expected ||
+        args.length
+      )
+        throw new Error("Invalid capability request");
+      if (key === "speechView") return speechInstaller.view();
+      if (key === "install") return speechInstaller.start();
+      if (key === "cancel") return speechInstaller.cancel();
+      if (key === "chrome")
+        return shell.openExternal("https://www.google.com/chrome/");
+      const [youtube, bili, installation] = await Promise.all([
+        transcripts.available(),
+        new BilibiliTranscriptReader(
+          runtimeLayout.runtimeRoot,
+          transcripts.evidenceRoot,
+        ).available(),
+        speechInstaller.view(),
+      ]);
+      return {
+        model: !!models!.view().current,
+        chrome: !!chromeExecutable(),
+        readers: { youtube, bilibili: bili, xiaohongshu: xhsAuth!.installed() },
+        speech: installation.readiness,
+      };
+    });
   registerTaskIpc(
     {
       snapshots: () =>
@@ -1071,6 +1113,7 @@ export async function initializeServices(
     shutdown: async () => {
       executionGate.close();
       await Promise.all([
+        speechInstaller.shutdown(),
         forwarding?.shutdown(),
         search.shutdown(),
         telegram?.stop(),

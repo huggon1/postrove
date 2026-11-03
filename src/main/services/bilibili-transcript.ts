@@ -15,6 +15,8 @@ import {
   runTranscriptProcess,
   type TranscriptRun,
 } from "./youtube-transcript";
+import { readVideoCheckpoint } from "./video-checkpoint";
+import type { VideoSpeechFallback } from "./video-speech";
 import { fetchBilibiliJson, bilibiliJsonUrl } from "./video-session";
 import type {
   VideoTranscriptReader,
@@ -138,6 +140,7 @@ export class BilibiliTranscriptReader implements VideoTranscriptReader {
     private runtimeRoot: string,
     readonly evidenceRoot: string,
     private run: TranscriptRun = runTranscriptProcess,
+    private speech?: Pick<VideoSpeechFallback, "read" | "ready">,
   ) {}
   async available() {
     try {
@@ -204,25 +207,34 @@ export class BilibiliTranscriptReader implements VideoTranscriptReader {
     if (!signal.aborted) {
       try {
         const saved = JSON.parse(await readFile(stateFile, "utf8"));
-        if (saved.state === "completed")
-          return {
-            outcome: "content",
-            source: sourceSchema.parse(
-              JSON.parse(
-                await readFile(join(directory, "source.json"), "utf8"),
+        const resumeSpeech =
+          saved.state === "completed" &&
+          saved.diagnostic?.category === "readiness" &&
+          (await this.speech?.ready());
+        if (!resumeSpeech) {
+          if (saved.state === "completed")
+            return {
+              outcome: "content",
+              source: sourceSchema.parse(
+                JSON.parse(
+                  await readFile(join(directory, "source.json"), "utf8"),
+                ),
               ),
-            ),
-            references: JSON.parse(
-              await readFile(join(directory, "references.json"), "utf8"),
-            ),
+              references: JSON.parse(
+                await readFile(join(directory, "references.json"), "utf8"),
+              ),
+              ...(saved.diagnostic ? { diagnostic: saved.diagnostic } : {}),
+            };
+          const checkpoint = await readVideoCheckpoint(directory, video, key);
+          if (checkpoint) return checkpoint;
+          return {
+            outcome: "unavailable",
+            reason:
+              saved.state === "unavailable"
+                ? saved.reason
+                : "transcript_interrupted",
           };
-        return {
-          outcome: "unavailable",
-          reason:
-            saved.state === "unavailable"
-              ? saved.reason
-              : "transcript_interrupted",
-        };
+        }
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
       }
@@ -343,11 +355,13 @@ export class BilibiliTranscriptReader implements VideoTranscriptReader {
         extractorFailure = "transcript_extraction_failed";
       }
       if (!track) {
-        const player = apiData(
-          await getJson(
-            `https://api.bilibili.com/x/player/wbi/v2?bvid=${view.bvid}&cid=${cid}`,
-          ),
-        );
+        const rawPlayer = (await getJson(
+          `https://api.bilibili.com/x/player/wbi/v2?bvid=${view.bvid}&cid=${cid}`,
+        )) as { code?: number };
+        const player =
+          rawPlayer?.code === -101 && this.speech
+            ? { need_login_subtitle: true }
+            : apiData(rawPlayer);
         if (player.cid !== undefined && numericId(player.cid) !== cid)
           throw new Error("transcript_identity_changed");
         const subtitles: any[] = Array.isArray(player.subtitle?.subtitles)
@@ -369,6 +383,27 @@ export class BilibiliTranscriptReader implements VideoTranscriptReader {
           subtitleLanguages: listed.map((sub) => sub.lan),
           ...(extractorFailure ? { extractorFailure } : {}),
         });
+        if (!selected && this.speech) {
+          const result = await this.speech.read({
+            video,
+            metadata: {
+              title: String(metadata.title),
+              uploader: String(metadata.uploader),
+              description: String(metadata.description),
+              duration,
+            },
+            directory,
+            artifactKey: key,
+            signal,
+            session,
+          });
+          await save(
+            "references.json",
+            result.outcome === "content" ? result.references : [],
+          );
+          await state({ state: "completed", diagnostic: result.diagnostic });
+          return result;
+        }
         if (!selected)
           throw new Error(
             player.need_login_subtitle === true

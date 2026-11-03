@@ -19,6 +19,7 @@ export async function storeBytes(
   signal: AbortSignal,
   maxBytes: number,
   expected?: { sha256: string; bytes: number; file: string },
+  progress?: (bytes: number) => void,
 ): Promise<StoredMedia> {
   await mkdir(directory, { recursive: true, mode: 0o700 });
   const staging = join(directory, `.download-${randomUUID()}`);
@@ -31,6 +32,7 @@ export async function storeBytes(
       bytes += chunk.byteLength;
       if (bytes > maxBytes) throw new SpeechError("media_budget");
       hash.update(chunk);
+      progress?.(bytes);
       // FileHandle.write can make a partial write.
       let offset = 0;
       while (offset < chunk.byteLength) {
@@ -50,6 +52,7 @@ export async function storeBytes(
     if (!bytes) throw new SpeechError("media_unavailable");
     await file.sync();
     await file.close();
+    if (signal.aborted) throw new SpeechError("cancelled");
     const path = join(directory, expected?.file ?? sha256);
     await rename(staging, path);
     return { path, sha256, bytes };

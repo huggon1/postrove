@@ -113,8 +113,9 @@ export class SpeechRuntime {
   async downloadModel(
     signal: AbortSignal,
     fetcher: SpeechFetch = globalThis.fetch,
+    progress?: (bytes: number) => void,
   ): Promise<void> {
-    const timeout = AbortSignal.timeout(600_000);
+    const timeout = AbortSignal.timeout(1_800_000);
     const combined = AbortSignal.any([signal, timeout]);
     try {
       const response = await fetcher(pins.model.url, { signal: combined });
@@ -126,6 +127,7 @@ export class SpeechRuntime {
         combined,
         pins.model.bytes,
         pins.model,
+        progress,
       );
     } catch (error) {
       if (signal.aborted) throw new SpeechError("cancelled");

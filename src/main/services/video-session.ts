@@ -6,7 +6,9 @@ export function bilibiliJsonUrl(raw: string) {
   const url = new URL(raw);
   const api =
     url.hostname === "api.bilibili.com" &&
-    ["/x/web-interface/view", "/x/player/wbi/v2"].includes(url.pathname);
+    ["/x/web-interface/view", "/x/player/wbi/v2", "/x/player/playurl"].includes(
+      url.pathname,
+    );
   const subtitle =
     (url.hostname === "hdslb.com" || url.hostname.endsWith(".hdslb.com")) &&
     url.pathname.startsWith("/bfs/subtitle/");
