@@ -766,16 +766,14 @@ for (const av of [false, true])
         contentType: "application/json",
       });
     } finally {
-      // The fixture has drained its workers and Chrome before returning the result.
-      const child = app.process();
-      if (child.exitCode === null && child.signalCode === null) {
-        const exited = new Promise<void>((resolve) =>
-          child.once("exit", () => resolve()),
-        );
-        child.kill("SIGTERM");
-        await exited;
-      }
+      // Graceful shutdown releases Electron's own profile handles on Windows.
+      await app.close();
       await new Promise<void>((resolve) => server.close(() => resolve()));
-      await rm(root, { recursive: true, force: true });
+      await rm(root, {
+        recursive: true,
+        force: true,
+        maxRetries: 5,
+        retryDelay: 300,
+      });
     }
   });
