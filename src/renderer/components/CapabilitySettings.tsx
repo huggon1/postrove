@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ArrowRight, Check } from "@phosphor-icons/react";
 import { bridge } from "../bridge";
 import { t } from "../i18n";
 import type { CapabilityView } from "../../shared/capability-contracts";
@@ -10,7 +11,6 @@ import { SectionHeading } from "../workspace/forms";
 import {
   capabilityPlatforms,
   capabilityGroups,
-  capabilityRanges,
   type CapabilityPlatform,
   type CapabilityRequirement,
 } from "../workspace/capability-groups";
@@ -28,6 +28,7 @@ export function CapabilitySettings({
   const [platformStatus] = usePlatformStatus();
   const [bilibili, setBilibili] = useState<boolean>();
   const [selected, setSelected] = useState<CapabilityPlatform>();
+  const [groupName, setGroupName] = useState<string>();
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
   useEffect(() => {
@@ -90,6 +91,7 @@ export function CapabilitySettings({
       }
       return;
     }
+    setGroupName(undefined);
     setSelected(undefined);
     if (requirement.id === "model") onSection("models");
     else if (requirement.id === "speech") onSection("speech");
@@ -105,6 +107,13 @@ export function CapabilitySettings({
           workspace.members?.enabled || [],
         )
       : [];
+  const selectedGroup = selectedGroups.find(
+    (group) => group.name === groupName,
+  );
+  function closePlatform() {
+    setGroupName(undefined);
+    setSelected(undefined);
+  }
   function requirements(items: CapabilityRequirement[]) {
     return (
       <div className="capability-requirements">
@@ -112,7 +121,7 @@ export function CapabilitySettings({
           <div className="capability-requirement" key={requirement.id}>
             <span>{t(requirement.label)}</span>
             {requirement.ready ? (
-              <span className="is-ready">{t("已配置")}</span>
+              <Check className="is-ready" aria-label={t("已配置")} />
             ) : (
               <button
                 className="text-button"
@@ -207,67 +216,57 @@ export function CapabilitySettings({
         <Modal
           label={t(selected.name)}
           className="connection-modal capability-modal"
-          onClose={() => setSelected(undefined)}
+          onClose={closePlatform}
         >
-          <ModalHeader
-            title={t(selected.name)}
-            onClose={() => setSelected(undefined)}
-          />
+          <ModalHeader title={t(selected.name)} onClose={closePlatform} />
           <div className="capability-detail">
-            <section className="capability-group">
-              <div className="capability-group-head">
-                <h3>{t("基础配置")}</h3>
-              </div>
-              {requirements(
-                selectedGroups[0]?.requirements.filter(
-                  (item) => item.id === "model" || item.id === "chrome",
-                ) || [],
-              )}
-            </section>
             {selectedGroups.map((group) => (
               <section className="capability-group" key={group.name}>
                 <div className="capability-group-head">
                   <h3>{t(group.name)}</h3>
-                  <span className={group.ready ? "is-ready" : ""}>
+                  <button
+                    className={`capability-setup-status ${group.ready ? "is-ready" : ""}`}
+                    aria-label={`${t(group.name)} · ${t(group.ready ? "已配置" : "待配置")}`}
+                    aria-haspopup="dialog"
+                    onClick={() => setGroupName(group.name)}
+                  >
                     {t(group.ready ? "已配置" : "待配置")}
-                  </span>
+                    <ArrowRight aria-hidden="true" />
+                  </button>
                 </div>
-                {requirements(
-                  group.requirements.filter(
-                    (item) => item.id !== "model" && item.id !== "chrome",
-                  ),
-                )}
               </section>
             ))}
-            {selected.id === "bilibili" && (
-              <details className="capability-disclosure">
-                <summary>{t("可选配置")}</summary>
-                <div className="capability-requirement">
-                  <span>{t("平台账号")}</span>
-                  {bilibili ? (
-                    <span className="is-ready">{t("已连接")}</span>
-                  ) : (
-                    <button
-                      className="text-button"
-                      disabled={pending}
-                      onClick={() =>
-                        void configure({
-                          id: "account",
-                          label: "平台账号",
-                          ready: false,
-                        })
-                      }
-                    >
-                      {t("连接账号")}
-                    </button>
-                  )}
-                </div>
-              </details>
-            )}
-            <details className="capability-disclosure">
-              <summary>{t("范围")}</summary>
-              <p>{t(capabilityRanges[selected.id])}</p>
-            </details>
+          </div>
+        </Modal>
+      )}
+      {selected && selectedGroup && (
+        <Modal
+          label={t(selectedGroup.name)}
+          className="connection-modal capability-modal capability-setup-modal"
+          onClose={() => setGroupName(undefined)}
+        >
+          <ModalHeader
+            title={t(selectedGroup.name)}
+            onClose={() => setGroupName(undefined)}
+          />
+          <div className="capability-detail">
+            {[false, true].map((ready) => {
+              const items = selectedGroup.requirements.filter(
+                (item) => item.ready === ready,
+              );
+              return items.length ? (
+                <section
+                  className="capability-group"
+                  key={String(ready)}
+                  data-configuration={ready ? "ready" : "missing"}
+                >
+                  <div className="capability-group-head">
+                    <h3>{t(ready ? "已配置" : "待配置")}</h3>
+                  </div>
+                  {requirements(items)}
+                </section>
+              ) : null;
+            })}
             {error && (
               <p className="inline-error" role="alert">
                 {error}

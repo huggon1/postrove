@@ -77,3 +77,25 @@ test("signed-in accounts and installed speech retain the common background-model
     );
   }
 });
+
+test("Bilibili account access gates its account capabilities while public reading stays configured", () => {
+  const guest = capabilityGroups(platform("bilibili"), configured, false, []);
+  const connected = capabilityGroups(
+    platform("bilibili"),
+    configured,
+    true,
+    [],
+  );
+  for (const name of ["原始字幕", "视频转录"]) {
+    assert.equal(guest.find((group) => group.name === name)!.ready, true);
+  }
+  for (const name of ["账号可见字幕", "账号可见视频转录"]) {
+    const group = guest.find((item) => item.name === name)!;
+    assert.equal(group.ready, false);
+    assert.deepEqual(
+      group.requirements.filter((item) => !item.ready).map((item) => item.id),
+      ["account"],
+    );
+    assert.equal(connected.find((item) => item.name === name)!.ready, true);
+  }
+});
