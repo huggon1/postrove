@@ -66,6 +66,23 @@ for (const language of ["zh-CN", "en"] as const) {
         diagnostic,
       };
     });
+    const outputLimit = readingDiagnostic(
+      "model_failed",
+      "translation",
+      { failureCode: "model_output_limit" },
+      true,
+    );
+    references.push({
+      id: "output-limit",
+      role: "reference",
+      url: "https://example.org/output-limit",
+      title: "model_failed",
+      state: "partial",
+      summary: "",
+      chunks: [],
+      diagnostic: outputLimit,
+      issue: readingDiagnosticMessage(outputLimit, language),
+    });
     await writeFile(
       join(profile, "preferences.json"),
       JSON.stringify({ language }),
@@ -125,6 +142,15 @@ for (const language of ["zh-CN", "en"] as const) {
         );
         await expect(reader.locator(".empty-state")).toHaveCount(0);
       }
+      await selector.selectOption("output-limit");
+      await expect(reader.locator(".inline-error")).toContainText(
+        language === "en"
+          ? "Model output reached its limit"
+          : "输出达到模型上限",
+      );
+      await page.screenshot({
+        path: info.outputPath(`output-limit-${language}.png`),
+      });
       await selector.selectOption(
         references.find((item) => item.diagnostic.code === "http_error")!.id,
       );
@@ -137,7 +163,8 @@ for (const language of ["zh-CN", "en"] as const) {
             message: item.issue,
             source: "Required operation",
             placement: "Existing reading material issue region",
-            trigger: item.diagnostic.code,
+            trigger:
+              item.diagnostic.evidence?.failureCode ?? item.diagnostic.code,
           })),
           null,
           2,

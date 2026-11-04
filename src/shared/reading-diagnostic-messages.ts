@@ -49,6 +49,13 @@ export function readingDiagnosticMessage(
     processing_failed: ["材料处理未完成", "Material processing is incomplete"],
     unknown: ["来源读取未完成", "Source reading is incomplete"],
   };
+  if (
+    diagnostic.code === "model_failed" &&
+    diagnostic.evidence?.failureCode === "model_output_limit"
+  )
+    return language === "en"
+      ? "Model output reached its limit"
+      : "输出达到模型上限";
   if (diagnostic.evidence?.platformCode === "300031")
     return language === "en"
       ? "Xiaohongshu source is currently unavailable (300031: 当前笔记暂时无法浏览)."
