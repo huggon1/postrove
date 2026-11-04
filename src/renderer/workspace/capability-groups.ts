@@ -100,6 +100,8 @@ export function capabilityGroups(
                     group("视频信息"),
                     group("原始字幕", [reader]),
                     group("视频转录", [reader, speech]),
+                    group("账号可见字幕", [reader, account]),
+                    group("账号可见视频转录", [reader, speech, account]),
                   ]
                 : [group("网页正文与图片")];
   if ("connection" in platform) {
@@ -127,13 +129,3 @@ export function capabilityGroups(
   }
   return groups;
 }
-
-export const capabilityRanges: Record<CapabilityPlatform["id"], string> = {
-  x: "公开帖子与串文的可见范围由来源页面决定。",
-  xiaohongshu: "视频转录读取音频中的口述内容；画面内容另行查看。",
-  youtube: "缺少字幕时转录可访问的音频；画面内容另行查看。",
-  reddit: "读取目标帖子或评论及必要上下文。账号访问范围由社区决定。",
-  github: "读取公开仓库的默认 README。",
-  bilibili: "字幕与音频权限分别确认；转录保留分 P 和时间点。",
-  web: "读取可访问的页面和一层直接引用。",
-};

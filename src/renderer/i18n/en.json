@@ -569,16 +569,7 @@
   "安装 Chrome": "Install Chrome",
   "安装": "Install",
   "连接账号": "Connect account",
-  "可选配置": "Optional setup",
-  "范围": "Scope",
   "其他网页": "Other websites",
-  "公开帖子与串文的可见范围由来源页面决定。": "The source page determines which posts and thread entries are visible.",
-  "视频转录读取音频中的口述内容；画面内容另行查看。": "Transcription reads spoken audio. View the video for visual content.",
-  "缺少字幕时转录可访问的音频；画面内容另行查看。": "When captions are missing, transcription uses accessible audio. View the video for visual content.",
-  "读取目标帖子或评论及必要上下文。账号访问范围由社区决定。": "Reads the target post or comment with required context. Communities determine account access.",
-  "读取公开仓库的默认 README。": "Reads the default README of a public repository.",
-  "字幕与音频权限分别确认；转录保留分 P 和时间点。": "Caption and audio access are checked separately. Transcription preserves the selected part and timestamps.",
-  "读取可访问的页面和一层直接引用。": "Reads accessible pages and one level of direct references.",
   "本地转写": "Local transcription",
   "转写组件": "Transcription component",
   "模型 · 190 MB": "Model · 190 MB",
@@ -604,5 +595,6 @@
   "模型校验失败": "Model verification failed",
   "模型下载超时": "Model download timed out",
   "模型保存失败，请检查磁盘空间": "Model could not be saved. Check disk space.",
-  "基础配置": "Base setup"
+  "账号可见字幕": "Account-accessible captions",
+  "账号可见视频转录": "Account-accessible video transcription"
 }
