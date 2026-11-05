@@ -4,7 +4,6 @@ import {
   chmod,
   copyFile,
   mkdir,
-  open,
   readFile,
   readdir,
   rename,
@@ -13,6 +12,7 @@ import {
 } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { execFileSync } from "node:child_process";
+import { downloadSpeechArtifact } from "./download-speech-artifact.mjs";
 
 const pins = JSON.parse(
   await readFile(
@@ -46,29 +46,8 @@ async function download(pin, name) {
       if (error.code !== "ENOENT") throw error;
     }
   }
-  if (!copied) {
-    const response = await fetch(pin.url, {
-      signal: AbortSignal.timeout(600_000),
-    });
-    if (!response.ok || !response.body)
-      throw new Error(`Speech artifact download failed: ${response.status}`);
-    const file = await open(path, "wx", 0o600);
-    let total = 0;
-    try {
-      for await (const bytes of response.body) {
-        total += bytes.byteLength;
-        if (total > 256 * 1024 * 1024)
-          throw new Error("Speech artifact exceeds build budget");
-        let offset = 0;
-        while (offset < bytes.byteLength)
-          offset += (await file.write(bytes, offset, bytes.byteLength - offset))
-            .bytesWritten;
-      }
-    } finally {
-      await file.close();
-    }
-  }
-  if ((await digest(path)) !== pin.sha256)
+  if (!copied) await downloadSpeechArtifact(pin, path);
+  else if ((await digest(path)) !== pin.sha256)
     throw new Error("Speech artifact checksum mismatch");
   return path;
 }
@@ -277,6 +256,9 @@ try {
     [
       `whisper.cpp ${pins.whisper}: ${pins.source.url}`,
       `FFmpeg ${pins.ffmpeg}: ${pins.ffmpegSource.url}`,
+      ...(pins.ffmpegSource.mirrors ?? []).map(
+        (url) => `FFmpeg verified source mirror: ${url}`,
+      ),
       target === "win32-x64"
         ? `Windows FFmpeg distribution: ${pins.windowsFfmpeg.url}`
         : "macOS: minimal static FFmpeg audio build",
