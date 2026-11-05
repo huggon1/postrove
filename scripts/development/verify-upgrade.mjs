@@ -369,16 +369,19 @@ require("./main.cjs");\n`,
       name: "检查更新",
       exact: true,
     });
+    const download = updates.getByRole("button", {
+      name: "下载更新",
+      exact: true,
+    });
     if ((await check.isVisible()) && (await check.isEnabled()))
-      await check.click();
-    await page
-      .getByRole("button", { name: "下载更新", exact: true })
-      .waitFor({ timeout: 30000 });
+      await check.click({ timeout: 5000 }).catch(async (error) => {
+        // Startup discovery can replace this button before the click completes.
+        if (!(await download.isVisible())) throw error;
+      });
+    await download.waitFor({ timeout: 30000 });
     await page.screenshot({ path: join(evidence, "available.png") });
     await checkpoint("download candidate");
-    await updates
-      .getByRole("button", { name: "下载更新", exact: true })
-      .click();
+    await download.click();
     await updates
       .getByRole("button", { name: "安装并重启", exact: true })
       .waitFor({ timeout: 90000 });
