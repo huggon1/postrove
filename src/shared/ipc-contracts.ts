@@ -1,4 +1,5 @@
 import type { PlatformConnectionId } from "./advisor-contracts";
+import type { CapabilityView, SpeechInstallView } from "./capability-contracts";
 import type {
   BotChannel,
   BotCredentialsByChannel,
@@ -92,6 +93,12 @@ export const platformConnectionChannels = {
   login: "platform-connection:login",
   logout: "platform-connection:logout",
 } as const;
+export type ReadingSiteId = "bilibili";
+export const readingSiteChannels = {
+  status: "reading-site:status",
+  login: "reading-site:login",
+  logout: "reading-site:logout",
+} as const;
 export const xChannels = {
   status: "x:status",
   login: "x:login",
@@ -109,6 +116,11 @@ export const channels = {
 } as const;
 
 export interface DesktopBridge {
+  capabilityView(): Promise<CapabilityView>;
+  openChromeDownload(): Promise<void>;
+  speechInstallView(): Promise<SpeechInstallView>;
+  installSpeech(): Promise<SpeechInstallView>;
+  cancelSpeechInstall(): Promise<SpeechInstallView>;
   advisorSettings(): Promise<ModelReply<AdvisorSettings>>;
   saveAdvisorSettings(
     input: Pick<AdvisorSettings, "enabled">,
@@ -214,6 +226,11 @@ export interface DesktopBridge {
   ): Promise<ModelReply<{ signedIn: boolean; installed: boolean }>>;
   loginPlatform(id: PlatformConnectionId): Promise<ModelReply<void>>;
   logoutPlatform(id: PlatformConnectionId): Promise<ModelReply<void>>;
+  readingSiteStatus(
+    id: ReadingSiteId,
+  ): Promise<ModelReply<{ signedIn: boolean; installed: boolean }>>;
+  loginReadingSite(id: ReadingSiteId): Promise<ModelReply<void>>;
+  logoutReadingSite(id: ReadingSiteId): Promise<ModelReply<void>>;
   xStatus(): Promise<ModelReply<{ signedIn: boolean }>>;
   loginX(): Promise<ModelReply<void>>;
   logoutX(): Promise<ModelReply<void>>;

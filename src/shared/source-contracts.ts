@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { transcriptEvidenceSchema } from "./transcript-contracts";
+import { videoIdentity, videoMatchesUrl } from "./video-contracts";
 import { youtubeVideo, redditPost } from "./source-profiles";
 export const repositoryUrlSchema = z
   .string()
@@ -137,7 +138,7 @@ export const xhsShortUrlSchema = z
       !url.port &&
       !url.username &&
       !url.password &&
-      /^\/[A-Za-z0-9_-]{1,120}\/?$/.test(url.pathname)
+      /^\/(?:[ao]\/)?[A-Za-z0-9_-]{1,120}\/?$/.test(url.pathname)
     );
   }, "请输入小红书短链接");
 export const webUrlSchema = z
@@ -155,6 +156,7 @@ export const platformSchema = z.enum([
   "x",
   "xiaohongshu",
   "youtube",
+  "bilibili",
   "reddit",
   "web",
 ]);
@@ -181,6 +183,7 @@ export const blockSchema = z.discriminatedUnion("type", [
 export const sourceSchema = z
   .object({
     sourceUrl: sourceUrlSchema,
+    resolvedSourceUrl: sourceUrlSchema.optional(),
     markdown: z.string().optional(),
     platform: platformSchema,
     title: z.string().max(500).optional(),
@@ -209,12 +212,32 @@ export const sourceSchema = z
   })
   .strict()
   .superRefine((source, ctx) => {
+    const evidenceUrl = source.resolvedSourceUrl ?? source.sourceUrl;
+    const video = videoIdentity(evidenceUrl);
+    if (
+      source.resolvedSourceUrl &&
+      !(
+        source.platform === "xiaohongshu" &&
+        xhsShortUrlSchema.safeParse(source.sourceUrl).success &&
+        video?.platform === "xiaohongshu"
+      )
+    )
+      ctx.addIssue({
+        code: "custom",
+        message:
+          "Resolved source requires a Xiaohongshu share link and original note",
+      });
     const canonical =
       source.platform === "youtube"
         ? youtubeVideo(source.sourceUrl)
         : source.platform === "reddit"
           ? redditPost(source.sourceUrl)
-          : undefined;
+          : source.platform === "bilibili" ||
+              (source.platform === "xiaohongshu" &&
+                source.evidence &&
+                "video" in source.evidence)
+            ? video && { key: video.sourceKey }
+            : undefined;
     if (source.sourceKey && (!canonical || source.sourceKey !== canonical.key))
       ctx.addIssue({
         code: "custom",
@@ -222,8 +245,11 @@ export const sourceSchema = z
       });
     if (
       source.evidence &&
-      (source.platform !== "youtube" ||
-        source.evidence.videoId !== youtubeVideo(source.sourceUrl)?.id)
+      ("video" in source.evidence
+        ? source.evidence.video.platform !== source.platform ||
+          !videoMatchesUrl(source.evidence.video, evidenceUrl)
+        : source.platform !== "youtube" ||
+          source.evidence.videoId !== youtubeVideo(source.sourceUrl)?.id)
     )
       ctx.addIssue({
         code: "custom",

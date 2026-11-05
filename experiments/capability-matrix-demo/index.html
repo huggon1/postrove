@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light"><title>Postrove · 功能与配置评审</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar"><a class="brand" href="#matrix" aria-label="Postrove 功能与配置"><img class="brand-logo" src="postrove-mark.svg" alt="">postrove<span class="brand-dot">.</span></a><nav aria-label="主导航"><span>话题</span><span>阅读</span><span>定时发送</span></nav><span class="top-settings">⚙ 设置</span></header>
+  <main class="workspace">
+    <div class="page-heading"><h1>设置</h1><span class="proposal-badge">假数据</span></div>
+    <div class="settings-layout">
+      <nav class="settings-nav" aria-label="设置分类">
+        <button class="selected" data-page="matrix" aria-current="page"><span>▦</span>功能与配置</button>
+        <button data-page="configuration"><span>⌘</span>配置</button>
+        <button data-page="speech"><span>↓</span>语音转文字</button>
+        <button data-page="readme"><span>▤</span>README 预览</button>
+        <div class="nav-separator"></div><span class="nav-static">偏好设置</span><span class="nav-static">关于</span>
+      </nav>
+      <section class="settings-content">
+        <div class="review-controls"><label>配置预设<select id="preset"><option value="first">首次使用</option><option value="basic">基础已配置</option><option value="some">部分平台登录</option><option value="full">配置齐备</option><option value="expired">会话过期</option><option value="missing">组件缺失</option></select></label><button id="apply-preset" class="secondary">载入预设</button><label id="speech-scenario-control" hidden>安装场景<select id="speech-scenario"><option value="success">正常安装</option><option value="network">下载中断</option><option value="checksum">校验失败</option></select></label><button id="reset" class="text-button">重置</button></div>
+        <div id="view"></div>
+      </section>
+    </div>
+  </main>
+  <dialog id="capability-dialog" class="drawer" aria-labelledby="drawer-title"><div id="drawer-content"></div></dialog>
+  <dialog id="setup-dialog" class="setup-dialog" aria-labelledby="setup-title"><div id="setup-content"></div></dialog>
+  <div id="toast" role="status" class="toast" hidden></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

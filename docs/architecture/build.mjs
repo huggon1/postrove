@@ -56,7 +56,7 @@ const nodes = [
       "Dispatch / persist / recover",
     ],
     detail:
-      "Main freezes expert, connection, language, and execution model. Each topic saves one question preparation per target language, including its terminal failure. Experts reuse that question, append their source profile's localized sentence, and save the exact submitted text and revisions. Answer persistence precedes same-session citation extraction. One prepare_reading operation produces each reply's reading version. Each expert retains independent cancellation and receipt state; shared preparation follows its remaining consumers.",
+      "Main freezes expert, connection, language, and execution model. Each topic saves one question preparation per target language, including its terminal failure. Experts reuse that question, append their source profile's localized sentence, and save the exact submitted text and revisions. Answer persistence precedes same-session citation extraction. AI connections search concurrently within a topic; language experts on the same connection take turns through citation extraction. One independent prepare_reading operation produces each reply's reading version. Each expert retains independent cancellation and receipt state; shared preparation follows its remaining consumers.",
   },
   {
     id: "reading",
@@ -191,12 +191,12 @@ const nodes = [
     label: "SHARED BROWSER",
     lines: [
       "Shared site sessions",
-      "Serial browser access",
+      "Parallel AI search",
       "Observed captures",
       "Login / access states",
     ],
     detail:
-      "PlatformBrowser owns shared Chrome and the serial access lock. BrowserAgent resolves observed refs and task-local capture IDs. PlatformAccess validates canonical source identity and caches images. A submitted checkpoint resumes observation of the original conversation. Browser/worker failures remain distinct from platform requirements.",
+      "PlatformBrowser owns shared Chrome and a search lane for each AI connection. Collection, login, logout, and mode changes acquire exclusive access. Active pages retain their browser mode until cleanup finishes. BrowserAgent resolves observed refs and task-local capture IDs. PlatformAccess validates canonical source identity and caches images. A submitted checkpoint resumes observation of the original conversation. Browser/worker failures remain distinct from platform requirements.",
   },
   {
     id: "sources",

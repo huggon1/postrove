@@ -1896,3 +1896,252 @@
   display: grid;
   gap: 18px;
 }
+
+.capability-table-wrap {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  overflow: hidden;
+  background: #fff;
+}
+.capability-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.capability-table th {
+  text-align: left;
+}
+.capability-table thead th {
+  font-size: 11px;
+  font-weight: 500;
+  color: #8b98ac;
+  padding: 17px 23px;
+  background: #fafbfe;
+}
+.capability-table th:first-child {
+  width: 29%;
+}
+.capability-table tbody tr {
+  cursor: pointer;
+  border-top: 1px solid #edf0f5;
+}
+.capability-table tbody tr:hover {
+  background: #f8faff;
+}
+.capability-table td {
+  padding: 19px 23px;
+}
+.capability-platform {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 21px 23px;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 550;
+}
+.capability-mark {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: #edf1f7;
+  color: #62748e;
+  flex: none;
+  font-size: 15px;
+}
+.capability-mark.xiaohongshu {
+  background: #fff0f2;
+  color: #df4a62;
+}
+.capability-mark.youtube {
+  background: #fff1f1;
+  color: #e65353;
+  font-size: 12px;
+}
+.capability-mark.reddit {
+  background: #fff3ec;
+  color: #dc7645;
+}
+.capability-mark.bilibili {
+  background: #edf8fc;
+  color: #58a4c5;
+}
+.capability-points {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  font-size: 12px;
+  color: #577c73;
+  line-height: 1.8;
+}
+.capability-empty {
+  color: #96a2b5;
+}
+.capability-modal {
+  width: 620px;
+}
+.capability-detail {
+  padding: 5px 29px 25px;
+  overflow: auto;
+}
+.capability-group {
+  padding: 23px 0;
+  border-bottom: 1px solid #edf0f5;
+}
+.capability-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 0;
+}
+.capability-setup-modal .capability-group-head {
+  margin-bottom: 15px;
+}
+.capability-group-head h3 {
+  font-size: 14px;
+  font-weight: 550;
+  line-height: 1.7;
+}
+.capability-setup-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--accent);
+  font-size: 12px;
+  flex: none;
+  padding: 6px 0 6px 10px;
+}
+.capability-setup-status svg {
+  width: 14px;
+  height: 14px;
+}
+.capability-requirements {
+  display: grid;
+  gap: 10px;
+}
+.capability-requirement {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  color: #8391a5;
+  font-size: 12px;
+  min-height: 25px;
+}
+.capability-requirement > .text-button {
+  color: var(--accent);
+  font-size: 12px;
+  padding: 3px 0;
+}
+.capability-detail .is-ready,
+.speech-install-card .is-ready {
+  color: #4d8b75;
+}
+.capability-requirement > svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+.speech-install-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 25px;
+  max-width: 640px;
+}
+.speech-install-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  font-size: 14px;
+}
+.speech-install-head strong {
+  font-weight: 550;
+}
+.speech-install-head > span {
+  font-size: 11px;
+  color: #8391a5;
+}
+.speech-install-resources {
+  margin: 23px 0 0;
+}
+.speech-install-resources > div {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 20px 0;
+  border-top: 1px solid #edf0f5;
+}
+.speech-install-resources dt {
+  font-size: 13px;
+  flex: 1;
+  color: #62748e;
+}
+.speech-install-resources dt small {
+  display: block;
+  font-size: 11px;
+  color: #94a0b2;
+  margin-top: 7px;
+}
+.speech-install-resources dd {
+  font-size: 11px;
+  color: #8391a5;
+  margin: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+.speech-install-progress {
+  margin: 12px 0;
+}
+.speech-install-progress progress {
+  display: block;
+  width: 100%;
+  height: 7px;
+  accent-color: var(--accent);
+}
+.speech-install-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 23px;
+}
+.speech-install-actions button {
+  font-size: 12px;
+}
+@media (max-width: 600px) {
+  .capability-table th:first-child {
+    width: 38%;
+  }
+  .capability-table thead th,
+  .capability-table td {
+    padding: 15px 13px;
+  }
+  .capability-platform {
+    gap: 9px;
+    padding: 19px 13px;
+    font-size: 12px;
+  }
+  .capability-mark {
+    width: 27px;
+    height: 27px;
+    border-radius: 9px;
+    font-size: 13px;
+  }
+  .capability-points {
+    font-size: 11px;
+    gap: 5px 10px;
+  }
+  .capability-detail {
+    padding: 2px 23px 25px;
+  }
+  .speech-install-card {
+    padding: 20px;
+  }
+  .speech-install-resources > div {
+    gap: 12px;
+  }
+}

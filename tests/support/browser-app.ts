@@ -347,6 +347,7 @@ app.whenReady().then(async () => {
     );
     return "unexpected_success";
   } catch (error) {
+    (globalThis as any).lastReadingDiagnostic = (error as any)?.diagnostic;
     return error instanceof Error ? error.message : String(error);
   } finally {
     await fixtureBrowser.shutdown();
@@ -368,7 +369,8 @@ app.whenReady().then(async () => {
     | "incomplete"
     | "sidebar"
     | "cancel"
-    | "worker-exit";
+    | "worker-exit"
+    | "page-close";
 }) => {
   const root = app.getPath("userData");
   const fixtureBrowser = new PlatformBrowser(
@@ -420,7 +422,7 @@ app.whenReady().then(async () => {
       join(root, "traces"),
     );
     const access = new PlatformAccess(agent);
-    if (["cancel", "worker-exit"].includes(input.mode)) {
+    if (["cancel", "worker-exit", "page-close"].includes(input.mode)) {
       const store = new FocusSearchStore(
         join(root, `search-${input.mode}.json`),
       );
@@ -452,7 +454,12 @@ app.whenReady().then(async () => {
                   await searchService!.cancel(
                     searchService!.reports()[0].taskId,
                   );
-                else worker!.kill();
+                else if (input.mode === "page-close") {
+                  const page = context
+                    .pages()
+                    .find((page) => !initialPages.has(page));
+                  await page?.close();
+                } else worker!.kill();
               },
             ),
           release: async () => {},
@@ -771,4 +778,50 @@ app.whenReady().then(async () => {
     await forwarding?.shutdown();
     await browser.shutdown();
   }
+};
+
+(globalThis as any).runDiagnosticCollectionFixture = async () => {
+  const { readingDiagnostic } =
+    await import("../../src/shared/reading-diagnostics");
+  const url = "https://www.youtube.com/watch?v=abcdefghijk";
+  const diagnostic = readingDiagnostic("captions_missing", "captions");
+  const capture = {
+    text: "Saved page description",
+    markdown: "Saved page description",
+    url,
+    pageUrl: url,
+    links: [],
+    images: [],
+  };
+  const agent = {
+    run: async () => ({
+      output: {
+        materials: [
+          {
+            role: "main",
+            url,
+            title: "Fictional video",
+            sourceCaptureIds: ["description"],
+            completeness: "partial",
+          },
+        ],
+      },
+      navigations: new Map(),
+      captureData: new Map([["description", capture]]),
+      sourceDiagnostics: new Map([[url, diagnostic]]),
+    }),
+  } as unknown as BrowserAgent;
+  return new PlatformAccess(agent).collect(
+    "fixture",
+    url,
+    {
+      method: "generic_api",
+      modelId: "fixture",
+      baseUrl: "http://127.0.0.1:9/v1",
+      api: "openai-completions",
+      credential: "fictional",
+    },
+    new AbortController().signal,
+    false,
+  );
 };

@@ -28,8 +28,8 @@ Start a topic and choose its members. Each member answers independently with its
 | ---------------- | ---------------------- | --------------------------------- | ---------------- | ------------ |
 | X                | Grok                   | X                                 | Chinese, English | Integrated   |
 | Xiaohongshu      | 点点                   | Xiaohongshu                       | Chinese          | Integrated   |
-| YouTube          | Gemini                 | Gemini Apps with a Google account | Chinese, English | Experimental |
-| Reddit           | Reddit AI search (Ask) | Optional: Reddit                  | English          | Experimental |
+| YouTube          | Gemini                 | Gemini Apps with a Google account | Chinese, English | Integrated   |
+| Reddit           | Reddit AI search (Ask) | Optional: Reddit                  | English          | Integrated   |
 
 One platform sign-in can enable several language experts. Grok in Chinese and English share the same X connection; Gemini's YouTube experts share one Google sign-in.
 
@@ -53,18 +53,19 @@ For example, ask “I want to make a pixel game with AI. Where do I start?” Co
 
 Reading rules define the content to capture. The Agent loads the relevant Skill for the observed page. Other pages use the general web rule, with the Agent identifying the main content and how to read it.
 
-| Page                          | Sign-in required    | Reading scope                                                                           | Skill / retrieval tool                                                                                                                 | Status     |
-| ----------------------------- | ------------------- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| X post                        | Yes, X              | Post text, ordered images, quoted posts, and author-supplied material links             | [x-reading](src/platforms/browser/skills/x-reading/SKILL.md)                                                                           | Integrated |
-| Xiaohongshu note              | Yes, Xiaohongshu    | Note title, text, and ordered image carousel                                            | [xiaohongshu-reading](src/platforms/browser/skills/xiaohongshu-reading/SKILL.md); optional `read_xiaohongshu` tool                     | Integrated |
-| Public GitHub repository      | No                  | Default README, including code, tables, images, and links                               | [github-reading](src/platforms/browser/skills/github-reading/SKILL.md)                                                                 | Integrated |
-| Public YouTube video          | No                  | Metadata, publicly accessible captions, timestamp links, and creator-supplied materials | [youtube-reading](src/platforms/browser/skills/youtube-reading/SKILL.md); available `read_youtube_transcript` tool and browser capture | Integrated |
-| Public Reddit post or comment | No                  | Post body, or the selected comment with its parent post and necessary ancestor context  | [reddit-reading](src/platforms/browser/skills/reddit-reading/SKILL.md)                                                                 | Integrated |
-| Other web pages               | Depends on the site | Accessible body, images, frames, and directly referenced materials                      | [web-reading](src/platforms/browser/skills/web-reading/SKILL.md)                                                                       | Integrated |
+Base setup consists of a background model and Google Chrome. The table shows capabilities and additional setup on that basis. Settings → Capabilities shows current capabilities and opens the required setup.
 
-Skills define the reading scope; retrieval tools provide a source-specific way to fetch it. Both platform packages include `xiaohongshu-mcp` for the optional note reader, plus verified yt-dlp and Deno for YouTube captions. YouTube and Reddit readers follow the [platform expansion design](docs/platform-expansion-design.md).
+| Platform | Reading with base setup | Capabilities added by further setup |
+| --- | --- | --- |
+| X | Publicly accessible post text, images, and quotations | Sign in for account-accessible content; enable experts for Grok |
+| Xiaohongshu | Publicly accessible note text, images, and video metadata | Sign in for account-accessible notes and 点点; install the speech model to transcribe accessible video audio |
+| YouTube | Video metadata, public captions, and timestamp links | Sign in to Google and enable experts for Gemini; install the speech model to transcribe accessible audio when captions are absent |
+| Bilibili | Video metadata, accessible native captions, and part-specific timestamps | Sign in for account-accessible captions and media; install the speech model to transcribe accessible audio when captions are absent |
+| Reddit | Public posts, selected comments, and required context; Reddit AI with an enabled English expert | Sign in for account-accessible community content |
+| GitHub | Public repository default README | — |
+| Other web pages | Accessible body, images, and directly referenced material | Use the site's session for account-accessible content |
 
-Sign in to X or Xiaohongshu in Members; questions and content reading share that account. Partial retrieval keeps the available content and shows its coverage.
+Download the model in Settings → Speech to text. The application supplies the transcription components; installation shows actual download progress and supports cancellation and retry. The verified model stays local. YouTube and Bilibili prefer captions and use local transcription when captions are absent; Xiaohongshu video uses local transcription. Transcription covers spoken audio; visual content and text within frames retain unknown coverage. Source platforms determine sign-in, verification, and media access. Partial retrieval preserves the captured content and its coverage.
 
 ## Architecture
 
@@ -90,4 +91,4 @@ Reports and website sessions are stored locally. Tasks send related questions an
 
 > ⚠️ Postrove uses your signed-in platform accounts for automated search and content retrieval. These actions may trigger platform safeguards, leading to extra verification, rate limits, account restrictions, or bans. We recommend dedicated secondary accounts for X, Xiaohongshu, and other platforms to reduce the impact of account restrictions.
 
-[Development guide](docs/development.md) · [0.2.1 release notes](docs/releases/0.2.1.md) · [Release guide](docs/releasing.md) · [MIT License](LICENSE)
+[Development guide](docs/development.md) · [0.2.2 release notes](docs/releases/0.2.2.md) · [Release guide](docs/releasing.md) · [MIT License](LICENSE)

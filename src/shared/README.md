@@ -10,6 +10,7 @@
 | `content-contracts.ts`                                                                      | Shared text operations and structured output                             |
 | `source-contracts.ts`                                                                       | Source identities, snapshots, and content blocks                         |
 | `reading-contracts.ts`                                                                      | Materials, chunks, introductions, and coverage                           |
+| `reading-diagnostics.ts`, `reading-observations.ts`, `reading-diagnostic-messages.ts` | Observed reading failures, recovery actions, and required state feedback |
 | `forwarding-view-contracts.ts`                                                              | Parsing views                                                            |
 | `task-contracts.ts`                                                                         | Task status, activity, and result references                             |
 | `model-contracts.ts`                                                                        | Model connections and execution configuration                            |

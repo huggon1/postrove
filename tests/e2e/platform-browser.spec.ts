@@ -434,6 +434,68 @@ test("Chrome tools capture observed replies and links, confine actions, and pers
   }
 });
 
+test("Grok snapshots retain complete replies with many inline citations", async () => {
+  const root = await mkdtemp(join(tmpdir(), "postrove-grok-citations-"));
+  const browser = new PlatformBrowser(root, () => {});
+  const citations = Array.from(
+    { length: 13 },
+    (_, index) =>
+      `<a href="https://x.com/fixture/status/${123456789 + index}">Source ${index + 1}</a>`,
+  ).join(" ");
+  try {
+    await browser.exclusive("x", new AbortController().signal, async (page) => {
+      await page.route("https://x.com/**", (route) =>
+        route.fulfill({
+          contentType: "text/html",
+          body: `<main><textarea>Fictional question</textarea><div id="reply">Complete fictional answer with original citations. ${citations} Final advice after every citation.</div><div id="actions">${Array.from({ length: 13 }, (_, index) => `<button>Action ${index}</button>`).join("")}</div></main>`,
+        }),
+      );
+      const snapshot = (await browser.operation("x", page, {
+        action: "navigate",
+        value: "https://x.com/i/grok?conversation=fixture",
+      })) as any;
+      const answer = snapshot.elements.find(
+        (node: any) =>
+          node.readingContainer &&
+          node.label.startsWith("Complete fictional answer"),
+      );
+      expect(answer).toBeTruthy();
+      expect(await page.locator("#reply").evaluate(isAssistantReply)).toBe(
+        true,
+      );
+      expect(await page.locator("main").evaluate(isAssistantReply)).toBe(false);
+      expect(
+        snapshot.elements.some(
+          (node: any) =>
+            node.readingContainer && node.label.startsWith("Action 0"),
+        ),
+      ).toBe(false);
+      const capture = (await browser.operation("x", page, {
+        action: "capture",
+        ref: answer.ref,
+      })) as any;
+      expect(capture.capture).toBe(await page.locator("#reply").innerText());
+      expect(capture.capture).toContain("Final advice after every citation.");
+      expect(capture.capture).not.toContain("Fictional question");
+      expect(capture.links).toHaveLength(13);
+      const ordinaryPage = (await browser.operation("x", page, {
+        action: "navigate",
+        value: "https://x.com/fixture/status/123456789",
+      })) as any;
+      expect(
+        ordinaryPage.elements.some(
+          (node: any) =>
+            node.readingContainer &&
+            node.label.startsWith("Complete fictional answer"),
+        ),
+      ).toBe(false);
+    });
+  } finally {
+    await browser.shutdown();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("snapshots expose Reddit answer bodies beyond the reading link limit", async () => {
   const root = await mkdtemp(join(tmpdir(), "postrove-shadow-answer-"));
   const browser = new PlatformBrowser(root, () => {});
@@ -491,6 +553,280 @@ test("snapshots expose Reddit answer bodies beyond the reading link limit", asyn
       },
     );
   } finally {
+    await browser.shutdown();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("parallel search pages keep connection ownership, prompt queued cancellation, and pinned mode until every page drains", async ({}, info) => {
+  const root = await mkdtemp(join(tmpdir(), "postrove-parallel-browser-"));
+  let visible = false;
+  const browser = new PlatformBrowser(root, () => {}, undefined, {
+    headless: () => !visible,
+  });
+  const held = Promise.withResolvers<void>();
+  const controller = new AbortController(),
+    queuedController = new AbortController();
+  const pages: import("playwright-core").Page[] = [];
+  const context = await browser.context("x");
+  let queuedEntered = false,
+    peerFinished = false,
+    ready = 0;
+  const first = browser.exclusive(
+    "x",
+    controller.signal,
+    async (page) => {
+      pages.push(page);
+      await page.route("https://fixture.example/**", (route) =>
+        route.fulfill({
+          contentType: "text/html",
+          body: "<main>Grok fixture</main>",
+        }),
+      );
+      await browser.operation("x", page, {
+        action: "navigate",
+        value: "https://fixture.example/grok",
+      });
+      ready++;
+      await new Promise<void>((resolve) => page.once("close", () => resolve()));
+    },
+    { connectionId: "x-grok" },
+  );
+  const peer = browser.exclusive(
+    "youtube",
+    new AbortController().signal,
+    async (page) => {
+      pages.push(page);
+      await page.route("https://fixture.example/**", (route) =>
+        route.fulfill({
+          contentType: "text/html",
+          body: "<main>Gemini fixture</main>",
+        }),
+      );
+      await browser.operation("youtube", page, {
+        action: "navigate",
+        value: "https://fixture.example/gemini",
+      });
+      ready++;
+      await held.promise;
+      expect(page.isClosed()).toBe(false);
+      expect(await page.locator("main").innerText()).toBe("Gemini fixture");
+      peerFinished = true;
+    },
+    { connectionId: "gemini-web" },
+  );
+  const queued = browser.exclusive(
+    "x",
+    queuedController.signal,
+    async () => {
+      queuedEntered = true;
+    },
+    { connectionId: "x-grok" },
+  );
+  const cancelled = expect(queued).rejects.toThrow("Cancelled");
+  try {
+    await expect.poll(() => pages.length).toBe(2);
+    await expect.poll(() => ready).toBe(2);
+    expect(pages[0]).not.toBe(pages[1]);
+    expect(pages.every((page) => page.context() === context)).toBe(true);
+    queuedController.abort();
+    await cancelled;
+    expect(queuedEntered).toBe(false);
+    visible = true;
+    controller.abort();
+    await first;
+    expect(pages.find((page) => page.url().endsWith("/grok"))!.isClosed()).toBe(
+      true,
+    );
+    expect(
+      pages.find((page) => page.url().endsWith("/gemini"))!.isClosed(),
+    ).toBe(false);
+    await browser.exclusive(
+      "reddit",
+      new AbortController().signal,
+      async (page) => {
+        expect(page.context()).toBe(context);
+        await page.goto("chrome://version");
+        expect(await page.locator("#command_line").innerText()).toMatch(
+          /--headless/,
+        );
+      },
+      { connectionId: "reddit-web" },
+    );
+    let stopped = false;
+    const shutdown = browser.shutdown().then(() => {
+      stopped = true;
+    });
+    await expect(
+      browser.exclusive("x", new AbortController().signal, async () => {}),
+    ).rejects.toThrow("shutting down");
+    expect(stopped).toBe(false);
+    held.resolve();
+    await Promise.all([peer, shutdown]);
+    expect(peerFinished).toBe(true);
+    await expect(browser.context("x")).rejects.toThrow("shutting down");
+    await info.attach("parallel-page-lifecycle", {
+      contentType: "application/json",
+      body: JSON.stringify({
+        independentPages: true,
+        sharedContext: true,
+        queuedCancellation: true,
+        peerSurvivesStop: true,
+        modePinnedUntilDrain: true,
+        shutdownDrainsPages: true,
+      }),
+    });
+  } finally {
+    controller.abort();
+    queuedController.abort();
+    held.resolve();
+    await Promise.allSettled([first, peer, queued]);
+    await browser.shutdown();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("logout, visible login and mode changes wait for every parallel search page and retain other sessions", async () => {
+  test.setTimeout(90_000);
+  const root = await mkdtemp(join(tmpdir(), "postrove-parallel-maintenance-"));
+  let visible = false;
+  const browser = new PlatformBrowser(root, () => {}, undefined, {
+    headless: () => !visible,
+  });
+  const x = Promise.withResolvers<void>(),
+    reddit = Promise.withResolvers<void>();
+  const modeX = Promise.withResolvers<void>(),
+    modeGemini = Promise.withResolvers<void>();
+  const entered: string[] = [];
+  const jobs: Promise<unknown>[] = [];
+  try {
+    const context = await browser.context("x");
+    await context.addCookies([
+      {
+        name: "auth_token",
+        value: "fictional-parallel-x",
+        domain: ".x.com",
+        path: "/",
+      },
+      {
+        name: "ct0",
+        value: "fictional-parallel-csrf",
+        domain: ".x.com",
+        path: "/",
+      },
+      {
+        name: "reddit_session",
+        value: "fictional-parallel-reddit",
+        domain: ".reddit.com",
+        path: "/",
+      },
+    ]);
+    const first = browser.exclusive(
+      "x",
+      new AbortController().signal,
+      async () => {
+        entered.push("x");
+        await x.promise;
+      },
+      { connectionId: "x-grok" },
+    );
+    const peer = browser.exclusive(
+      "reddit",
+      new AbortController().signal,
+      async () => {
+        entered.push("reddit");
+        await reddit.promise;
+      },
+      { connectionId: "reddit-web" },
+    );
+    jobs.push(first, peer);
+    await expect.poll(() => entered.length).toBe(2);
+    let loggedOut = false;
+    const logout = browser.logout("x").then(() => {
+      loggedOut = true;
+    });
+    const later = browser.exclusive(
+      "youtube",
+      new AbortController().signal,
+      async () => {
+        expect(loggedOut).toBe(true);
+        expect((await browser.status("x")).signedIn).toBe(false);
+        expect((await browser.status("reddit")).signedIn).toBe(true);
+      },
+      { connectionId: "gemini-web" },
+    );
+    jobs.push(logout, later);
+    x.resolve();
+    await first;
+    expect(loggedOut).toBe(false);
+    expect((await browser.status("x")).signedIn).toBe(true);
+    reddit.resolve();
+    await Promise.all([peer, logout, later]);
+    const a = browser.exclusive(
+      "x",
+      new AbortController().signal,
+      async (page) => {
+        entered.push("mode-x");
+        await modeX.promise;
+        expect(page.isClosed()).toBe(false);
+      },
+      { connectionId: "x-grok" },
+    );
+    const b = browser.exclusive(
+      "youtube",
+      new AbortController().signal,
+      async (page) => {
+        entered.push("mode-gemini");
+        await modeGemini.promise;
+        expect(page.isClosed()).toBe(false);
+      },
+      { connectionId: "gemini-web" },
+    );
+    jobs.push(a, b);
+    await expect.poll(() => entered.length).toBe(4);
+    visible = true;
+    let switched = false;
+    const headed = browser.context("x", false).then((context) => {
+      switched = true;
+      return context;
+    });
+    jobs.push(headed);
+    modeX.resolve();
+    await a;
+    expect(switched).toBe(false);
+    modeGemini.resolve();
+    await b;
+    const loginContext = await headed;
+    expect(loginContext).not.toBe(context);
+    expect((await browser.status("reddit")).signedIn).toBe(true);
+    loginContext.on("page", (page) => {
+      void page
+        .route("https://x.com/**", (route) =>
+          route.fulfill({
+            contentType: "text/html",
+            body: "<main>Fictional sign-in</main>",
+          }),
+        )
+        .catch(() => {});
+    });
+    await browser.login("x");
+    expect(
+      loginContext
+        .pages()
+        .some((page) => page.url() === "https://x.com/i/flow/login"),
+    ).toBe(true);
+    const probe = await loginContext.newPage();
+    await probe.goto("chrome://version");
+    expect(await probe.locator("#command_line").innerText()).not.toMatch(
+      /--headless/,
+    );
+    await probe.close();
+  } finally {
+    x.resolve();
+    reddit.resolve();
+    modeX.resolve();
+    modeGemini.resolve();
+    await Promise.allSettled(jobs);
     await browser.shutdown();
     await rm(root, { recursive: true, force: true });
   }

@@ -1,6 +1,8 @@
 import { useState } from "react";
 import {
   ArrowRight,
+  SquaresFour,
+  Microphone,
   Plus,
   Desktop,
   GearSix,
@@ -9,6 +11,8 @@ import {
   Sparkle,
   Users,
 } from "@phosphor-icons/react";
+import { CapabilitySettings } from "../components/CapabilitySettings";
+import { SpeechSettings } from "../components/SpeechSettings";
 import { ModelSettings } from "../components/ModelSettings";
 import { TelegramSettings } from "../components/TelegramSettings";
 import { FeishuSettings } from "../components/FeishuSettings";
@@ -26,9 +30,11 @@ import type { Workspace } from "./use-workspace";
 import type { ReactNode } from "react";
 
 const sections = [
+  { id: "capabilities", label: "能力地图", icon: SquaresFour },
   { id: "connections", label: "收件连接", icon: LinkSimple },
   { id: "members", label: "AI 成员", icon: Users },
   { id: "models", label: "后台模型", icon: Sparkle },
+  { id: "speech", label: "语音转文字", icon: Microphone },
   { id: "preferences", label: "偏好设置", icon: GearSix },
   { id: "about", label: "关于", icon: Globe },
 ] as const;
@@ -82,6 +88,14 @@ export function Settings({
         ))}
       </nav>
       <div className="settings-content">
+        {section === "capabilities" && (
+          <CapabilitySettings
+            workspace={workspace}
+            onSection={onSection}
+            onMember={onMember}
+          />
+        )}
+        {section === "speech" && <SpeechSettings />}
         {section === "connections" && (
           <>
             <SectionHeading title={t("收件连接")} />

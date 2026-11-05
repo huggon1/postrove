@@ -28,8 +28,8 @@ _截图使用虚构的问题、回答、来源和阅读材料，展示当前源�
 | -------- | --------------------- | ----------------------------- | ---------- | ------ |
 | X        | Grok                  | X                             | 中文、英文 | 已接入 |
 | 小红书   | 点点                  | 小红书                        | 中文       | 已接入 |
-| YouTube  | Gemini                | Gemini Apps，使用 Google 账号 | 中文、英文 | 试用   |
-| Reddit   | Reddit AI 搜索（Ask） | 可选：Reddit                  | 英文       | 试用   |
+| YouTube  | Gemini                | Gemini Apps，使用 Google 账号 | 中文、英文 | 已接入 |
+| Reddit   | Reddit AI 搜索（Ask） | 可选：Reddit                  | 英文       | 已接入 |
 
 同一次平台登录可以启用多位语言专家。Grok 中文和英文共用 X 连接，Gemini 的 YouTube 专家共用 Google 登录。
 
@@ -53,18 +53,19 @@ _截图使用虚构的问题、回答、来源和阅读材料，展示当前源�
 
 读取规则明确要采集的内容。Agent 按实际页面加载对应 Skill。其他页面使用通用网页规则，由 Agent 识别正文并选择读取方式。
 
-| 页面                  | 需要登录       | 读取范围                                             | Skill / 读取工具                                                                                                               | 状态   |
-| --------------------- | -------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ------ |
-| X 帖子                | 是，登录 X     | 正文、按顺序排列的图片、引用帖子及作者提供的材料链接 | [x-reading](src/platforms/browser/skills/x-reading/SKILL.md)                                                                   | 已接入 |
-| 小红书笔记            | 是，登录小红书 | 笔记标题、正文和按顺序排列的图片轮播                 | [xiaohongshu-reading](src/platforms/browser/skills/xiaohongshu-reading/SKILL.md)；可用时调用 `read_xiaohongshu`                | 已接入 |
-| GitHub 公开仓库       | 否             | 默认 README，包含代码、表格、图片和链接              | [github-reading](src/platforms/browser/skills/github-reading/SKILL.md)                                                         | 已接入 |
-| YouTube 公开视频      | 否             | 视频信息、公开字幕、时间点链接及作者提供的材料       | [youtube-reading](src/platforms/browser/skills/youtube-reading/SKILL.md)；可用时调用 `read_youtube_transcript`，结合浏览器采集 | 已接入 |
-| Reddit 公开帖子或评论 | 否             | 帖子正文，或选中评论及其父帖和必要的上级评论         | [reddit-reading](src/platforms/browser/skills/reddit-reading/SKILL.md)                                                         | 已接入 |
-| 其他网页              | 按网站要求     | 可访问的正文、图片、嵌入页面及直接引用材料           | [web-reading](src/platforms/browser/skills/web-reading/SKILL.md)                                                               | 已接入 |
+基础配置包含后台模型和 Google Chrome。下表列出在此基础上的能力与额外配置。设置 → 能力地图展示当前可用能力，并提供配置入口。
 
-Skill 约定读取范围，工具提供对应来源的获取方式。两端安装包均包含用于笔记读取的 `xiaohongshu-mcp`，以及已校验的 yt-dlp 和 Deno，用于读取 YouTube 字幕。YouTube 和 Reddit 的读取流程见[平台扩展设计](docs/platform-expansion-design.md)。
+| 平台 | 基础配置下可读取 | 额外配置带来的能力 |
+| --- | --- | --- |
+| X | 可公开访问帖子的正文、图片及引用 | 登录 X 后使用账号可访问的内容；启用专家后使用 Grok |
+| 小红书 | 可公开访问笔记的配文、图片与视频信息 | 登录后使用账号可访问的笔记与点点；安装语音模型后转录可获取的视频音频 |
+| YouTube | 视频信息、公开字幕与时间点链接 | 登录 Google 并启用专家后使用 Gemini；安装语音模型后转录缺字幕视频的可获取音频 |
+| Bilibili | 视频信息、可获取的原生字幕与分 P 时间点 | 登录后使用账号可获取的字幕与媒体；安装语音模型后转录缺字幕视频的可获取音频 |
+| Reddit | 公开帖子、选定评论及必要上下文；启用英文专家后使用 Reddit AI | 登录后使用账号可访问的社区内容 |
+| GitHub | 公开仓库的默认 README | — |
+| 其他网页 | 可访问正文、图片与直接引用材料 | 使用网站要求的登录态读取账号可访问的内容 |
 
-在成员管理中登录 X 或小红书后，提问和内容读取共用该账号。部分读取成功时，应用保留已获取的内容，并显示读取范围。
+在设置 → 语音转文字中下载模型。应用提供转录组件，安装流程显示真实下载进度，并支持取消和重试。模型下载并校验完成后保存在本地。YouTube 和 Bilibili 优先读取字幕，缺字幕时使用本地转录；小红书视频使用本地转录。转录覆盖音频中的语音，画面文字和视觉内容保留为尚未覆盖。网站登录、访问验证与媒体权限仍由来源平台决定。部分读取会保留已获取的内容及其范围。
 
 ## 架构
 
@@ -90,4 +91,4 @@ Skill 约定读取范围，工具提供对应来源的获取方式。两端安�
 
 > ⚠️ Postrove 使用已登录的平台账号执行自动搜索和内容读取。这类操作可能触发平台风控，导致额外验证、限流、账号限制或封禁。建议为 X、小红书等平台使用专用小号，以降低账号受限时的影响。
 
-[开发指南](docs/development.md) · [0.2.1 发布说明](docs/releases/0.2.1.md) · [发布指南](docs/releasing.md) · [MIT 许可证](LICENSE)
+[开发指南](docs/development.md) · [0.2.2 发布说明](docs/releases/0.2.2.md) · [发布指南](docs/releasing.md) · [MIT 许可证](LICENSE)

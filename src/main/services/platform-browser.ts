@@ -6,20 +6,29 @@ import { z } from "zod";
 import type { Platform } from "../../platforms/types";
 import type { XhsAuth } from "./xhs-auth";
 import { ChromeProfiles, chromeExecutable } from "./chrome-profiles";
+import { BrowserTaskQueue } from "./browser-task-queue";
 type BrowserSite = Platform | "gemini";
-type LoginSite = "x" | "xiaohongshu" | "gemini" | "reddit";
-const loginSites = ["x", "xiaohongshu", "gemini", "reddit"] as const;
+type LoginSite = "x" | "xiaohongshu" | "gemini" | "reddit" | "bilibili";
+const loginSites = [
+  "x",
+  "xiaohongshu",
+  "gemini",
+  "reddit",
+  "bilibili",
+] as const;
 const loginUrls: Record<LoginSite, string> = {
   x: "https://x.com/i/flow/login",
   xiaohongshu: "https://www.xiaohongshu.com/explore",
   gemini: "https://gemini.google.com/app",
   reddit: "https://www.reddit.com/login/",
+  bilibili: "https://passport.bilibili.com/login",
 };
 const sessionDomains: Record<LoginSite, RegExp> = {
   x: /(^|\.)x\.com$/,
   xiaohongshu: /(^|\.)xiaohongshu\.com$/,
   gemini: /(^|\.)google\.com$/,
   reddit: /(^|\.)reddit\.com$/,
+  bilibili: /(^|\.)bilibili\.com$/,
 };
 function signedIn(
   site: LoginSite,
@@ -33,7 +42,9 @@ function signedIn(
         ? [["web_session"]]
         : site === "gemini"
           ? [["__Secure-1PSID", "__Secure-3PSID", "SID"]]
-          : [["reddit_session"]];
+          : site === "bilibili"
+            ? [["SESSDATA"]]
+            : [["reddit_session"]];
   return groups.every((names) =>
     cookies.some(
       (c) =>
@@ -88,11 +99,14 @@ export class PlatformBrowser {
   private contexts = new Map<Platform, Promise<BrowserContext>>();
   private contextHeadless?: boolean;
   private contextQueue: Promise<unknown> = Promise.resolve();
+  private closing = false;
+  private statusQueue: Promise<unknown> = Promise.resolve();
   private statusCache = new Map<BrowserSite, string>();
-  private locked = new Map<Platform, Promise<unknown>>();
+  private jobs = new BrowserTaskQueue();
   private chrome = new ChromeProfiles();
   private taskPages = new WeakSet<Page>();
-  private activeTask = false;
+  private activeTasks = 0;
+  private activeHeadless?: boolean;
   private loginPages = new Map<BrowserSite, Page>();
   constructor(
     private root: string,
@@ -109,13 +123,17 @@ export class PlatformBrowser {
     return this.chrome.userAgent(context);
   }
   context(platform: BrowserSite, headless?: boolean) {
+    if (this.closing)
+      return Promise.reject(new Error("Browser is shutting down"));
+    if (headless !== undefined || !this.activeTasks)
+      return this.jobs.run(() => this.openQueuedContext(platform, headless));
+    return this.openQueuedContext(platform);
+  }
+  private openQueuedContext(platform: BrowserSite, headless?: boolean) {
     const operation = this.contextQueue
       .catch(() => {})
       .then(async () => {
-        const desired =
-          headless ??
-          (this.activeTask ? this.contextHeadless : undefined) ??
-          this.taskHeadless();
+        const desired = headless ?? this.activeHeadless ?? this.taskHeadless();
         const previous = this.contexts.get("web");
         if (previous && this.contextHeadless !== desired) {
           const context = await previous;
@@ -244,7 +262,14 @@ export class PlatformBrowser {
       installed: !!chromeExecutable(),
     };
   }
-  private async saveStatus(_platform: BrowserSite, context: BrowserContext) {
+  private saveStatus(platform: BrowserSite, context: BrowserContext) {
+    const operation = this.statusQueue
+      .catch(() => {})
+      .then(() => this.commitStatus(platform, context));
+    this.statusQueue = operation;
+    return operation;
+  }
+  private async commitStatus(_platform: BrowserSite, context: BrowserContext) {
     const cookies = await context.cookies();
     await writeFile(
       join(this.root, "shared", "postrove-session-status.json"),
@@ -268,10 +293,10 @@ export class PlatformBrowser {
   }
 
   login(platform: LoginSite) {
-    return this.serialize(() => this.openLogin(platform));
+    return this.jobs.run(() => this.openLogin(platform));
   }
   private async openLogin(platform: LoginSite) {
-    const context = await this.context(platform, false);
+    const context = await this.openQueuedContext(platform, false);
     const existing = this.loginPages.get(platform);
     if (existing && !existing.isClosed()) {
       await existing.bringToFront();
@@ -288,10 +313,10 @@ export class PlatformBrowser {
     });
   }
   logout(platform: LoginSite) {
-    return this.serialize(() => this.clearLogin(platform));
+    return this.jobs.run(() => this.clearLogin(platform));
   }
   private async clearLogin(platform: LoginSite) {
-    const context = await this.context(platform);
+    const context = await this.openQueuedContext(platform);
     await context.clearCookies({
       domain: sessionDomains[platform],
     });
@@ -301,38 +326,37 @@ export class PlatformBrowser {
     await this.saveStatus(platform, context);
     if (platform === "xiaohongshu") await this.xhs?.logout();
   }
-  private serialize<T>(run: () => Promise<T>) {
-    const previous = this.locked.get("web") ?? Promise.resolve();
-    const job = previous.catch(() => {}).then(run);
-    this.locked.set("web", job);
-    return job;
-  }
   async exclusive<T>(
     platform: Platform,
     signal: AbortSignal,
     run: (page: Page) => Promise<T>,
+    options: { connectionId?: string } = {},
   ) {
-    return this.serialize(async () => {
-      if (signal.aborted) throw new Error("Cancelled");
-      this.activeTask = true;
-      let context: BrowserContext | undefined;
-      let page: Page | undefined;
-      const abort = () => void page?.close();
-      try {
-        context = await this.context(platform, this.taskHeadless());
-        page = await context.newPage();
-        signal.addEventListener("abort", abort, { once: true });
+    return this.jobs.run(
+      async () => {
         if (signal.aborted) throw new Error("Cancelled");
-        if (this.contextHeadless) await this.chrome.useChromeIdentity(page);
-        await this.guardTaskPage(platform, page);
-        return await run(page);
-      } finally {
-        this.activeTask = false;
-        signal.removeEventListener("abort", abort);
-        await page?.close().catch(() => {});
-        if (context) await this.saveStatus(platform, context).catch(() => {});
-      }
-    });
+        if (this.activeTasks++ === 0) this.activeHeadless = this.taskHeadless();
+        let context: BrowserContext | undefined;
+        let page: Page | undefined;
+        const abort = () => void page?.close().catch(() => {});
+        try {
+          context = await this.openQueuedContext(platform, this.activeHeadless);
+          page = await context.newPage();
+          signal.addEventListener("abort", abort, { once: true });
+          if (signal.aborted) throw new Error("Cancelled");
+          if (this.contextHeadless) await this.chrome.useChromeIdentity(page);
+          await this.guardTaskPage(platform, page);
+          return await run(page);
+        } finally {
+          signal.removeEventListener("abort", abort);
+          await page?.close().catch(() => {});
+          if (context) await this.saveStatus(platform, context).catch(() => {});
+          if (--this.activeTasks === 0) this.activeHeadless = undefined;
+        }
+      },
+      signal,
+      options.connectionId,
+    );
   }
   private async guardTaskPage(platform: Platform, page: Page) {
     if (this.taskPages.has(page)) return;
@@ -648,6 +672,9 @@ export class PlatformBrowser {
       }
     }
     const snapshot = await frame.evaluate(() => {
+      const linkedReply =
+        ["x.com", "www.x.com", "grok.com"].includes(location.hostname) &&
+        /^\/(?:i\/)?grok(?:\/|$)/.test(location.pathname);
       const roots: (Document | ShadowRoot)[] = [document];
       for (let index = 0; index < roots.length; index++)
         for (const node of roots[index].querySelectorAll("*"))
@@ -677,7 +704,12 @@ export class PlatformBrowser {
           return (
             body.length >= 40 &&
             !element.querySelector('input,textarea,[contenteditable="true"]') &&
-            element.querySelectorAll('button,a,[role="button"]').length <= 12 &&
+            // Grok's inline citations are reply content, separate from actions.
+            element.querySelectorAll(
+              linkedReply
+                ? 'button,[role="button"]'
+                : 'button,a,[role="button"]',
+            ).length <= 12 &&
             (element.tagName !== "DIV" ||
               !!element.querySelector("p,table,ul,ol,blockquote") ||
               Array.from(element.childNodes).some(
@@ -797,6 +829,8 @@ export class PlatformBrowser {
     };
   }
   async shutdown() {
+    this.closing = true;
+    await this.jobs.close();
     await this.contextQueue.catch(() => {});
     await Promise.all(
       [...this.contexts.entries()].map(async ([platform, pending]) => {

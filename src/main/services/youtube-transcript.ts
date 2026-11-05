@@ -17,6 +17,9 @@ import {
   type SourceContent,
 } from "../../shared/source-contracts";
 import { youtubeVideo } from "../../shared/source-profiles";
+import { videoIdentity } from "../../shared/video-contracts";
+import { readVideoCheckpoint } from "./video-checkpoint";
+import type { VideoSpeechFallback } from "./video-speech";
 import { transcriptSegmentSchema } from "../../shared/transcript-contracts";
 
 export const youtubeRuntimeVersion = {
@@ -35,14 +38,9 @@ type Metadata = {
   subtitles?: Record<string, { ext?: string; url?: string }[]>;
   automatic_captions?: Record<string, { ext?: string; url?: string }[]>;
 };
-export type TranscriptResult =
-  | {
-      outcome: "content";
-      source: SourceContent;
-      references: { url: string; title: string }[];
-    }
-  | { outcome: "unavailable"; reason: string };
-type Run = (
+export type { VideoTranscriptResult as TranscriptResult } from "./video-transcript";
+import type { VideoTranscriptResult as TranscriptResult } from "./video-transcript";
+export type TranscriptRun = (
   executable: string,
   args: string[],
   directory: string,
@@ -160,7 +158,12 @@ export function normalizeTranscript(
   if (!segments.length) throw new Error("empty_captions");
   return segments;
 }
-const runProcess: Run = (executable, args, directory, signal) =>
+export const runTranscriptProcess: TranscriptRun = (
+  executable,
+  args,
+  directory,
+  signal,
+) =>
   new Promise((resolve, reject) => {
     if (signal.aborted) return reject(new Error("Cancelled"));
     const env: NodeJS.ProcessEnv = {
@@ -238,7 +241,8 @@ export class YoutubeTranscriptReader {
   constructor(
     private runtimeRoot: string,
     readonly evidenceRoot: string,
-    private run: Run = runProcess,
+    private run: TranscriptRun = runTranscriptProcess,
+    private speech?: Pick<VideoSpeechFallback, "read" | "ready">,
   ) {}
   available() {
     return (this.readiness ??= (async () => {
@@ -293,19 +297,34 @@ export class YoutubeTranscriptReader {
     const stateFile = join(directory, "reader-attempt.json");
     try {
       const saved = JSON.parse(await readFile(stateFile, "utf8"));
-      if (saved.state === "completed")
-        return {
-          outcome: "content",
-          source: sourceSchema.parse(
-            JSON.parse(await readFile(join(directory, "source.json"), "utf8")),
-          ),
-          references: JSON.parse(
-            await readFile(join(directory, "references.json"), "utf8"),
-          ),
-        };
-      if (saved.state === "unavailable")
-        return { outcome: "unavailable", reason: saved.reason };
-      return { outcome: "unavailable", reason: "transcript_interrupted" };
+      const resumeSpeech =
+        saved.state === "completed" &&
+        saved.diagnostic?.category === "readiness" &&
+        (await this.speech?.ready());
+      if (!resumeSpeech) {
+        if (saved.state === "completed")
+          return {
+            outcome: "content",
+            source: sourceSchema.parse(
+              JSON.parse(
+                await readFile(join(directory, "source.json"), "utf8"),
+              ),
+            ),
+            references: JSON.parse(
+              await readFile(join(directory, "references.json"), "utf8"),
+            ),
+            ...(saved.diagnostic ? { diagnostic: saved.diagnostic } : {}),
+          };
+        const checkpoint = await readVideoCheckpoint(
+          directory,
+          videoIdentity(video.url)!,
+          key,
+        );
+        if (checkpoint) return checkpoint;
+        if (saved.state === "unavailable")
+          return { outcome: "unavailable", reason: saved.reason };
+        return { outcome: "unavailable", reason: "transcript_interrupted" };
+      }
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     }
@@ -365,7 +384,28 @@ export class YoutubeTranscriptReader {
       if (metadata.id !== video.id)
         throw new Error("transcript_identity_changed");
       const track = selectTranscriptTrack(metadata);
-      if (!track) throw new Error("transcript_unavailable");
+      if (!track) {
+        if (!this.speech) throw new Error("transcript_captions_missing");
+        const result = await this.speech.read({
+          video: videoIdentity(video.url)!,
+          metadata: {
+            title: String(metadata.title || video.url),
+            uploader: metadata.channel || metadata.uploader,
+            description: metadata.description,
+            duration: metadata.duration,
+          },
+          directory,
+          artifactKey: key,
+          signal,
+        });
+        await writeFile(
+          join(directory, "references.json"),
+          JSON.stringify(result.outcome === "content" ? result.references : []),
+          { mode: 0o600 },
+        );
+        await saveState({ state: "completed", diagnostic: result.diagnostic });
+        return result;
+      }
       await this.run(
         executable,
         [
@@ -386,7 +426,8 @@ export class YoutubeTranscriptReader {
       const names = (await readdir(directory)).filter((name) =>
         /^captions\.[A-Za-z0-9_-]+\.json3$/.test(name),
       );
-      if (names.length !== 1) throw new Error("transcript_unavailable");
+      if (names.length !== 1)
+        throw new Error("transcript_caption_artifact_missing");
       if ((await stat(join(directory, names[0]))).size > 20 * 1024 * 1024)
         throw new Error("transcript_output_limit");
       await chmod(join(directory, names[0]), 0o600);

@@ -1,13 +1,13 @@
 {
   "name": "postrove",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "license": "MIT",
   "private": true,
   "main": "dist/main/main.cjs",
   "scripts": {
     "build": "node scripts/app-build/app.mjs",
     "setup:xhs": "node scripts/app-build/with-env-proxy.mjs scripts/app-build/prepare-xhs-runtime.mjs",
-    "prepare:runtime": "npm run setup:xhs && npm run setup:youtube",
+    "prepare:runtime": "npm run setup:xhs && npm run setup:youtube && npm run setup:speech",
     "build:icon": "node scripts/app-build/icon.mjs",
     "package:app": "node scripts/app-build/clean-package.mjs && npm run build && npm run build:icon && electron-builder --mac --arm64 --publish never && node scripts/app-build/checksums.mjs",
     "package:windows": "node scripts/app-build/clean-package.mjs && npm run build && npm run build:icon && electron-builder --win nsis --x64 --publish never && node scripts/app-build/checksums.mjs",
@@ -29,7 +29,10 @@
     "test:package": "node scripts/development/verify-package.mjs",
     "test:windows-installation": "node scripts/development/verify-windows-installation.mjs",
     "test:windows-upgrade": "node scripts/development/verify-windows-upgrade.mjs",
-    "setup:youtube": "node scripts/app-build/with-env-proxy.mjs scripts/app-build/prepare-youtube-runtime.mjs"
+    "setup:youtube": "node scripts/app-build/with-env-proxy.mjs scripts/app-build/prepare-youtube-runtime.mjs",
+    "setup:speech": "node scripts/app-build/with-env-proxy.mjs scripts/app-build/prepare-speech-runtime.mjs",
+    "setup:speech-model": "node scripts/app-build/with-env-proxy.mjs --import tsx scripts/development/prepare-speech-model.ts",
+    "verify:speech-runtime": "node scripts/app-build/with-env-proxy.mjs --import tsx scripts/development/verify-speech-runtime.ts"
   },
   "dependencies": {
     "@earendil-works/pi-agent-core": "1.1.0",
@@ -55,7 +58,7 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@types/ws": "^8.18.2",
-    "electron": "44.4.3",
+    "electron": "44.10.2",
     "electron-builder": "^26.15.3",
     "esbuild": "^0.28.2",
     "prettier": "^3.9.8",
@@ -69,5 +72,10 @@
   "description": "Discover social-media content through platform AI and read forwarded links",
   "engines": {
     "node": ">=24.0.0"
+  },
+  "overrides": {
+    "@earendil-works/pi-coding-agent": {
+      "undici": "8.12.2"
+    }
   }
 }

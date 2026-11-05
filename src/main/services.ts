@@ -1,3 +1,16 @@
+import { BilibiliTranscriptReader } from "./services/bilibili-transcript";
+import { VideoTranscriptReaders } from "./services/video-transcript";
+import { XiaohongshuMediaReader } from "./services/xiaohongshu-media";
+import { XiaohongshuVideoReader } from "./services/xiaohongshu-video";
+import { SpeechService } from "./services/speech";
+import { SpeechInstaller } from "./services/speech/installer";
+import { VideoSpeechFallback } from "./services/video-speech";
+import { capabilityChannels } from "../shared/capability-contracts";
+import { chromeExecutable } from "./services/chrome-profiles";
+import {
+  ReadingFailure,
+  readingDiagnostic,
+} from "../shared/reading-diagnostics";
 import { YoutubeTranscriptReader } from "./services/youtube-transcript";
 import { FeishuService } from "./integrations/feishu/service";
 import { FeishuAdapter } from "./integrations/feishu/adapter";
@@ -35,6 +48,7 @@ import {
   channels,
   modelChannels,
   platformConnectionChannels,
+  readingSiteChannels,
   xChannels,
   xhsChannels,
 } from "../shared/ipc-contracts";
@@ -179,28 +193,45 @@ export async function initializeServices(
     () => models!.acquire(),
     join(app.getPath("userData"), "browser-traces"),
   );
+  const speech = new SpeechService({
+    runtimeRoot: runtimeLayout.runtimeRoot,
+    dataDir: app.getPath("userData"),
+  });
+  const speechFallback = new VideoSpeechFallback(
+    runtimeLayout.runtimeRoot,
+    speech,
+  );
   const transcripts = new YoutubeTranscriptReader(
     runtimeLayout.runtimeRoot,
     join(app.getPath("userData"), "capture-evidence"),
+    undefined,
+    speechFallback,
   );
   const results = new ResultPublisher(
     join(app.getPath("userData"), "results"),
     imageRoot,
     transcripts.evidenceRoot,
   );
+  const speechInstaller = new SpeechInstaller(speech.runtime, changed);
   const browserAgent = new BrowserAgent(
     browser,
     join(__dirname, "../worker/jobs/browser/worker-entry.mjs"),
     join(app.getPath("userData"), "browser-traces"),
     async (url, signal) => {
       if (!xhsAuth!.installed())
-        throw new Error("Xiaohongshu enhancement is unavailable");
+        throw new ReadingFailure(
+          readingDiagnostic("component_missing", "readiness"),
+          "小红书组件不可用",
+        );
       const source = await createXhsAdapter(await xhsAuth!.connect(), {
         id: new URL(url).pathname.split("/").filter(Boolean).at(-1)!,
         token: new URL(url).searchParams.get("xsec_token") ?? "",
       }).read("enhanced-reading", url, signal);
       if (source.outcome !== "content")
-        throw new Error("Enhanced reading is unavailable");
+        throw new ReadingFailure(
+          source.diagnostic ?? readingDiagnostic("unknown", "source"),
+          source.message,
+        );
       const content = source.content;
       return {
         capture: content.contentBlocks
@@ -227,7 +258,21 @@ export async function initializeServices(
         { config, release: async () => {} },
         taskId,
       ),
-    transcripts,
+    new VideoTranscriptReaders({
+      youtube: transcripts,
+      bilibili: new BilibiliTranscriptReader(
+        runtimeLayout.runtimeRoot,
+        transcripts.evidenceRoot,
+        undefined,
+        speechFallback,
+      ),
+      xiaohongshu: new XiaohongshuVideoReader(transcripts.evidenceRoot, {
+        media: new XiaohongshuMediaReader(runtimeLayout.runtimeRoot),
+        speech,
+        acquire: ({ url, allowedHosts, headers, signal }) =>
+          speech.acquireMedia({ url, allowedHosts, headers, signal }),
+      }),
+    }),
   );
 
   const platformAccess = new PlatformAccess(browserAgent, browser, imageRoot);
@@ -550,6 +595,35 @@ export async function initializeServices(
     join(__dirname, "../renderer/index.html"),
   ).href;
   stage("task_ipc");
+  for (const [key, channel] of Object.entries(capabilityChannels))
+    handle(channel, async (event, ...args: unknown[]) => {
+      if (
+        !event.senderFrame ||
+        event.senderFrame !== event.sender.mainFrame ||
+        event.senderFrame.url !== expected ||
+        args.length
+      )
+        throw new Error("Invalid capability request");
+      if (key === "speechView") return speechInstaller.view();
+      if (key === "install") return speechInstaller.start();
+      if (key === "cancel") return speechInstaller.cancel();
+      if (key === "chrome")
+        return shell.openExternal("https://www.google.com/chrome/");
+      const [youtube, bili, installation] = await Promise.all([
+        transcripts.available(),
+        new BilibiliTranscriptReader(
+          runtimeLayout.runtimeRoot,
+          transcripts.evidenceRoot,
+        ).available(),
+        speechInstaller.view(),
+      ]);
+      return {
+        model: !!models!.view().current,
+        chrome: !!chromeExecutable(),
+        readers: { youtube, bilibili: bili, xiaohongshu: xhsAuth!.installed() },
+        speech: installation.readiness,
+      };
+    });
   registerTaskIpc(
     {
       snapshots: () =>
@@ -882,6 +956,28 @@ export async function initializeServices(
       }
     });
 
+  for (const channel of Object.values(readingSiteChannels))
+    handle(channel, async (event, ...args: unknown[]) => {
+      if (
+        !event.senderFrame ||
+        event.senderFrame !== event.sender.mainFrame ||
+        event.senderFrame.url !== expected ||
+        args.length !== 1 ||
+        args[0] !== "bilibili"
+      )
+        return { ok: false, message: "无效的请求" };
+      try {
+        if (channel === readingSiteChannels.status)
+          return { ok: true, value: await browser.status("bilibili") };
+        if (channel === readingSiteChannels.login)
+          await browser.login("bilibili");
+        else await browser.logout("bilibili");
+        return { ok: true, value: undefined };
+      } catch {
+        return { ok: false, message: "平台登录操作未完成，请稍后重试" };
+      }
+    });
+
   for (const channel of Object.values(xChannels))
     handle(channel, async (event, ...args: unknown[]) => {
       if (
@@ -1017,6 +1113,7 @@ export async function initializeServices(
     shutdown: async () => {
       executionGate.close();
       await Promise.all([
+        speechInstaller.shutdown(),
         forwarding?.shutdown(),
         search.shutdown(),
         telegram?.stop(),

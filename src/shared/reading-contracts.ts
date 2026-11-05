@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { readingDiagnosticSchema } from "./reading-diagnostics";
 import { sourceSchema, webUrlSchema } from "./source-contracts";
 
 export const readingMaterialSchema = z
@@ -21,6 +22,7 @@ export const readingMaterialSchema = z
     summary: z.string().max(4000),
     state: z.enum(["pending", "processing", "completed", "partial", "failed"]),
     issue: z.string().max(1500).optional(),
+    diagnostic: readingDiagnosticSchema.optional(),
   })
   .strict()
   .refine((m) => !m.source || m.source.sourceUrl === m.url)

@@ -1,4 +1,5 @@
 import { botChannels } from "../shared/bot-contracts";
+import { capabilityChannels } from "../shared/capability-contracts";
 import { deletionChannels } from "../shared/deletion-contracts";
 import { updateChannels } from "../shared/update-contracts";
 import { contextBridge, ipcRenderer } from "electron";
@@ -10,12 +11,21 @@ import {
   telegramChannels,
   modelChannels,
   platformConnectionChannels,
+  readingSiteChannels,
   xChannels,
   xhsChannels,
   type DesktopBridge,
 } from "../shared/ipc-contracts";
 
 const bridge: DesktopBridge = {
+  capabilityView: () => ipcRenderer.invoke(capabilityChannels.view),
+  openChromeDownload: () => ipcRenderer.invoke(capabilityChannels.chrome),
+  speechInstallView: () => ipcRenderer.invoke(capabilityChannels.speechView),
+  installSpeech: () => ipcRenderer.invoke(capabilityChannels.install),
+  cancelSpeechInstall: () => ipcRenderer.invoke(capabilityChannels.cancel),
+  readingSiteStatus: (id) => ipcRenderer.invoke(readingSiteChannels.status, id),
+  loginReadingSite: (id) => ipcRenderer.invoke(readingSiteChannels.login, id),
+  logoutReadingSite: (id) => ipcRenderer.invoke(readingSiteChannels.logout, id),
   platformStatus: (id) =>
     ipcRenderer.invoke(platformConnectionChannels.status, id),
   loginPlatform: (id) =>

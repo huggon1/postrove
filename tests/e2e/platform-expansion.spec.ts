@@ -639,3 +639,141 @@ for (const scenario of [
     }
   });
 }
+
+for (const av of [false, true])
+  test(`Bilibili native captions retain part identity${av ? " through a verified AV redirect" : ""}`, async ({}, info) => {
+    const root = await mkdtemp(join(tmpdir(), "postrove-bili-reading-"));
+    const canonical = "https://www.bilibili.com/video/BV1234567890?p=2";
+    const original = av
+      ? "https://www.bilibili.com/video/av123?p=2"
+      : canonical;
+    let calls = 0,
+      triedUnobserved = false,
+      scopeRejected = false;
+    const server = createServer(async (req, res) => {
+      let body = "";
+      for await (const part of req) body += part;
+      const input = JSON.parse(body);
+      const results = input.messages
+        .filter((message: any) => message.role === "tool")
+        .map((message: any) => {
+          try {
+            return JSON.parse(message.content);
+          } catch {
+            return {};
+          }
+        });
+      scopeRejected ||= input.messages.some(
+        (message: any) =>
+          message.role === "tool" &&
+          String(message.content).includes("requires an observed video URL"),
+      );
+      const snapshot = results
+        .toReversed()
+        .find((result: any) => result.elements);
+      const caption = results.find(
+        (result: any) => result.evidence?.kind === "transcript",
+      );
+      let name = "browser",
+        args: any,
+        output: any;
+      if (!results.some((result: any) => result.skill === "bilibili-reading")) {
+        name = "load_platform_skill";
+        args = { name: "bilibili-reading" };
+      } else if (!triedUnobserved) {
+        triedUnobserved = true;
+        name = "read_video_transcript";
+        args = { url: canonical };
+      } else if (!snapshot) args = { action: "navigate", value: original };
+      else if (!caption) {
+        name = "read_video_transcript";
+        args = { url: canonical };
+      } else
+        output = {
+          materials: [
+            {
+              role: "main",
+              url: original,
+              title: "Bilibili fixture",
+              sourceIdentity: "Fixture creator",
+              sourceCaptureIds: [caption.captureId],
+              completeness: "partial",
+              completenessNote:
+                "Available original transcript and metadata; visual content coverage is unknown.",
+            },
+          ],
+        };
+      if (++calls > 10) {
+        res.writeHead(500);
+        res.end("{}");
+        return;
+      }
+      const delta = output
+        ? { role: "assistant", content: JSON.stringify(output) }
+        : {
+            role: "assistant",
+            tool_calls: [
+              {
+                index: 0,
+                id: `bili-${calls}`,
+                type: "function",
+                function: { name, arguments: JSON.stringify(args) },
+              },
+            ],
+          };
+      res.writeHead(200, { "Content-Type": "text/event-stream" });
+      for (const [value, finish] of [
+        [delta, null],
+        [{}, output ? "stop" : "tool_calls"],
+      ])
+        res.write(
+          `data: ${JSON.stringify({ id: `bili-${calls}`, object: "chat.completion.chunk", created: 1, model: "fixture", choices: [{ index: 0, delta: value, finish_reason: finish }] })}\n\n`,
+        );
+      res.end("data: [DONE]\n\n");
+    });
+    await new Promise<void>((resolve) =>
+      server.listen(0, "127.0.0.1", resolve),
+    );
+    const app = await electron.launch({
+      args: [resolve("build/test-workers/platform-expansion-app.mjs")],
+      env: { ...process.env, POSTROVE_BROWSER_FIXTURE_ROOT: root },
+    });
+    try {
+      const endpoint = `http://127.0.0.1:${(server.address() as any).port}/v1`;
+      const result = await app.evaluate(
+        async (_electron, input) =>
+          (globalThis as any).collectBilibiliVideo(input),
+        { endpoint, av },
+      );
+      expect(scopeRejected).toBe(true);
+      expect(result.extractions).toBe(1);
+      expect(result.materials[0].source.platform).toBe("bilibili");
+      expect(result.materials[0].source.sourceKey).toBe(
+        `bilibili:video:${av ? "av123" : "BV1234567890"}:p:2`,
+      );
+      const evidence = result.materials[0].source.evidence;
+      expect(evidence.video.cid).toBe("789");
+      expect(evidence.provenance).toEqual({
+        source: "platform_captions",
+        kind: "automatic",
+      });
+      expect(evidence.segments[0].url).toBe(`${canonical}&t=1`);
+      expect(result.materials[0].source.markdown).toContain(
+        "Bilibili native caption.",
+      );
+      await info.attach("bilibili-controlled-result.json", {
+        body: JSON.stringify(result, null, 2),
+        contentType: "application/json",
+      });
+    } finally {
+      // Graceful shutdown releases Electron's own profile handles on Windows.
+      await app.close();
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+      await rm(root, {
+        recursive: true,
+        force: true,
+        maxRetries: 5,
+        retryDelay: 300,
+      });
+    }
+  });
