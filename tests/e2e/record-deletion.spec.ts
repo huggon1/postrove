@@ -136,6 +136,8 @@ test("record deletion preserves independent results and persists undo and visibi
       .getByRole("navigation", { name: "主导航" })
       .getByRole("button", { name: "阅读", exact: true })
       .click();
+    // Main commits completion before the debounced workspace snapshot reaches React.
+    await expect(page.locator(".reading-card-footer")).toContainText("已完成");
     await page.getByRole("button", { name: "删除内容", exact: true }).click();
     await expect(
       page.getByRole("button", { name: "Deletion source", exact: true }),

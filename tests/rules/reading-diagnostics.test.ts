@@ -203,3 +203,29 @@ test("Xiaohongshu HTTP 403 and generic service failure preserve observed facts",
     await new Promise<void>((done) => server.close(() => done()));
   }
 });
+
+test("model output limits retain their observed cause in both reading languages", async () => {
+  const { readingDiagnosticMessage } =
+    await import("../../src/shared/reading-diagnostic-messages");
+  const diagnostic = diagnoseReadingError(
+    new ExecutionFailure("model_output_limit"),
+    "translation",
+    true,
+  );
+  assert.equal(diagnostic.evidence?.failureCode, "model_output_limit");
+  assert.equal(
+    readingDiagnosticMessage(diagnostic, "zh-CN"),
+    "输出达到模型上限",
+  );
+  assert.equal(
+    readingDiagnosticMessage(diagnostic, "en"),
+    "Model output reached its limit",
+  );
+  assert.equal(
+    readingDiagnosticMessage(
+      readingDiagnostic("model_failed", "translation"),
+      "en",
+    ),
+    "Model processing failed",
+  );
+});
