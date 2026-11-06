@@ -16,7 +16,7 @@ const id = "abcdef1234567890abcdef12",
 const metadata = {
   id,
   title: "Fictional spoken note",
-  description: "Written description",
+  description: "Written description\n\nhttps://example.org/creator-material",
   uploader: "Fixture",
   duration: 12,
   images: [{ url: "https://example.test/cover.jpg", alt: "Video cover" }],
@@ -97,6 +97,13 @@ test("XHS video composes written text, cover and ASR with separate provenance", 
     assert.match(result.source.markdown!, /Written description/);
     assert.match(result.source.markdown!, /这是口述内容/);
     assert.equal(result.source.images.length, 1);
+    assert.match(result.source.markdown!, /Fixture/);
+    assert.deepEqual(result.references, [
+      {
+        url: "https://example.org/creator-material",
+        title: "https://example.org/creator-material",
+      },
+    ]);
     assert.equal(result.source.sourceUrl, url);
     const evidence = result.source.evidence!;
     assert.ok("provenance" in evidence);
@@ -317,6 +324,123 @@ test("XHS missing ASR model is separate from website access and skips the media 
     await f.cleanup();
   }
 });
+
+test("XHS readiness-blocked attempts resume once the local model becomes ready", async () => {
+  let ready = false;
+  const f = await fixture({
+    speech: {
+      check: async () => ({
+        backend: "whisper.cpp",
+        runtime: "ready",
+        model: ready ? "ready" : "missing",
+        ...(ready ? {} : { issue: "model_missing" }),
+      }),
+      transcribe: async () => speech,
+    },
+  });
+  try {
+    const signal = new AbortController().signal;
+    const first = await f.reader.read(url, f.attempt, signal);
+    assert.equal(first.diagnostic?.stage, "readiness");
+    assert.equal(f.reads(), 1);
+    assert.deepEqual(await f.reader.read(url, f.attempt, signal), first);
+    assert.equal(f.reads(), 1);
+    ready = true;
+    const resumed = await f.reader.read(url, f.attempt, signal);
+    assert.equal(resumed.outcome, "content");
+    if (resumed.outcome !== "content") return;
+    assert.equal(resumed.diagnostic, undefined);
+    assert.match(resumed.source.markdown!, /Written description/);
+    assert.match(resumed.source.markdown!, /这是口述内容/);
+    assert.equal(resumed.source.images.length, 1);
+    assert.equal(resumed.source.evidence?.segments.length, 1);
+    assert.equal(f.downloads(), 1);
+    assert.equal(f.reads(), 2);
+  } finally {
+    await f.cleanup();
+  }
+});
+
+test("XHS resource retry keeps metadata and earlier speech when later media access fails", async () => {
+  let resumed = false;
+  const priorSpeech: SpeechResult = {
+    ...speech,
+    status: "partial",
+    issue: { code: "model_missing" },
+  };
+  const f = await fixture({
+    context: async () => {
+      if (resumed) throw new Error("download_failed");
+      return {};
+    },
+    speech: {
+      check: async () => ({
+        backend: "whisper.cpp",
+        runtime: "ready",
+        model: "ready",
+      }),
+      transcribe: async () => priorSpeech,
+    },
+  });
+  try {
+    const first = await f.reader.read(
+      url,
+      f.attempt,
+      new AbortController().signal,
+    );
+    assert.equal(first.outcome, "content");
+    assert.equal(first.diagnostic?.stage, "readiness");
+    const raw = await readFile(join(f.directory, "transcription.json"), "utf8");
+    resumed = true;
+    const result = await f.reader.read(
+      url,
+      f.attempt,
+      new AbortController().signal,
+    );
+    assert.equal(result.outcome, "content");
+    if (result.outcome !== "content") return;
+    assert.match(result.source.markdown!, /Written description/);
+    assert.match(result.source.markdown!, /这是口述内容/);
+    assert.equal(result.source.images.length, 1);
+    assert.equal(result.source.evidence?.transcriptCoverage, "partial");
+    assert.equal(result.diagnostic?.evidence?.failureCode, "download_failed");
+    assert.equal(
+      await readFile(join(f.directory, "transcription.json"), "utf8"),
+      raw,
+    );
+    assert.equal(result.references.length, 1);
+  } finally {
+    await f.cleanup();
+  }
+});
+
+test("XHS committed page metadata survives a media adapter with missing metadata", async () => {
+  const f = await fixture({
+    context: async () => ({ fallback: metadata }),
+    media: {
+      available: async () => true,
+      read: async () => ({
+        note: { id, url, requestUrl: url },
+        cookies: "guest",
+        issue: "extraction_failed",
+      }),
+    },
+  });
+  try {
+    const result = await f.reader.read(
+      url,
+      f.attempt,
+      new AbortController().signal,
+    );
+    assert.equal(result.outcome, "content");
+    if (result.outcome !== "content") return;
+    assert.match(result.source.markdown!, /Written description/);
+    assert.equal(result.source.images.length, 1);
+    assert.equal(result.references.length, 1);
+  } finally {
+    await f.cleanup();
+  }
+});
 test("XHS completed chunks survive a later speech failure", async () => {
   const partial = {
     ...speech,
@@ -405,6 +529,10 @@ test("XHS cancellation preserves the original metadata and completed speech chec
       JSON.parse(await readFile(join(exported, "reader-attempt.json"), "utf8"))
         .state,
       "cancelled",
+    );
+    assert.match(
+      await readFile(join(exported, "source-metadata.json"), "utf8"),
+      /Written description/,
     );
     const recovered = await f.reader.read(
       url,

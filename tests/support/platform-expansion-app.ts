@@ -235,6 +235,7 @@ app.whenReady().then(async () => {
 (globalThis as any).collectBilibiliVideo = async (input: {
   endpoint: string;
   av: boolean;
+  cancelAfterRead?: boolean;
 }) => {
   const { BilibiliTranscriptReader } =
     await import("../../src/main/services/bilibili-transcript");
@@ -260,6 +261,7 @@ app.whenReady().then(async () => {
     "controlled reader boundary",
     { mode: 0o700 },
   );
+  const controller = new AbortController();
   let extractions = 0;
   const reader = new BilibiliTranscriptReader(
     runtime,
@@ -289,7 +291,7 @@ app.whenReady().then(async () => {
   await context.route("**/*", (route) =>
     route.fulfill({
       contentType: "text/html",
-      body: `<article><h1>Bilibili fixture</h1><p>Observed creator metadata.</p><a href="${canonical}">Selected part</a></article>`,
+      body: `<article><h1>Bilibili fixture</h1><p>Observed creator metadata.</p><aside>登录 免费享高清</aside><a href="${canonical}">Selected part</a></article>`,
     }),
   );
   // Resolve the controlled redirect through Chrome; the Agent observes its final address.
@@ -308,8 +310,8 @@ app.whenReady().then(async () => {
   const transcripts = new VideoTranscriptReaders({
     bilibili: {
       available: () => reader.available(),
-      read: (raw, attempt, signal) =>
-        reader.read(raw, attempt, signal, {
+      read: async (raw, attempt, signal) => {
+        const result = await reader.read(raw, attempt, signal, {
           getJson: async () => ({
             code: 0,
             data: {
@@ -320,7 +322,10 @@ app.whenReady().then(async () => {
               pages: [{ page: 2, cid: 789, duration: 10 }],
             },
           }),
-        }),
+        });
+        if (input.cancelAfterRead) controller.abort();
+        return result;
+      },
     },
   });
   const agent = new BrowserAgent(
@@ -343,13 +348,21 @@ app.whenReady().then(async () => {
         baseUrl: input.endpoint,
         credential: "fictional",
       },
-      new AbortController().signal,
+      controller.signal,
       false,
       undefined,
       undefined,
       attemptId,
     );
     return { materials, extractions };
+  } catch (error) {
+    if (input.cancelAfterRead)
+      return {
+        cancelled: controller.signal.aborted,
+        message: (error as Error).message,
+        extractions,
+      };
+    throw error;
   } finally {
     await browser.shutdown();
   }

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { transcriptEvidenceSchema } from "./transcript-contracts";
 import { videoIdentity, videoMatchesUrl } from "./video-contracts";
 import { youtubeVideo, redditPost } from "./source-profiles";
+import { completeLinkInput } from "./link-input";
 export const repositoryUrlSchema = z
   .string()
   .max(2048)
@@ -149,7 +150,16 @@ export const webUrlSchema = z
     const url = new URL(value);
     return url.protocol === "https:" && !url.username && !url.password;
   }, "请输入 HTTPS 网页链接");
-export const forwardingInputSchema = webUrlSchema;
+export const forwardingInputSchema = z
+  .string()
+  .max(4096)
+  .transform((value, context) => {
+    const completed = completeLinkInput(value);
+    if (completed) return completed;
+    context.addIssue({ code: "custom", message: "请输入 HTTPS 网页链接" });
+    return z.NEVER;
+  })
+  .pipe(webUrlSchema);
 export const sourceUrlSchema = webUrlSchema;
 export const platformSchema = z.enum([
   "github",

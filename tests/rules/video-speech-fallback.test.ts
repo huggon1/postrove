@@ -256,8 +256,16 @@ test("Bilibili subtitle login state still permits session-bound media ASR with H
                 aid: 123,
                 title: "Bilibili title",
                 owner: { name: "Creator" },
-                desc: "Written description",
-                pages: [{ page: 2, cid: 789, duration: 10 }],
+                desc: "Written description\n\nhttps://example.org/reference",
+                pic: "https://i0.hdslb.com/bfs/archive/cover.jpg",
+                pages: [
+                  {
+                    page: 2,
+                    cid: 789,
+                    duration: 10,
+                    part: "The selected part",
+                  },
+                ],
               },
             };
           if (url.includes("/v2?"))
@@ -293,6 +301,15 @@ test("Bilibili subtitle login state still permits session-bound media ASR with H
     assert.equal(result.outcome, "content");
     if (result.outcome !== "content") return;
     assert.equal(result.diagnostic, undefined);
+    assert.match(result.source.markdown!, /The selected part/);
+    assert.match(result.source.markdown!, /Written description/);
+    assert.equal(result.source.images.length, 1);
+    assert.equal(result.references.length, 1);
+    assert.equal(
+      "provenance" in result.source.evidence! &&
+        result.source.evidence.provenance.source,
+      "application_asr",
+    );
     assert.match(result.source.evidence!.segments[0].url, /p=2&t=1/);
     assert.equal(
       result.source.evidence &&
@@ -306,6 +323,44 @@ test("Bilibili subtitle login state still permits session-bound media ASR with H
     );
     assert.equal(requests.length, 3);
     assert.deepEqual(f.counts(), { downloads: 2, transcriptions: 1 });
+  } finally {
+    await rm(f.root, { recursive: true, force: true });
+  }
+});
+
+test("missing ASR resources retain video cover, part title and creator references", async () => {
+  const f = await fixture({ missingModel: true });
+  try {
+    const directory = join(f.evidenceRoot, randomUUID());
+    await mkdir(directory, { recursive: true });
+    const result = await f.fallback.read({
+      video: videoIdentity(`https://www.bilibili.com/video/${bvid}?p=2`)!,
+      metadata: {
+        title: "Video title",
+        uploader: "Creator",
+        partTitle: "Selected part",
+        description:
+          "The full written description\nhttps://example.org/creator",
+        images: [
+          {
+            imageId: "bilibili-cover",
+            url: "https://i0.hdslb.com/bfs/archive/cover.jpg",
+            alt: "Video cover",
+          },
+        ],
+      },
+      directory,
+      artifactKey: `${randomUUID()}/bilibili/${bvid}-p2`,
+      signal: new AbortController().signal,
+    });
+    assert.equal(result.outcome, "content");
+    if (result.outcome !== "content") return;
+    assert.match(result.source.markdown!, /Selected part/);
+    assert.match(result.source.markdown!, /full written description/);
+    assert.equal(result.source.images.length, 1);
+    assert.equal(result.references.length, 1);
+    assert.equal(result.diagnostic?.stage, "readiness");
+    assert.deepEqual(f.counts(), { transcriptions: 0, downloads: 0 });
   } finally {
     await rm(f.root, { recursive: true, force: true });
   }

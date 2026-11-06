@@ -285,6 +285,7 @@ export class ResultPublisher {
             await mkdir(target, { recursive: true, mode: 0o700 });
             for (const file of [
               "metadata.json",
+              "source-metadata.json",
               "captions.json3",
               "captions.srt",
               "captions.json",
@@ -352,7 +353,7 @@ export class ResultPublisher {
       const published = JSON.parse(
         await readFile(join(destination, "manifest.json"), "utf8"),
       );
-      let latest: { admittedAt: string; runId: string } | undefined;
+      let latest: { admittedAt: string; runId: string; publishedAt?: string } | undefined;
       try {
         latest = JSON.parse(
           await readFile(join(parent, "latest.json"), "utf8"),
@@ -362,8 +363,8 @@ export class ResultPublisher {
       }
       if (
         !latest ||
-        `${published.admittedAt}/${input.runId}` >=
-          `${latest.admittedAt}/${latest.runId}`
+        `${published.admittedAt}/${published.publishedAt}/${input.runId}` >=
+          `${latest.admittedAt}/${latest.publishedAt ?? ""}/${latest.runId}`
       ) {
         const markdown =
           `<!-- Canonical result: ${this.path(input.kind, input.runId)} -->\n\n` +
@@ -378,6 +379,7 @@ export class ResultPublisher {
           join(parent, "latest.json.tmp"),
           JSON.stringify({
             admittedAt: published.admittedAt,
+            publishedAt: published.publishedAt,
             runId: input.runId,
           }),
           { mode: 0o600 },
