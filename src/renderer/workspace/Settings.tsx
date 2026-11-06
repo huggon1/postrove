@@ -20,6 +20,7 @@ import { bridge } from "../bridge";
 import { selectLanguage, t } from "../i18n";
 import { Avatar } from "./ui";
 import { SectionHeading } from "./forms";
+import { PlatformHomeButton } from "./PlatformHomeButton";
 import { usePlatformStatus } from "./use-platform-status";
 import {
   advisors,
@@ -55,6 +56,7 @@ export function Settings({
   updateSection: ReactNode;
 }) {
   const [error, setError] = useState("");
+  const [homeError, setHomeError] = useState("");
   const [platformStatus] = usePlatformStatus();
   async function telegramAction(operation: () => Promise<{ ok: boolean }>) {
     const reply = await operation();
@@ -128,6 +130,11 @@ export function Settings({
         {section === "members" && (
           <>
             <SectionHeading title={t("AI 成员")} />
+            {homeError && (
+              <p className="inline-error" role="alert">
+                {homeError}
+              </p>
+            )}
             <div className="settings-members">
               {platformConnections
                 .map((connection) => ({
@@ -144,45 +151,57 @@ export function Settings({
                     ),
                 )
                 .map((connection) => (
-                  <button
+                  <div
+                    className="settings-member-card"
                     key={connection.connectionId}
-                    onClick={() => onMember(connection.connectionId)}
                   >
-                    <Avatar id={connection.id} languageBadge={false} />
-                    <span>
-                      <strong>{t(connection.name)}</strong>
-                      <small>{t(connection.source)}</small>
-                      <span className="settings-expert-tags">
-                        {advisors
-                          .filter(
-                            (advisor) =>
-                              advisor.connectionId ===
-                                connection.connectionId &&
-                              workspace.members?.enabled.includes(advisor.id),
-                          )
-                          .map((advisor) => (
-                            <i key={advisor.id}>
-                              {t(
-                                advisor.language === "en"
-                                  ? "英文专家"
-                                  : "中文专家",
-                              )}
-                            </i>
-                          ))}
+                    <button onClick={() => onMember(connection.connectionId)}>
+                      <Avatar id={connection.id} languageBadge={false} />
+                      <span>
+                        <strong>{t(connection.name)}</strong>
+                        <small>{t(connection.source)}</small>
+                        {platformStatus[connection.connectionId]?.signedIn && (
+                          <small className="platform-account-name">
+                            {platformStatus[connection.connectionId].account
+                              ?.name || t("账号名称待识别")}
+                          </small>
+                        )}
+                        <span className="settings-expert-tags">
+                          {advisors
+                            .filter(
+                              (advisor) =>
+                                advisor.connectionId ===
+                                  connection.connectionId &&
+                                workspace.members?.enabled.includes(advisor.id),
+                            )
+                            .map((advisor) => (
+                              <i key={advisor.id}>
+                                {t(
+                                  advisor.language === "en"
+                                    ? "英文专家"
+                                    : "中文专家",
+                                )}
+                              </i>
+                            ))}
+                        </span>
                       </span>
-                    </span>
-                    <span
-                      className={`connection-pill ${platformStatus[connection.connectionId]?.signedIn ? "connected" : ""}`}
-                    >
-                      <i />
-                      {t(
-                        platformStatus[connection.connectionId]?.signedIn
-                          ? "已连接"
-                          : "未连接",
-                      )}
-                    </span>
-                    <ArrowRight />
-                  </button>
+                      <span
+                        className={`connection-pill ${platformStatus[connection.connectionId]?.signedIn ? "connected" : ""}`}
+                      >
+                        <i />
+                        {t(
+                          platformStatus[connection.connectionId]?.signedIn
+                            ? "已连接"
+                            : "未连接",
+                        )}
+                      </span>
+                      <ArrowRight />
+                    </button>
+                    <PlatformHomeButton
+                      connectionId={connection.connectionId}
+                      onError={setHomeError}
+                    />
+                  </div>
                 ))}
               <button className="add-member-card" onClick={() => onMember()}>
                 <span className="add-connection-symbol">

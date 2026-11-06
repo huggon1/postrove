@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import {
   access,
   mkdir,
@@ -84,6 +85,28 @@ try {
     );
   for (const name of ["runtime.json", "YT-DLP-LICENSE", "DENO-LICENSE"])
     await access(join(resources, ".runtime/youtube", name));
+  const speechRoot = join(
+    resources,
+    ".runtime/speech",
+    windows ? "win32-x64" : "darwin-arm64",
+  );
+  const speechManifest = JSON.parse(
+    await readFile(join(speechRoot, "runtime.json"), "utf8"),
+  );
+  for (const name of windows
+    ? ["whisper-cli.exe", "ffmpeg.exe"]
+    : ["whisper-cli", "ffmpeg"])
+    assert.ok(speechManifest.files?.[name], "Missing speech executable digest");
+  for (const [name, digest] of Object.entries(speechManifest.files)) {
+    assert.match(name, /^[A-Za-z0-9_.-]+$/);
+    assert.equal(
+      createHash("sha256")
+        .update(await readFile(join(speechRoot, name)))
+        .digest("hex"),
+      digest,
+      "Packaged speech resource digest differs from its final bytes",
+    );
+  }
   phase = "startup";
   await launch();
   await page.evaluate(() => window.postrove.saveLanguage("zh-CN"));
