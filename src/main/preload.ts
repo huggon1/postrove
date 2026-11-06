@@ -38,6 +38,8 @@ const bridge: DesktopBridge = {
     ipcRenderer.invoke(searchChannels.cancelSection, { taskId, sectionId }),
   revealResult: (kind, taskId) =>
     ipcRenderer.invoke("results:reveal", { kind, taskId }),
+  copyResultPath: (kind, taskId) =>
+    ipcRenderer.invoke("results:copy-path", { kind, taskId }),
   saveReadingLanguage: (language) =>
     ipcRenderer.invoke("preferences:save-reading-language", language),
   botStatus: (channel) => ipcRenderer.invoke(botChannels.status, channel),
