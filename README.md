@@ -49,6 +49,8 @@ Collect posts and articles from different platforms in one place. Read their tex
 
 For example, ask “I want to make a pixel game with AI. Where do I start?” Compare the members' replies, then collect a useful tutorial into Reading. You can also add its link directly or forward it to your configured Telegram or Feishu app bot. Postrove retrieves the available content and prepares a summary for later reading.
 
+The reader’s copy icon copies the absolute `result.md` path for a coding agent. Browser addresses can be added with an omitted HTTPS prefix.
+
 ![Read a saved pixel-game tutorial with its summary, illustration, and original-text switch](assets/screenshots/reading-en.png)
 
 Reading rules define the content to capture. The Agent loads the relevant Skill for the observed page. Other pages use the general web rule, with the Agent identifying the main content and how to read it.
@@ -91,4 +93,4 @@ Reports and website sessions are stored locally. Tasks send related questions an
 
 > ⚠️ Postrove uses your signed-in platform accounts for automated search and content retrieval. These actions may trigger platform safeguards, leading to extra verification, rate limits, account restrictions, or bans. We recommend dedicated secondary accounts for X, Xiaohongshu, and other platforms to reduce the impact of account restrictions.
 
-[Development guide](docs/development.md) · [0.2.2 release notes](docs/releases/0.2.2.md) · [Release guide](docs/releasing.md) · [MIT License](LICENSE)
+[Development guide](docs/development.md) · [0.2.3 release notes](docs/releases/0.2.3.md) · [Release guide](docs/releasing.md) · [MIT License](LICENSE)
