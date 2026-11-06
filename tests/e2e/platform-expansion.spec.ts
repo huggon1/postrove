@@ -640,8 +640,16 @@ for (const scenario of [
   });
 }
 
-for (const av of [false, true])
-  test(`Bilibili native captions retain part identity${av ? " through a verified AV redirect" : ""}`, async ({}, info) => {
+for (const { av, afterRead } of [
+  { av: false, afterRead: "success" },
+  { av: true, afterRead: "success" },
+  { av: false, afterRead: "login_required" },
+  { av: false, afterRead: "invalid_json" },
+  { av: false, afterRead: "omit_reader_capture" },
+  { av: false, afterRead: "invalid_capture_ids" },
+  { av: false, afterRead: "cancelled" },
+])
+  test(`Bilibili native captions retain part identity${av ? " through a verified AV redirect" : ""} · ${afterRead}`, async ({}, info) => {
     const root = await mkdtemp(join(tmpdir(), "postrove-bili-reading-"));
     const canonical = "https://www.bilibili.com/video/BV1234567890?p=2";
     const original = av
@@ -708,8 +716,37 @@ for (const av of [false, true])
         res.end("{}");
         return;
       }
+      if (output && afterRead === "login_required")
+        output = { error: "login_required" };
+      if (output && afterRead === "omit_reader_capture")
+        output = {
+          materials: [
+            {
+              role: "main",
+              url: original,
+              title: "Page shell only",
+              sourceCaptureIds: [],
+            },
+          ],
+        };
+      if (output && afterRead === "invalid_capture_ids")
+        output = {
+          materials: [
+            {
+              role: "main",
+              url: original,
+              sourceCaptureIds: { value: caption.captureId },
+            },
+          ],
+        };
       const delta = output
-        ? { role: "assistant", content: JSON.stringify(output) }
+        ? {
+            role: "assistant",
+            content:
+              afterRead === "invalid_json"
+                ? "Captured transcript without JSON."
+                : JSON.stringify(output),
+          }
         : {
             role: "assistant",
             tool_calls: [
@@ -743,14 +780,27 @@ for (const av of [false, true])
       const result = await app.evaluate(
         async (_electron, input) =>
           (globalThis as any).collectBilibiliVideo(input),
-        { endpoint, av },
+        { endpoint, av, cancelAfterRead: afterRead === "cancelled" },
       );
       expect(scopeRejected).toBe(true);
+      if (afterRead === "cancelled") {
+        expect(result.cancelled).toBe(true);
+        expect(result.message).toBe("Cancelled");
+        expect(result.materials).toBeUndefined();
+        return;
+      }
       expect(result.extractions).toBe(1);
       expect(result.materials[0].source.platform).toBe("bilibili");
       expect(result.materials[0].source.sourceKey).toBe(
         `bilibili:video:${av ? "av123" : "BV1234567890"}:p:2`,
       );
+      expect(result.materials[0].diagnostic).toBeUndefined();
+      if (afterRead !== "success") {
+        expect(result.materials[0].title).toBe("Bilibili fixture");
+        expect(result.materials[0].source.sourceIdentity).toBe(
+          "Fixture creator",
+        );
+      }
       const evidence = result.materials[0].source.evidence;
       expect(evidence.video.cid).toBe("789");
       expect(evidence.provenance).toEqual({

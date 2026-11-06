@@ -102,6 +102,7 @@ export class PlatformAccess {
       undefined,
       undefined,
       attemptId,
+      { url, browserUrl: browserUrl.href, includeReferences },
     );
     const main = result.output.materials[0];
     if (main.role !== "main" || main.url !== url)
@@ -310,7 +311,10 @@ export class PlatformAccess {
       if (
         readerDiagnostic ||
         (material.source?.completeness !== "complete" &&
-          !captures.some((capture: BrowserCapture) => capture.evidence))
+          !captures.some(
+            (capture: BrowserCapture) =>
+              capture.evidence || capture.sourceReader,
+          ))
       )
         material.diagnostic ??= readerDiagnostic ?? diagnostic;
       materials.push(material);
