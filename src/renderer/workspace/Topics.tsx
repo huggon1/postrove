@@ -1,4 +1,5 @@
 import { sourceProfiles } from "../../shared/source-profiles";
+import { forwardingInputSchema } from "../../shared/source-contracts";
 import { useState } from "react";
 import {
   ArrowRight,
@@ -74,11 +75,12 @@ export function Composer({
   const [question, setQuestion] = useState("");
   const [menu, setMenu] = useState(false);
   const enabled = workspace.members?.enabled ?? [];
-  const linkOnly = /^https:\/\/\S+$/.test(question.trim());
+  const linkInput = forwardingInputSchema.safeParse(question);
+  const linkOnly = linkInput.success;
   async function send() {
     const text = question.trim();
-    if (/^https:\/\/\S+$/.test(text)) {
-      onLink(text);
+    if (linkInput.success) {
+      onLink(linkInput.data);
       return;
     }
     const taskId = await workspace.run(() =>

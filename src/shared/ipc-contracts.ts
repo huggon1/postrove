@@ -133,6 +133,10 @@ export interface DesktopBridge {
     kind: "search" | "reading",
     taskId: string,
   ): Promise<ModelReply<string>>;
+  copyResultPath(
+    kind: "search" | "reading",
+    taskId: string,
+  ): Promise<ModelReply<string>>;
   saveReadingLanguage(
     language: ApplicationPreferences["readingLanguage"],
   ): Promise<ApplicationPreferences>;
