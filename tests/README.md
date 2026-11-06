@@ -41,6 +41,8 @@ Fixtures use isolated profiles and controlled external responses.
 
 `tests/rules/reading-diagnostics.test.ts` covers bilingual model-output-limit feedback, typed causes, component readiness, access parameters, caption observations, HTTP 403, unknown errors, and legacy issue text. `tests/rules/reading-diagnostic-receipts.test.ts` covers durable task diagnostics and partial processing receipts with original content and completed translations.
 
+`tests/rules/reading-source-recovery.test.ts` covers source-stage failure after successful text processing, Main-owned recapture, richer-source replacement, retained content after failed capture, reuse after unchanged capture, completed reference retention, processing-only recovery, legacy completed-state correction, and speech-component integrity diagnostics. The reading diagnostics E2E shows retained legacy content, source feedback, and retry controls in both languages at desktop and compact widths.
+
 `tests/rules/reading-diagnostic-provenance.test.ts` covers later translation and summary failures alongside earlier source issues, including retained original text and truncated output. `tests/rules/reading-source-diagnostics.test.ts` verifies source-scoped observations across redirect aliases, partial content, and uncaptured references.
 
 `tests/rules/model-connections.test.ts` covers saved connection activation, independent editor catalogs, retained execution leases, failed writes, inactive credential replacement, reasoning compatibility, and late check completion after an active configuration change.

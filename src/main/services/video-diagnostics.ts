@@ -23,12 +23,12 @@ export function xiaohongshuVideoDiagnostic(
     };
   if (reason === "runtime_missing" || reason === "model_missing")
     return readingDiagnostic("component_missing", "readiness", evidence);
+  if (reason === "runtime_integrity" || reason === "model_integrity")
+    return readingDiagnostic("component_unavailable", "readiness", evidence);
   if (
     [
       "runtime_unavailable",
       "speech_runtime_missing",
-      "runtime_integrity",
-      "model_integrity",
       "unsupported_runtime",
     ].includes(reason)
   )
