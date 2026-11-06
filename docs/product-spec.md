@@ -60,7 +60,7 @@ Main freezes model metadata and options for active execution through a lease. Ex
 
 ## Saved results and deletion
 
-Terminal runs publish immutable Markdown packages. Result file opens the current run's location. [Result contracts](data-contracts.md#result-packages) define stable paths and latest results for further Agent work.
+Terminal runs publish immutable Markdown packages. Result file opens the current run's location. The reading header's copy icon copies the current attempt's absolute `result.md` path and briefly shows a check after copying. [Result contracts](data-contracts.md#result-packages) define stable paths and latest results for further Agent work.
 
 Deleting a topic or reading record changes visibility and offers Undo for eight seconds. Main stops active execution before deleting it. Source associations, material evidence, logs, and receipt identities remain saved. Undo restores the same record identity. Recollecting a hidden reading result creates a fresh reading identity.
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { sourceProfiles } from "../../shared/source-profiles";
 import { forwardingInputSchema } from "../../shared/source-contracts";
 import {
@@ -6,6 +6,8 @@ import {
   ArrowUpRight,
   BookOpen,
   CaretDown,
+  Check,
+  Copy,
   FileText,
   LinkSimple,
   MagnifyingGlass,
@@ -218,7 +220,13 @@ export function ReadingView({
 }) {
   const [materialId, setMaterialId] = useState(""),
     [original, setOriginal] = useState(false),
-    [receipts, setReceipts] = useState(false);
+    [receipts, setReceipts] = useState(false),
+    [copiedPath, setCopiedPath] = useState(false);
+  useEffect(() => {
+    if (!copiedPath) return;
+    const timer = setTimeout(() => setCopiedPath(false), 2_000);
+    return () => clearTimeout(timer);
+  }, [copiedPath]);
   const materials = report.materials ?? [];
   const material =
     materials.find((item) => item.id === materialId) ?? materials[0];
@@ -256,6 +264,22 @@ export function ReadingView({
         >
           <ArrowUpRight />
         </IconButton>
+        {!active && (
+          <IconButton
+            label={t(copiedPath ? "已复制路径" : "复制结果文件路径")}
+            tooltip
+            disabled={workspace.busy}
+            onClick={async () => {
+              setCopiedPath(false);
+              const path = await workspace.run(() =>
+                bridge.copyResultPath("reading", report.taskId),
+              );
+              if (path) setCopiedPath(true);
+            }}
+          >
+            {copiedPath ? <Check /> : <Copy />}
+          </IconButton>
+        )}
         {!active && (
           <IconButton
             label={t("结果文件")}
