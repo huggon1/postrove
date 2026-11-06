@@ -192,6 +192,67 @@ test("XHS metadata-only results keep written content and covers", () => {
   assert.equal(result.metadata.images.length, 1);
   assert.equal(result.metadata.title, metadata.title);
 });
+
+test("XHS observed HTTP CDN streams and covers use HTTPS and select an audio-bearing format", () => {
+  const result = normalizeXhsVideoMetadata(
+    {
+      ...metadata,
+      thumbnails: [
+        { url: "http://sns-webpic-qc.xhscdn.com/cover.jpg?image=fictional" },
+      ],
+      formats: [
+        {
+          url: "http://sns-video-v6.xhscdn.com/video.m4s?token=fictional",
+          audio_channels: 0,
+          filesize: 1,
+        },
+        {
+          url: "http://sns-video-v6.xhscdn.com/unknown.mp4",
+          acodec: "unknown",
+          filesize: 2,
+        },
+        {
+          url: "http://sns-video-v6.xhscdn.com/spoken.mp4?token=fictional",
+          acodec: "aac",
+          audio_channels: 2,
+          filesize: 30,
+        },
+      ],
+    },
+    note,
+  );
+  assert.equal(
+    result.media?.url,
+    "https://sns-video-v6.xhscdn.com/spoken.mp4?token=fictional",
+  );
+  assert.deepEqual(result.media?.allowedHosts, ["sns-video-v6.xhscdn.com"]);
+  assert.equal(
+    result.metadata.images[0].url,
+    "https://sns-webpic-qc.xhscdn.com/cover.jpg?image=fictional",
+  );
+});
+
+test("XHS CDN upgrading rejects credentialed, ported and unrelated HTTP addresses", () => {
+  for (const address of [
+    "http://user@sns-video-v6.xhscdn.com/media.mp4",
+    "http://sns-video-v6.xhscdn.com:8080/media.mp4",
+    "http://sns-video-v6.xhscdn.com:80/media.mp4",
+    "https://sns-video-v6.xhscdn.com:443/media.mp4",
+    "http://evil.test/media.mp4",
+    "http://evilxhscdn.com/media.mp4",
+  ]) {
+    const result = normalizeXhsVideoMetadata(
+      {
+        ...metadata,
+        thumbnails: [{ url: address }],
+        formats: [{ url: address, acodec: "aac" }],
+      },
+      note,
+    );
+    assert.equal(result.media, undefined);
+    assert.deepEqual(result.metadata.images, []);
+  }
+});
 test("XHS failure classification requires an observed access challenge", () => {
   assert.equal(classifyXhsFailure("HTTP Error 403"), "extraction_failed");
   assert.equal(
@@ -299,6 +360,34 @@ test("XHS sparse extractor metadata retains the verified page text and cover", a
     assert.equal(result.metadata?.description, metadata.description);
     assert.equal(result.metadata?.images.length, 1);
     assert.ok(result.media);
+  } finally {
+    await f.cleanup();
+  }
+});
+
+test("XHS blank or abbreviated extractor fields keep fuller matching page metadata", async () => {
+  const f = await fixture(async () =>
+    JSON.stringify({
+      ...metadata,
+      title: "  ",
+      description: "The written",
+      uploader: "\n",
+      uploader_id: "",
+      thumbnails: [{ url: "https://example.test/alternate.jpg" }],
+    }),
+  );
+  try {
+    const fallback = normalizeXhsVideoMetadata(metadata, note).metadata;
+    const result = await f.reader.read({
+      url: full,
+      directory: f.directory,
+      signal: new AbortController().signal,
+      fallback,
+    });
+    assert.equal(result.metadata?.title, metadata.title);
+    assert.equal(result.metadata?.description, metadata.description);
+    assert.equal(result.metadata?.uploader, metadata.uploader_id);
+    assert.equal(result.metadata?.images.length, 2);
   } finally {
     await f.cleanup();
   }

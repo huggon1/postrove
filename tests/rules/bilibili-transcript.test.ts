@@ -33,6 +33,7 @@ async function fixture(
     mismatchCid?: boolean;
     failExtractor?: boolean;
     subtitleUrl?: string;
+    cover?: string;
   } = {},
 ) {
   const root = await mkdtemp(join(tmpdir(), "postrove-bili-"));
@@ -79,10 +80,11 @@ async function fixture(
             aid: 123,
             title: "Fixture video",
             owner: { name: "Fixture creator" },
-            desc: "Source description",
+            desc: "Source description\n\nhttps://example.org/material",
+            pic: options.cover ?? "http://i0.hdslb.com/bfs/archive/fixture.jpg",
             pages: [
               { page: 1, cid: 456, duration: 10 },
-              { page: 2, cid: 789, duration: 8 },
+              { page: 2, cid: 789, duration: 8, part: "Selected part" },
             ],
           },
         };
@@ -140,6 +142,18 @@ test("Bilibili explicitly queries captions, validates part/CID, and retains its 
     assert.equal(result.outcome, "content");
     if (result.outcome !== "content") return;
     const evidence = result.source.evidence!;
+    assert.match(result.source.markdown!, /Source description/);
+    assert.match(result.source.markdown!, /## Selected part/);
+    assert.equal(
+      result.source.images[0].url,
+      "https://i0.hdslb.com/bfs/archive/fixture.jpg",
+    );
+    assert.deepEqual(result.references, [
+      {
+        url: "https://example.org/material",
+        title: "https://example.org/material",
+      },
+    ]);
     assert.ok("video" in evidence);
     assert.equal(evidence.video.cid, "789");
     assert.equal(evidence.provenance.source, "platform_captions");
@@ -272,11 +286,18 @@ for (const scenario of [
     try {
       const id = randomUUID(),
         signal = new AbortController().signal;
-      assert.deepEqual(await f.reader.read(url, id, signal, f.session), {
-        outcome: "unavailable",
-        reason: scenario.expected,
-      });
-      await f.reader.read(url, id, signal, f.session);
+      const result = await f.reader.read(url, id, signal, f.session);
+      assert.equal(result.outcome, "content");
+      if (result.outcome !== "content") return;
+      assert.match(result.source.markdown!, /Source description/);
+      assert.equal(result.source.images.length, 1);
+      assert.equal(result.source.evidence, undefined);
+      assert.equal(
+        result.diagnostic?.code,
+        scenario.login ? "login_required" : "captions_missing",
+      );
+      assert.equal(result.diagnostic?.stage, "captions");
+      assert.deepEqual(await f.reader.read(url, id, signal, f.session), result);
       assert.equal(f.calls.length, 1);
       assert.equal(f.requests.length, 2);
     } finally {
@@ -346,13 +367,16 @@ test("Bilibili rejects extractor/CID changes and subtitle destinations outside i
         new AbortController().signal,
         f.session,
       );
-      assert.equal(result.outcome, "unavailable");
+      assert.equal(result.outcome, "content");
+      if (result.outcome !== "content") return;
       assert.equal(
-        result.outcome === "unavailable" && result.reason,
+        result.diagnostic?.evidence?.failureCode,
         "subtitleUrl" in options
           ? "transcript_access_url_rejected"
           : "transcript_identity_changed",
       );
+      assert.equal(result.source.evidence, undefined);
+      assert.match(result.source.markdown!, /Source description/);
       assert.equal(
         f.requests.some((url) => url.includes("evil.test")),
         false,
@@ -505,5 +529,92 @@ test("Bilibili unavailable state preserves the original failing stage", async ()
     assert.equal(sourceState.reason, "bilibili_api_-403");
   } finally {
     await rm(f.root, { recursive: true, force: true });
+  }
+});
+
+test("Bilibili retains metadata during missing runtime and resumes the same attempt after preparation", async () => {
+  const f = await fixture();
+  try {
+    const manifest = join(f.root, "runtime/youtube/runtime.json");
+    await rm(manifest);
+    const attempt = randomUUID();
+    const first = await f.reader.read(
+      url,
+      attempt,
+      new AbortController().signal,
+      f.session,
+    );
+    assert.equal(first.outcome, "content");
+    if (first.outcome !== "content") return;
+    assert.equal(first.diagnostic?.stage, "readiness");
+    assert.equal(first.source.evidence, undefined);
+    assert.match(first.source.markdown!, /Fixture creator/);
+    assert.match(first.source.markdown!, /Selected part/);
+    assert.equal(first.source.images.length, 1);
+    assert.equal(first.references.length, 1);
+    assert.equal(f.calls.length, 0);
+    await writeFile(manifest, JSON.stringify(youtubeRuntimeVersion));
+    const resumed = await f.reader.read(
+      url,
+      attempt,
+      new AbortController().signal,
+      f.session,
+    );
+    assert.equal(resumed.outcome, "content");
+    if (resumed.outcome !== "content") return;
+    assert.equal(resumed.diagnostic, undefined);
+    assert.equal(resumed.source.evidence?.segments.length, 2);
+    assert.equal(f.calls.length, 1);
+  } finally {
+    await rm(f.root, { recursive: true, force: true });
+  }
+});
+
+test("Bilibili subtitle endpoint failure keeps the verified description, cover and references", async () => {
+  const f = await fixture({ noSubs: true });
+  try {
+    const result = await f.reader.read(
+      url,
+      randomUUID(),
+      new AbortController().signal,
+      {
+        getJson: (address, signal) =>
+          address.includes("/v2?")
+            ? Promise.reject(new Error("bilibili_http_503"))
+            : f.session.getJson(address, signal),
+      },
+    );
+    assert.equal(result.outcome, "content");
+    if (result.outcome !== "content") return;
+    assert.match(result.source.markdown!, /Source description/);
+    assert.equal(result.source.images.length, 1);
+    assert.equal(result.references.length, 1);
+    assert.equal(result.source.evidence, undefined);
+    assert.equal(result.diagnostic?.evidence?.httpStatus, 503);
+  } finally {
+    await rm(f.root, { recursive: true, force: true });
+  }
+});
+
+test("Bilibili public covers stay within source image hosts", async () => {
+  for (const cover of [
+    "https://user@i0.hdslb.com/cover.jpg",
+    "https://evil.test/cover.jpg",
+    "https://i0.hdslb.com:8080/cover.jpg",
+  ]) {
+    const f = await fixture({ cover });
+    try {
+      const result = await f.reader.read(
+        url,
+        randomUUID(),
+        new AbortController().signal,
+        f.session,
+      );
+      assert.equal(result.outcome, "content");
+      if (result.outcome === "content")
+        assert.deepEqual(result.source.images, []);
+    } finally {
+      await rm(f.root, { recursive: true, force: true });
+    }
   }
 });

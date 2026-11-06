@@ -285,6 +285,7 @@ export class ResultPublisher {
             await mkdir(target, { recursive: true, mode: 0o700 });
             for (const file of [
               "metadata.json",
+              "source-metadata.json",
               "captions.json3",
               "captions.srt",
               "captions.json",
