@@ -51,7 +51,10 @@ function linksFromMessage(text: string, entities?: unknown[]) {
     const displayed = trimUrl(match[0]);
     return { raw: displayed, displayed: match[0] };
   });
-  return matches;
+  if (matches.length) return matches;
+  return forwardingInputSchema.safeParse(text).success
+    ? [{ raw: text.trim(), displayed: text }]
+    : [];
 }
 
 export function parseSingleBotLink(message: {
@@ -85,7 +88,7 @@ export function parseSingleBotLink(message: {
   }
   let xhsAccessToken: string | undefined;
   try {
-    const url = new URL(raw);
+    const url = new URL(parsed);
     if (["xiaohongshu.com", "www.xiaohongshu.com"].includes(url.hostname))
       xhsAccessToken = url.searchParams.get("xsec_token") ?? undefined;
   } catch {

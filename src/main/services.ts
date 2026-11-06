@@ -41,7 +41,7 @@ import { searchChannels } from "../shared/ipc-contracts";
 import { z } from "zod";
 import { handle } from "./ipc";
 import type { Language } from "../shared/language";
-import { app, safeStorage, shell, utilityProcess } from "electron";
+import { app, clipboard, safeStorage, shell, utilityProcess } from "electron";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
@@ -744,7 +744,12 @@ export async function initializeServices(
     changed();
     return preferences.view();
   });
-  for (const channel of ["advisors:view", "advisors:save", "results:reveal"])
+  for (const channel of [
+    "advisors:view",
+    "advisors:save",
+    "results:reveal",
+    "results:copy-path",
+  ])
     handle(channel, async (event, ...args: unknown[]) => {
       if (
         event.senderFrame !== event.sender.mainFrame ||
@@ -781,7 +786,13 @@ export async function initializeServices(
           value = await results.publishReading(detail);
         }
         if (!value) throw new Error("Result is still running");
-        shell.showItemInFolder(value);
+        if (channel === "results:copy-path") {
+          try {
+            await clipboard.writeText(value);
+          } catch {
+            return { ok: false, message: "操作未完成，请重试" };
+          }
+        } else shell.showItemInFolder(value);
         return { ok: true, value };
       } catch {
         return { ok: false, message: "结果文件暂不可用" };

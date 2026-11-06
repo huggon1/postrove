@@ -71,3 +71,5 @@ The [platform account E2E](../tests/e2e/platform-account.spec.ts) checks authent
 The [account home navigation E2E](../tests/e2e/platform-home-navigation.spec.ts) opens cold and headless-to-visible sessions with a committed homepage whose scripts are still loading. It verifies session retention, late account-name detection, and a failed document request.
 
 The [account login E2E](../tests/e2e/platform-account-login.spec.ts) verifies one snapshot after login, static display during ordinary browser activity, and explicit refresh.
+
+The reading result-path icon shows its existing action label on pointer hover and keyboard focus. The user explicitly requested this hover explanation. The [result-path E2E](../tests/e2e/reading-result-path.spec.ts) checks visible tooltip text and viewport bounds in both languages at desktop and compact widths.

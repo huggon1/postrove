@@ -360,6 +360,8 @@
   "暂无引用": "No citations",
   "引用": "Citations",
   "结果文件": "Result file",
+  "复制结果文件路径": "Copy result file path",
+  "已复制路径": "Path copied",
   "结果文件暂不可用": "Result file is unavailable",
   "导出运行日志": "Export run logs",
   "{0} 个来源": "{0} sources",
