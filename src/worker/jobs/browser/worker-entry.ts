@@ -308,6 +308,10 @@ port.on("message", ({ data }) => {
               type: "failed",
               message: code,
               diagnostic,
+              ...(error instanceof Error &&
+              error.message === "Browser agent returned invalid JSON"
+                ? { invalidOutput: true }
+                : {}),
             };
     })
     .finally(async () => {
