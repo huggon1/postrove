@@ -16,6 +16,11 @@ import {
   type TranscriptRun,
 } from "./youtube-transcript";
 import { readVideoCheckpoint } from "./video-checkpoint";
+import { transcriptDiagnostic } from "../../shared/reading-observations";
+import {
+  videoMetadataMarkdown,
+  videoDescriptionReferences,
+} from "./video-metadata";
 import type { VideoSpeechFallback } from "./video-speech";
 import { fetchBilibiliJson, bilibiliJsonUrl } from "./video-session";
 import type {
@@ -44,6 +49,24 @@ function apiData(raw: any) {
   if (raw?.code !== 0 || !raw.data || typeof raw.data !== "object")
     throw new Error("transcript_extraction_failed");
   return raw.data;
+}
+function coverImage(raw: unknown, title: string) {
+  if (typeof raw !== "string") return [];
+  try {
+    const url = new URL(raw.startsWith("//") ? `https:${raw}` : raw);
+    if (
+      !["https:", "http:"].includes(url.protocol) ||
+      url.port ||
+      url.username ||
+      url.password ||
+      !url.hostname.endsWith(".hdslb.com")
+    )
+      return [];
+    url.protocol = "https:";
+    return [{ imageId: "bilibili-cover", url: url.href, alt: title }];
+  } catch {
+    return [];
+  }
 }
 export function selectBilibiliTrack(
   metadata: Metadata,
@@ -188,29 +211,33 @@ export class BilibiliTranscriptReader implements VideoTranscriptReader {
     await mkdir(directory, { recursive: true, mode: 0o700 });
     const stateFile = join(directory, "reader-attempt.json");
     let stage: "readiness" | "source" | "captions" = "readiness";
-    const save = async (name: string, value: unknown) =>
-      writeFile(
-        join(directory, name),
+    const save = async (name: string, value: unknown) => {
+      const path = join(directory, name);
+      await writeFile(
+        `${path}.tmp`,
         typeof value === "string" ? value : JSON.stringify(value, null, 2),
         { mode: 0o600 },
       );
+      await rename(`${path}.tmp`, path);
+    };
     const state = async (value: object) => {
-      await save("reader-attempt.json.tmp", {
+      await save("reader-attempt.json", {
         ...value,
         stage,
         video,
         runtime: { downloader: youtubeRuntimeVersion.downloader },
         at: new Date().toISOString(),
       });
-      await rename(stateFile + ".tmp", stateFile);
     };
     if (!signal.aborted) {
       try {
         const saved = JSON.parse(await readFile(stateFile, "utf8"));
         const resumeSpeech =
-          saved.state === "completed" &&
-          saved.diagnostic?.category === "readiness" &&
-          (await this.speech?.ready());
+          (saved.reason === "transcript_runtime_unavailable" &&
+            (await this.available())) ||
+          (saved.state === "completed" &&
+            saved.diagnostic?.category === "readiness" &&
+            (await this.speech?.ready()));
         if (!resumeSpeech) {
           if (saved.state === "completed")
             return {
@@ -226,7 +253,11 @@ export class BilibiliTranscriptReader implements VideoTranscriptReader {
               ...(saved.diagnostic ? { diagnostic: saved.diagnostic } : {}),
             };
           const checkpoint = await readVideoCheckpoint(directory, video, key);
-          if (checkpoint) return checkpoint;
+          if (checkpoint)
+            return {
+              ...checkpoint,
+              ...(saved.diagnostic ? { diagnostic: saved.diagnostic } : {}),
+            };
           return {
             outcome: "unavailable",
             reason:
@@ -243,8 +274,6 @@ export class BilibiliTranscriptReader implements VideoTranscriptReader {
     const budget = AbortSignal.any([signal, AbortSignal.timeout(75_000)]);
     try {
       if (signal.aborted) throw new Error("Cancelled");
-      if (!(await this.available()))
-        throw new Error("transcript_runtime_unavailable");
       const getJson = (url: string) =>
         session
           ? session.getJson(bilibiliJsonUrl(url).href, budget)
@@ -284,16 +313,54 @@ export class BilibiliTranscriptReader implements VideoTranscriptReader {
           ? page.duration
           : undefined;
       // Keep public source metadata; signed media URLs and session state stay out of packages.
-      const metadata: Record<string, unknown> = {
+      const title = String(view.title ?? video.url).slice(0, 500);
+      const metadata = {
         video,
         bvid: view.bvid,
         aid: numericId(view.aid),
-        title: String(view.title ?? video.url),
-        uploader: String(view.owner?.name ?? ""),
-        description: String(view.desc ?? ""),
+        title,
+        uploader: String(view.owner?.name ?? "").slice(0, 300),
+        description: String(view.desc ?? "").slice(0, 300_000),
+        partTitle:
+          typeof page?.part === "string" ? page.part.slice(0, 500) : undefined,
+        images: coverImage(view.pic, title),
         duration,
       };
       await save("metadata.json", metadata);
+      const metadataMarkdown = videoMetadataMarkdown(metadata);
+      await save(
+        "source.json",
+        sourceSchema.parse({
+          platform: "bilibili",
+          sourceUrl: video.url,
+          sourceKey: video.sourceKey,
+          sourceIdentity: (metadata.uploader || metadata.title).slice(0, 300),
+          title: metadata.title,
+          fetchedAt: new Date().toISOString(),
+          markdown: metadataMarkdown,
+          contentBlocks: Array.from(
+            { length: Math.ceil(metadataMarkdown.length / 300_000) },
+            (_, index) => ({
+              type: "text",
+              text: metadataMarkdown.slice(
+                index * 300_000,
+                (index + 1) * 300_000,
+              ),
+            }),
+          ),
+          images: metadata.images,
+          completeness: "partial",
+          completenessNote:
+            "Metadata captured; transcript pending. Visual coverage: unknown.",
+        }),
+      );
+      await save(
+        "references.json",
+        videoDescriptionReferences(metadata.description, video),
+      );
+      stage = "readiness";
+      if (!(await this.available()))
+        throw new Error("transcript_runtime_unavailable");
       stage = "captions";
       await state({ state: "running" });
       let track: ReturnType<typeof selectBilibiliTrack> = undefined;
@@ -386,12 +453,7 @@ export class BilibiliTranscriptReader implements VideoTranscriptReader {
         if (!selected && this.speech) {
           const result = await this.speech.read({
             video,
-            metadata: {
-              title: String(metadata.title),
-              uploader: String(metadata.uploader),
-              description: String(metadata.description),
-              duration,
-            },
+            metadata,
             directory,
             artifactKey: key,
             signal,
@@ -423,35 +485,17 @@ export class BilibiliTranscriptReader implements VideoTranscriptReader {
       await save("segments.json", segments);
       const kind = track.language.startsWith("ai-") ? "automatic" : "unknown";
       const markdown =
-        `# ${metadata.title}\n\n${metadata.uploader}\n\n${metadata.description}\n\n` +
+        `${videoMetadataMarkdown(metadata)}\n\n` +
         segments
           .map(
             (segment) =>
               `[${Math.floor(segment.start / 60)}:${String(Math.floor(segment.start % 60)).padStart(2, "0")}](${segment.url}) ${segment.text}`,
           )
           .join("\n\n");
-      const references = [
-        ...new Set(
-          String(metadata.description).match(
-            /https:\/\/[^\s<>"\u0000-\u001f]+/g,
-          ) ?? [],
-        ),
-      ]
-        .map((raw) => raw.replace(/[),.;]+$/, ""))
-        .filter((raw) => {
-          try {
-            const url = new URL(raw);
-            return (
-              !url.username &&
-              !url.password &&
-              videoIdentity(raw)?.sourceKey !== video.sourceKey
-            );
-          } catch {
-            return false;
-          }
-        })
-        .slice(0, 30)
-        .map((url) => ({ url, title: url }));
+      const references = videoDescriptionReferences(
+        metadata.description,
+        video,
+      );
       const source = sourceSchema.parse({
         platform: "bilibili",
         sourceUrl: video.url,
@@ -470,7 +514,7 @@ export class BilibiliTranscriptReader implements VideoTranscriptReader {
             text: markdown.slice(index * 300000, (index + 1) * 300000),
           }),
         ),
-        images: [],
+        images: metadata.images,
         completeness: "partial",
         completenessNote:
           "Available original transcript and metadata; visual content coverage is unknown.",
@@ -505,8 +549,15 @@ export class BilibiliTranscriptReader implements VideoTranscriptReader {
               )
             ? error.message
             : "transcript_extraction_failed";
-      await state({ state: "unavailable", reason });
+      const diagnostic = { ...transcriptDiagnostic(reason), stage };
+      await state({ state: "unavailable", reason, diagnostic });
       if (signal.aborted) throw new Error("Cancelled");
+      const checkpoint = await readVideoCheckpoint(directory, video, key);
+      if (checkpoint?.outcome === "content") {
+        checkpoint.source.completenessNote = `Saved metadata and available transcript. Capture: ${reason}. Visual coverage: unknown.`;
+        await save("source.json", checkpoint.source);
+        return { ...checkpoint, diagnostic };
+      }
       return { outcome: "unavailable", reason };
     }
   }

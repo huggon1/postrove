@@ -3,7 +3,6 @@ import { chmod, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { sourceSchema } from "../../shared/source-contracts";
 import {
-  videoIdentity,
   videoTimestampUrl,
   type VideoIdentity,
 } from "../../shared/video-contracts";
@@ -16,13 +15,13 @@ import type {
 } from "./video-transcript";
 import { xiaohongshuVideoDiagnostic } from "./video-diagnostics";
 import { runTranscriptProcess, type TranscriptRun } from "./youtube-transcript";
+import {
+  videoMetadataMarkdown,
+  videoDescriptionReferences,
+  type VideoMetadata,
+} from "./video-metadata";
 
-export interface VideoSpeechMetadata {
-  title: string;
-  uploader?: string;
-  description?: string;
-  duration?: number;
-}
+export type VideoSpeechMetadata = VideoMetadata;
 /** Uses page identity for media retrieval and publishes only bounded ASR evidence. */
 export class VideoSpeechFallback {
   constructor(
@@ -64,9 +63,7 @@ export class VideoSpeechFallback {
         url: videoTimestampUrl(video, segment.start),
       }));
       const markdown = [
-        `# ${metadata.title}`,
-        metadata.uploader,
-        metadata.description,
+        videoMetadataMarkdown(metadata),
         ...segments.map(
           (segment) =>
             `[${Math.floor(segment.start / 60)}:${String(Math.floor(segment.start % 60)).padStart(2, "0")}](${segment.url}) ${segment.text}`,
@@ -98,7 +95,7 @@ export class VideoSpeechFallback {
             text: markdown.slice(index * 300000, (index + 1) * 300000),
           }),
         ),
-        images: [],
+        images: metadata.images ?? [],
         completeness: "partial",
         completenessNote: `Metadata captured. Speech: ${speech?.status ?? "unavailable"}${issue ? ` (${issue})` : ""}. Visual coverage: unknown.`,
         ...(segments.length
@@ -309,29 +306,10 @@ export class VideoSpeechFallback {
     }
     const source = await publish();
     if (signal.aborted) throw new Error("Cancelled");
-    const references = [
-      ...new Set(
-        (metadata.description ?? "").match(
-          /https:\/\/[^\s<>"\u0000-\u001f]+/g,
-        ) ?? [],
-      ),
-    ]
-      .map((raw) => raw.replace(/[),.;]+$/, ""))
-      .filter((raw) => {
-        try {
-          const url = new URL(raw);
-          return (
-            !url.username &&
-            !url.password &&
-            url.protocol === "https:" &&
-            videoIdentity(raw)?.sourceKey !== video.sourceKey
-          );
-        } catch {
-          return false;
-        }
-      })
-      .slice(0, 30)
-      .map((url) => ({ url, title: url }));
+    const references = videoDescriptionReferences(
+      metadata.description ?? "",
+      video,
+    );
     return {
       outcome: "content",
       source,

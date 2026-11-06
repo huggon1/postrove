@@ -33,6 +33,8 @@ The topic feed and its supporting column share the desktop viewport. Compact wid
 
 Shared form components own labels, input spacing, validation feedback, and dialog actions. A failed operation retains the active form and its entered values. Secret controls retain the value while switching its visibility.
 
+A reading card's image fills and crops within its fixed-height cover. The cover and title each open their reading record through their own click target.
+
 ## Review evidence
 
 For each added or expanded message, record its admission source and triggering state. Review the rendered interface and both interface languages.
