@@ -41,7 +41,12 @@ import {
   platformSkillCatalog,
   loadPlatformSkill,
 } from "../../platforms/browser/skills";
-import { xhsNoteUrlSchema } from "../../shared/source-contracts";
+import { sourceSchema, xhsNoteUrlSchema } from "../../shared/source-contracts";
+import {
+  recoverCapturedVideo,
+  type CollectionIdentity,
+  type SourceReaderCapture,
+} from "./captured-video-recovery";
 import { createWorkerEnvironment } from "./worker-environment";
 export interface BrowserCapture {
   text: string;
@@ -61,6 +66,7 @@ export interface BrowserCapture {
     note: string;
   };
   readerDiagnostic?: ReadingDiagnostic;
+  sourceReader?: true;
 }
 export type SearchProgress = Partial<
   Pick<
@@ -97,6 +103,7 @@ export class BrowserAgent {
     recovery?: { prompt: string; conversationUrl?: string },
     routeId?: string,
     readingAttemptId = taskId,
+    collection?: CollectionIdentity,
   ) {
     const youtubeReading =
       purpose === "collect" &&
@@ -109,6 +116,7 @@ export class BrowserAgent {
       const captures: string[] = [];
       const captureRecords = new Map<string, string>();
       const captureData = new Map<string, BrowserCapture>();
+      const readerCaptures = new Map<string, SourceReaderCapture>();
       const navigations = new Map<string, string>();
       const sourceCaptures = new Set<string>();
       const sourceOpened = new Map<string, Set<string>>();
@@ -614,8 +622,15 @@ export class BrowserAgent {
                 if (result.outcome !== "content") {
                   return { ...result, diagnostic };
                 }
-                const source = result.source;
+                const source = sourceSchema.parse(result.source);
+                const captureId = source.evidence?.captureId ?? randomUUID();
+                readerCaptures.set(captureId, {
+                  source,
+                  requestedUrl,
+                  attemptId: readingAttemptId,
+                });
                 return {
+                  captureId,
                   capture: source.markdown,
                   markdown: source.markdown,
                   url: source.sourceUrl,
@@ -1157,9 +1172,15 @@ export class BrowserAgent {
                   captureId =
                     typeof evidenceId === "string"
                       ? evidenceId
-                      : `capture-${captures.length}`;
+                      : typeof value.captureId === "string" &&
+                          readerCaptures.has(value.captureId)
+                        ? String(value.captureId)
+                        : `capture-${captures.length}`;
                   captureRecords.set(captureId, value.capture);
                   captureData.set(captureId, {
+                    ...(readerCaptures.has(captureId)
+                      ? { sourceReader: true as const }
+                      : {}),
                     ...(value.evidence ? { evidence: value.evidence } : {}),
                     ...(value.readerCoverage
                       ? { readerCoverage: value.readerCoverage }
@@ -1304,7 +1325,35 @@ export class BrowserAgent {
                 .trim()
                 .replace(/^```(?:json)?\s*/i, "")
                 .replace(/\s*```$/, "");
-              const output = JSON.parse(text);
+              let output;
+              const recovered =
+                purpose === "collect" && !signal.aborted && !stopReason
+                  ? recoverCapturedVideo(
+                      collection,
+                      readingAttemptId,
+                      readerCaptures,
+                      captureData,
+                      navigations,
+                    )
+                  : undefined;
+              try {
+                output = JSON.parse(text);
+              } catch (error) {
+                if (!recovered) throw error;
+                output = recovered;
+              }
+              if (
+                recovered &&
+                (output?.error ||
+                  !Array.isArray(output?.materials) ||
+                  output.materials[0]?.role !== "main" ||
+                  output.materials[0]?.url !== collection!.url ||
+                  !Array.isArray(output.materials[0]?.sourceCaptureIds) ||
+                  !output.materials[0].sourceCaptureIds.includes(
+                    recovered.materials[0].sourceCaptureIds![0],
+                  ))
+              )
+                output = recovered;
               output.citationsPending = citationsPending();
               if (
                 [
@@ -1360,6 +1409,24 @@ export class BrowserAgent {
               );
             }
           } else if (data?.type === "failed") {
+            if (
+              purpose === "collect" &&
+              data.invalidOutput === true &&
+              !signal.aborted &&
+              !stopReason
+            ) {
+              const recovered = recoverCapturedVideo(
+                collection,
+                readingAttemptId,
+                readerCaptures,
+                captureData,
+                navigations,
+              );
+              if (recovered) {
+                finish(undefined, recovered);
+                return;
+              }
+            }
             const received = readingDiagnosticSchema.safeParse(data.diagnostic);
             finish(
               new ReadingFailure(

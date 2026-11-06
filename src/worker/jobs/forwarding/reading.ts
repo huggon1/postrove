@@ -3,6 +3,7 @@ import {
   readingDiagnostic,
   diagnoseReadingError,
   materialDiagnostic,
+  sourceReadingDiagnostic,
   type ReadingDiagnostic,
 } from "../../../shared/reading-diagnostics";
 import { randomUUID } from "node:crypto";
@@ -230,7 +231,8 @@ export async function runReadingJob(
     }
     for (const material of materials) {
       if (signal.aborted) throw new Error("cancelled");
-      if (material.state === "completed") continue;
+      const sourceDiagnostic = sourceReadingDiagnostic(material);
+      if (material.state === "completed" && !sourceDiagnostic) continue;
       if (!material.source) {
         material.diagnostic ??=
           materialDiagnostic(material) ??
@@ -258,6 +260,7 @@ export async function runReadingJob(
         continue;
       }
       let stage: "translation" | "summary" = "translation";
+      let translated = false;
       try {
         material.state = "processing";
         if (
@@ -304,6 +307,7 @@ export async function runReadingJob(
           if (!result.text.trim()) throw new ExecutionFailure("model_empty");
           chunk.translated = result.text;
           chunk.complete = !result.truncated;
+          translated = true;
           save(material);
           if (result.truncated) {
             const diagnostic =
@@ -334,13 +338,23 @@ export async function runReadingJob(
             break;
           }
         }
-        material.state = material.chunks.every((c) => c.complete)
+        material.state = !sourceDiagnostic && material.chunks.every((c) => c.complete)
           ? "completed"
           : "partial";
         emit({ type: "phase", taskId: command.taskId, phase: "生成摘要" });
         stage = "summary";
-        material.summary = await deps.summarize(material);
+        if (!material.summary || translated)
+          material.summary = await deps.summarize(material);
         if (!material.summary.trim()) throw new ExecutionFailure("model_empty");
+        if (sourceDiagnostic && !failures.has(material.id)) {
+          material.issue ??= readingDiagnosticMessage(sourceDiagnostic, language);
+          failures.set(material.id, {
+            materialId: material.id,
+            stage: "source",
+            readingDiagnostic: sourceDiagnostic,
+            message: material.issue.slice(0, 500),
+          });
+        }
         save(material);
       } catch (error) {
         if (signal.aborted) throw new Error("cancelled");

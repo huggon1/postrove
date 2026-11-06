@@ -85,6 +85,16 @@ export const readingDiagnosticSchema = z
   .strict();
 export type ReadingDiagnostic = z.infer<typeof readingDiagnosticSchema>;
 
+/** Acquisition issues survive successful translation and introduction processing. */
+export function sourceReadingDiagnostic(material: {
+  diagnostic?: ReadingDiagnostic;
+}): ReadingDiagnostic | undefined {
+  const diagnostic = material.diagnostic;
+  return diagnostic && !["translation", "summary"].includes(diagnostic.stage)
+    ? diagnostic
+    : undefined;
+}
+
 const categories: Record<ReadingIssueCode, ReadingDiagnostic["category"]> = {
   login_required: "login",
   verification_required: "account_action",

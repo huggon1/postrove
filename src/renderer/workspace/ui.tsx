@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useId,
   useRef,
   type ButtonHTMLAttributes,
   type ReactNode,
@@ -44,17 +45,31 @@ export function advisorName(id: AdvisorId) {
 }
 export function IconButton({
   label,
+  tooltip = false,
+  children,
   className = "",
   ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & { label: string }) {
+}: ButtonHTMLAttributes<HTMLButtonElement> & {
+  label: string;
+  tooltip?: boolean;
+}) {
+  const tooltipId = useId();
   return (
     <button
       type="button"
       className={`icon-button ${className}`}
       aria-label={label}
-      title={label}
+      title={tooltip ? undefined : label}
+      aria-describedby={tooltip ? tooltipId : undefined}
       {...props}
-    />
+    >
+      {children}
+      {tooltip && (
+        <span id={tooltipId} role="tooltip" className="icon-tooltip">
+          {label}
+        </span>
+      )}
+    </button>
   );
 }
 const openModals = new Set<HTMLDialogElement>();

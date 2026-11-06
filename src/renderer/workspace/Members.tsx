@@ -25,6 +25,7 @@ import { bridge } from "../bridge";
 import { t } from "../i18n";
 import { Avatar, IconButton, Modal, ModalHeader, advisorName } from "./ui";
 import { ConfirmDialog, Feedback, SetupSteps } from "./forms";
+import { PlatformHomeButton } from "./PlatformHomeButton";
 import { usePlatformStatus } from "./use-platform-status";
 import type { Workspace } from "./use-workspace";
 
@@ -50,7 +51,7 @@ export function Members({
   const [signingOut, setSigningOut] = useState(false);
   const [disconnect, setDisconnect] = useState(false);
   const current = connections.find((item) => item.connectionId === selected);
-  async function action(kind: "login" | "check" | "logout") {
+  async function action(kind: "login" | "check" | "logout" | "home") {
     if (!current) return false;
     setBusy(true);
     setError("");
@@ -60,7 +61,9 @@ export function Members({
           ? await bridge.platformStatus(current.connectionId)
           : await (kind === "login"
               ? bridge.loginPlatform(current.connectionId)
-              : bridge.logoutPlatform(current.connectionId));
+              : kind === "home"
+                ? bridge.openPlatformHome(current.connectionId)
+                : bridge.logoutPlatform(current.connectionId));
       if (!reply.ok) {
         setError(reply.message);
         return false;
@@ -70,6 +73,7 @@ export function Members({
         setStatus((old) => ({
           ...old,
           [current.connectionId]: {
+            ...check.value,
             signedIn: check.value.signedIn,
             installed:
               "installed" in check.value ? !!check.value.installed : true,
@@ -204,6 +208,11 @@ export function Members({
                 <div className="adapter-heading">
                   <h3>{t(connection.name)}</h3>
                   <p>{t(connection.source)}</p>
+                  {status[connection.connectionId]?.account && (
+                    <p className="platform-account-name">
+                      {status[connection.connectionId].account?.name}
+                    </p>
+                  )}
                 </div>
                 <span
                   className={`connection-pill ${status[connection.connectionId]?.signedIn ? "connected" : ""}`}
@@ -245,7 +254,22 @@ export function Members({
           <aside className={`connection-identity ${current.platform}`}>
             <Avatar id={current.id} languageBadge={false} />
             <h3>{t(current.name)}</h3>
-            <span>{t(current.source)}</span>
+            <span className="identity-source">{t(current.source)}</span>
+            {connected && (
+              <span className="platform-account-name">
+                {status[current.connectionId]?.account?.name ||
+                  t("账号名称待识别")}
+                {status[current.connectionId]?.account?.handle && (
+                  <small>{status[current.connectionId].account?.handle}</small>
+                )}
+              </span>
+            )}
+            {connected && (
+              <PlatformHomeButton
+                connectionId={current.connectionId}
+                onError={setError}
+              />
+            )}
             <div className="identity-line" />
             <span className="identity-status">
               {connected ? <CheckCircle /> : <Globe />}
@@ -322,7 +346,7 @@ export function Members({
               <button
                 className="primary"
                 disabled={busy}
-                onClick={() => void action("login")}
+                onClick={() => void action(connected ? "home" : "login")}
               >
                 {t(connected ? "打开平台" : "打开登录窗口")}
                 <ArrowUpRight />

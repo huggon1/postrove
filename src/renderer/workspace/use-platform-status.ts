@@ -2,10 +2,11 @@ import { platformConnections } from "../../shared/advisor-contracts";
 import { useEffect, useState } from "react";
 import { bridge } from "../bridge";
 import { t } from "../i18n";
+import type { PlatformAccountStatus } from "../../shared/ipc-contracts";
 
 export function usePlatformStatus() {
   const [status, setStatus] = useState<
-    Record<string, { signedIn: boolean; installed: boolean; error?: string }>
+    Record<string, PlatformAccountStatus & { error?: string }>
   >({});
   useEffect(() => {
     let alive = true,
@@ -24,6 +25,7 @@ export function usePlatformStatus() {
         if (result.status === "fulfilled" && result.value.ok) {
           const value = result.value.value;
           next[id] = {
+            ...value,
             signedIn: value.signedIn,
             installed: "installed" in value ? !!value.installed : true,
           };
