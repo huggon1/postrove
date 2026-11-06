@@ -6,7 +6,7 @@
 
 The top bar contains the Postrove mark, Topics, Reading, Scheduled sends, Members, and Settings. The page heading identifies the selected destination. Topic cards open a conversation; collected material opens its reader. Each region names the object it presents.
 
-Settings uses a category rail and a content pane. Section headings and their primary actions share a row at desktop widths. Connection cards open focused setup dialogs. Model setup presents connection method, authentication, and model options as three steps. Member setup shares a platform connection across its language experts.
+Settings uses a category rail and a content pane. Section headings and their primary actions share a row at desktop widths. Connection cards open focused setup dialogs. Model setup presents connection method, authentication, and model options as three steps. Member setup shares a platform connection across its language experts. Settings member cards show the saved account name, an up-right home icon, and a circular-arrow refresh icon. Login completion saves the observed name; Refresh account name reads and saves a fresh observation. Refresh failure retains the prior name for the same session and shows inline feedback. These icon actions show their labels on pointer hover and keyboard focus. Connection detail shows the account name and available platform handle. The home action opens the same account's platform homepage in visible Chrome. The Bilibili account requirement includes its observed name and home icon.
 
 Each background-model card identifies its connection. The active card uses a blue In use indicator and contains the Current model selector followed by a blue primary Check connection button and its inline result. A successful check uses green feedback; cancellation uses neutral status text. Other cards expose Use this connection. The connection actions menu contains configuration editing and removal. At compact widths, the active indicator follows the connection name and check feedback wraps below its button.
 
@@ -33,6 +33,8 @@ The topic feed and its supporting column share the desktop viewport. Compact wid
 
 Shared form components own labels, input spacing, validation feedback, and dialog actions. A failed operation retains the active form and its entered values. Secret controls retain the value while switching its visibility.
 
+A reading card's image fills and crops within its fixed-height cover. The cover and title each open their reading record through their own click target.
+
 ## Review evidence
 
 For each added or expanded message, record its admission source and triggering state. Review the rendered interface and both interface languages.
@@ -56,3 +58,20 @@ Speech to text shows the bundled transcription component and the separate Whispe
 | Component, download, checksum, timeout, and storage failures                                            | Required recovery feedback; displayed after the corresponding installation failure.                                                         |
 
 The [capability settings E2E](../tests/e2e/capability-settings.spec.ts) opens real capability and speech IPC with a fresh profile. It records both languages at desktop and compact widths, checks the two-column matrix and focused requirements dialogs for all seven platform rows, plus account-dependent capabilities. It follows shared-model requirements to Background models and speech requirements to installation settings. Screenshots cover the matrix, platform dialog, requirements, and model-awaiting-download state. A controlled readiness snapshot exercises the fully configured status. The test checks viewport overflow, focus return, and renderer errors.
+
+### Platform account review
+
+| Added copy | Admission source and trigger |
+| --- | --- |
+| Observed account name and handle | Explicit user request to identify the configured account in connection settings. Shown after an authenticated self observation. |
+| Open account home | Required operation for the home icon on a platform connection or Bilibili account requirement. |
+| Refresh account name; Account name refresh failed. Try again. | Explicit user request for a manual account-name refresh icon and hover explanation; failure feedback follows a failed refresh. |
+| Account name pending | Required state feedback on a connected member card or detail while self identity awaits observation. |
+
+The [platform account E2E](../tests/e2e/platform-account.spec.ts) checks authenticated self controls, changed-session identity clearing, scoped sign-out, shared-profile home navigation, and credential exclusion from account metadata. Its application case renders Settings and connection detail in both languages at desktop and compact widths. Fictional account observations supply the layout evidence.
+
+The [account home navigation E2E](../tests/e2e/platform-home-navigation.spec.ts) opens cold and headless-to-visible sessions with a committed homepage whose scripts are still loading. It verifies session retention, late account-name detection, and a failed document request.
+
+The [account login E2E](../tests/e2e/platform-account-login.spec.ts) verifies one snapshot after login, static display during ordinary browser activity, and explicit refresh.
+
+The reading result-path icon shows its existing action label on pointer hover and keyboard focus. The user explicitly requested this hover explanation. The [result-path E2E](../tests/e2e/reading-result-path.spec.ts) checks visible tooltip text and viewport bounds in both languages at desktop and compact widths.

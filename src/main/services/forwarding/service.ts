@@ -2,6 +2,7 @@ import {
   readingDiagnostic,
   diagnoseReadingError,
   materialDiagnostic,
+  sourceReadingDiagnostic,
   type ReadingDiagnostic,
 } from "../../../shared/reading-diagnostics";
 import { readingDiagnosticMessage } from "../../../shared/reading-diagnostic-messages";
@@ -115,6 +116,28 @@ function sameJson(left: unknown, right: unknown) {
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
+function sourceContent(material: ReadingMaterial) {
+  const source = material.source;
+  return source && {
+    title: material.title,
+    markdown: source.markdown,
+    contentBlocks: source.contentBlocks,
+    images: source.images.map(({ imageId, url, alt }) => ({ imageId, url, alt })),
+  };
+}
+
+function sourceRegressed(saved: ReadingMaterial, refreshed: ReadingMaterial) {
+  if (!saved.source || !refreshed.source || !sourceReadingDiagnostic(refreshed)) return false;
+  const before = saved.source, after = refreshed.source;
+  const body = (source: typeof before) => source.markdown ?? source.contentBlocks
+    .map((block) => block.type === "image" ? "" : block.text).join("\n\n");
+  return (
+    (before.evidence?.segments.length ?? 0) > (after.evidence?.segments.length ?? 0) ||
+    before.images.some((image) => !after.images.some((next) => next.url === image.url || next.imageId === image.imageId)) ||
+    body(before).length > body(after).length
+  );
+}
+
 function withoutSecret(task: ForwardingTaskRecord) {
   const { xhsAccessTokenCiphertext: _secret, ...safe } = task;
   return structuredClone(safe);
@@ -151,7 +174,7 @@ export class ForwardingPipelineService {
 
   async recover() {
     await this.dependencies.store.update((state) => {
-      for (const task of state.tasks)
+      for (const task of state.tasks) {
         if (task.state === "running") {
           const stage = knownStage(task.phase);
           task.state = "failed";
@@ -171,6 +194,29 @@ export class ForwardingPipelineService {
             occurredAt: task.finishedAt,
           });
         }
+        if (task.state === "completed") {
+          const material = task.materials?.find(sourceReadingDiagnostic);
+          if (!material) continue;
+          for (const saved of task.materials ?? []) {
+            const diagnostic = sourceReadingDiagnostic(saved);
+            if (diagnostic) {
+              saved.state = "partial";
+              saved.issue ??= readingDiagnosticMessage(diagnostic, task.outputLanguage ?? "zh-CN");
+            }
+          }
+          if (task.report) task.report.materials = structuredClone(task.materials!);
+          task.state = "failed";
+          task.phase = "解析失败";
+          task.failureStage = "source";
+          task.diagnostic = sourceReadingDiagnostic(material);
+          task.message = (material.issue ?? readingDiagnosticMessage(
+            task.diagnostic!, task.outputLanguage ?? "zh-CN",
+          )).slice(0, 500);
+          task.attemptStartedAt ??= task.createdAt;
+          task.attemptId = randomUUID();
+          addForwardingActivity(task, { kind: "recovered", summary: task.message });
+        }
+      }
     });
     for (const task of this.dependencies.store.snapshot().tasks)
       if (task.finishedAt)
@@ -356,7 +402,7 @@ export class ForwardingPipelineService {
         task.state !== "cancelled" &&
         !(
           task.state === "completed" &&
-          task.materials?.some((m) => m.state !== "completed")
+          task.materials?.some((m) => m.state !== "completed" || sourceReadingDiagnostic(m))
         )
       )
         throw new Error("当前任务已完成");
@@ -433,7 +479,7 @@ export class ForwardingPipelineService {
         phase: task.phase,
         progress: {
           evaluated:
-            task.materials?.filter((m) => m.state === "completed").length ?? 0,
+            task.materials?.filter((m) => m.state === "completed" && !sourceReadingDiagnostic(m)).length ?? 0,
           total: task.materials?.length ?? 0,
         },
         hasSource: !!task.source,
@@ -512,12 +558,15 @@ export class ForwardingPipelineService {
         await entry.lease.release();
         return;
       }
-      stage = task.materials ? "translation" : "source";
+      const needsSource = !task.materials || task.materials.some(
+        (material) => !material.source || sourceReadingDiagnostic(material),
+      );
+      stage = needsSource ? "source" : "translation";
       await this.dependencies.store.update((state) => {
         const current = state.tasks.find((item) => item.taskId === taskId);
         if (!current || current.state !== "queued") return;
         current.state = "running";
-        current.phase = task.materials ? "翻译材料" : "读取来源";
+        current.phase = needsSource ? "读取来源" : "翻译材料";
         addForwardingActivity(current, {
           kind: "phase",
           summary:
@@ -578,9 +627,9 @@ export class ForwardingPipelineService {
           task.materials = materials;
           task.source = materials[0].source;
         } else {
-          for (const material of task.materials.filter((m) => !m.source)) {
+          for (const material of task.materials.filter((m) => !m.source || sourceReadingDiagnostic(m))) {
             try {
-              const collected = await this.dependencies.collectMaterials(
+              const collected = readingMaterialsSchema.parse(await this.dependencies.collectMaterials(
                 taskId,
                 material.url,
                 entry.lease.config,
@@ -593,17 +642,28 @@ export class ForwardingPipelineService {
                     )
                   : undefined,
                 task.attemptId ?? task.resultId,
-              );
-              material.source = collected[0].source;
-              material.state = material.source ? "pending" : "failed";
-              material.issue = collected[0].issue;
-              material.diagnostic = collected[0].diagnostic;
-              await this.receive(taskId, {
-                type: "material",
-                taskId,
-                resultId: task.resultId,
-                material,
-              });
+              ));
+              if (this.active.get(taskId) !== entry || this.closed) return;
+              const refreshed = collected[0];
+              if (refreshed.url !== material.url)
+                throw new Error("Collected source identity mismatch");
+              if (refreshed.source && !sourceRegressed(material, refreshed)) {
+                const changed = !sameJson(sourceContent(material), sourceContent(refreshed));
+                material.source = refreshed.source;
+                material.title = refreshed.title;
+                material.state = "pending";
+                material.issue = refreshed.issue;
+                material.diagnostic = refreshed.diagnostic;
+                if (changed) {
+                  material.chunks = [];
+                  material.summary = "";
+                }
+              } else {
+                material.diagnostic = refreshed.diagnostic ?? readingDiagnostic("capture_incomplete", "source");
+                material.issue = refreshed.issue ?? readingDiagnosticMessage(material.diagnostic, task.outputLanguage ?? "zh-CN");
+                material.state = material.source ? "partial" : "failed";
+              }
+              await this.saveRecollectedMaterial(taskId, entry, material);
             } catch (error) {
               if (entry.controller.signal.aborted) throw error;
               material.diagnostic = diagnoseReadingError(error, "source");
@@ -611,15 +671,11 @@ export class ForwardingPipelineService {
                 material.diagnostic,
                 task.outputLanguage ?? "zh-CN",
               );
-              material.state = "failed";
-              await this.receive(taskId, {
-                type: "material",
-                taskId,
-                resultId: task.resultId,
-                material,
-              });
+              material.state = material.source ? "partial" : "failed";
+              await this.saveRecollectedMaterial(taskId, entry, material);
             }
           }
+          task.source = task.materials[0].source;
         }
       }
       browserReading = false;
@@ -704,6 +760,26 @@ export class ForwardingPipelineService {
         diagnostic,
       );
     }
+  }
+
+  private async saveRecollectedMaterial(taskId: string, entry: ActiveEntry, material: ReadingMaterial) {
+    if (this.active.get(taskId) !== entry || this.closed) return;
+    const parsed = readingMaterialSchema.parse(material);
+    await this.dependencies.store.update((state) => {
+      const task = state.tasks.find((item) => item.taskId === taskId);
+      if (!task || task.state !== "running" || this.active.get(taskId) !== entry) return;
+      const index = task.materials?.findIndex((item) => item.id === parsed.id) ?? -1;
+      if (index < 0 || task.materials![index].url !== parsed.url || task.materials![index].role !== parsed.role)
+        throw new Error("Collected material identity mismatch");
+      task.materials![index] = parsed;
+      if (index === 0) task.source = parsed.source;
+      task.phase = "读取来源";
+      addForwardingActivity(task, {
+        kind: "source_saved",
+        summary: `${parsed.title}：${parsed.chunks.filter((chunk) => chunk.complete).length}/${parsed.chunks.length} 段已处理`,
+      });
+    });
+    this.dependencies.changed();
   }
 
   private async receive(taskId: string, raw: unknown) {
@@ -882,7 +958,7 @@ export class ForwardingPipelineService {
       )
         throw new Error("Reading result differs from saved materials");
       const incomplete = snapshotTask.materials!.filter(
-        (m) => m.state !== "completed",
+        (m) => m.state !== "completed" || sourceReadingDiagnostic(m),
       );
       if (
         event.failure &&
@@ -899,7 +975,7 @@ export class ForwardingPipelineService {
         task.failureStage =
           event.failure?.stage ??
           (failed
-            ? !failed.source
+            ? !failed.source || sourceReadingDiagnostic(failed)
               ? "source"
               : failed.chunks.some((c) => !c.complete)
                 ? "translation"

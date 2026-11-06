@@ -63,6 +63,32 @@ export interface XhsMediaResult {
   /** Cookie presence is transport evidence, independently of detected website login. */
   cookies: "absent" | "guest" | "account_session_present";
 }
+/** Keep the complete matching page fields when extractor fields are empty or abbreviated. */
+export function mergeXhsVideoMetadata(
+  primary: XhsVideoMetadata | undefined,
+  fallback: XhsVideoMetadata | undefined,
+): XhsVideoMetadata | undefined {
+  if (!primary) return fallback;
+  if (!fallback) return primary;
+  if (primary.id !== fallback.id) throw new XhsMediaError("identity_changed");
+  const text = (value: string, previous: string) => {
+    if (!value.trim()) return previous;
+    return previous.trim().startsWith(value.trim()) ? previous : value;
+  };
+  return {
+    ...primary,
+    title: text(primary.title, fallback.title),
+    description: text(primary.description, fallback.description),
+    uploader: text(primary.uploader, fallback.uploader),
+    images: [...primary.images, ...fallback.images]
+      .filter(
+        (image, index, all) =>
+          all.findIndex((item) => item.url === image.url) === index,
+      )
+      .slice(0, 30),
+    duration: primary.duration ?? fallback.duration,
+  };
+}
 export type XhsProcessRunner = (
   executable: string,
   args: string[],
@@ -86,9 +112,15 @@ const shortHosts = new Set([
   "xhslink.cn",
   "www.xhslink.cn",
 ]);
-function safeUrl(raw: string) {
+function safeUrl(raw: string, upgradeCdn = false) {
   try {
     const url = new URL(raw);
+    if (upgradeCdn) {
+      const authority = raw.match(/^[a-z][a-z0-9+.-]*:\/\/([^/?#]+)/i)?.[1];
+      if (/:\d+$/.test(authority ?? "")) return undefined;
+      if (url.protocol === "http:" && url.hostname.endsWith(".xhscdn.com"))
+        url.protocol = "https:";
+    }
     return url.protocol === "https:" &&
       !url.port &&
       !url.username &&
@@ -297,7 +329,7 @@ export function normalizeXhsVideoMetadata(raw: unknown, note: XhsNoteIdentity) {
     ? input.thumbnails
     : [{ url: input.thumbnail }];
   for (const item of thumbnails) {
-    const url = safeUrl(string(object(item).url, 4096));
+    const url = safeUrl(string(object(item).url, 4096), true);
     if (url && !images.some((image) => image.url === url.href))
       images.push({ url: url.href, alt: "Video cover" });
     if (images.length === 30) break;
@@ -307,11 +339,18 @@ export function normalizeXhsVideoMetadata(raw: unknown, note: XhsNoteIdentity) {
   );
   const candidates = formats
     .flatMap((format) => {
-      const url = safeUrl(string(format.url, 8192));
+      const url = safeUrl(string(format.url, 8192), true);
+      const channels = number(format.audio_channels);
+      const codec = string(format.acodec, 80).trim().toLowerCase();
       if (
         !url ||
         !url.hostname.endsWith(".xhscdn.com") ||
-        format.acodec === "none"
+        channels === 0 ||
+        codec === "none" ||
+        !(
+          (channels !== undefined && channels > 0) ||
+          (codec && codec !== "unknown")
+        )
       )
         return [];
       const headers = object(format.http_headers ?? input.http_headers);
@@ -461,20 +500,10 @@ export class XiaohongshuMediaReader {
         JSON.stringify(xhsMetadataEvidence(parsed)),
         { mode: 0o600 },
       );
-      result.metadata = {
-        ...normalized.metadata,
-        title: normalized.metadata.title || options.fallback?.title || "",
-        description:
-          normalized.metadata.description ||
-          options.fallback?.description ||
-          "",
-        uploader:
-          normalized.metadata.uploader || options.fallback?.uploader || "",
-        images: normalized.metadata.images.length
-          ? normalized.metadata.images
-          : (options.fallback?.images ?? []),
-        duration: normalized.metadata.duration ?? options.fallback?.duration,
-      };
+      result.metadata = mergeXhsVideoMetadata(
+        normalized.metadata,
+        options.fallback,
+      );
       result.media = normalized.media;
       if (!result.media) result.issue = "media_unavailable";
     } catch (error) {
