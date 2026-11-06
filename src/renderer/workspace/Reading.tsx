@@ -1,10 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { sourceProfiles } from "../../shared/source-profiles";
+import { forwardingInputSchema } from "../../shared/source-contracts";
 import {
   ArrowRight,
   ArrowUpRight,
   BookOpen,
   CaretDown,
+  Check,
+  Copy,
   FileText,
   LinkSimple,
   MagnifyingGlass,
@@ -51,19 +54,12 @@ export function CollectLink({
         onSubmit={async (event) => {
           event.preventDefault();
           setError("");
-          try {
-            const parsed = new URL(url.trim());
-            if (
-              parsed.protocol !== "https:" ||
-              parsed.username ||
-              parsed.password
-            )
-              throw new Error();
-          } catch {
+          const parsed = forwardingInputSchema.safeParse(url);
+          if (!parsed.success) {
             setError(t("请输入 HTTPS 网页链接"));
             return;
           }
-          const taskId = await workspace.run(() => bridge.addLink(url.trim()));
+          const taskId = await workspace.run(() => bridge.addLink(parsed.data));
           if (taskId) onAdded(taskId);
         }}
       >
@@ -71,11 +67,17 @@ export function CollectLink({
           <span>{t("链接")}</span>
           <input
             aria-label={t("链接")}
-            type="url"
+            type="text"
+            inputMode="url"
+            autoCapitalize="none"
+            spellCheck={false}
             autoFocus
             required
             value={url}
-            onChange={(event) => setUrl(event.target.value)}
+            onChange={(event) => {
+              setUrl(event.target.value);
+              setError("");
+            }}
             placeholder="https://"
           />
         </label>
@@ -218,7 +220,13 @@ export function ReadingView({
 }) {
   const [materialId, setMaterialId] = useState(""),
     [original, setOriginal] = useState(false),
-    [receipts, setReceipts] = useState(false);
+    [receipts, setReceipts] = useState(false),
+    [copiedPath, setCopiedPath] = useState(false);
+  useEffect(() => {
+    if (!copiedPath) return;
+    const timer = setTimeout(() => setCopiedPath(false), 2_000);
+    return () => clearTimeout(timer);
+  }, [copiedPath]);
   const materials = report.materials ?? [];
   const material =
     materials.find((item) => item.id === materialId) ?? materials[0];
@@ -256,6 +264,22 @@ export function ReadingView({
         >
           <ArrowUpRight />
         </IconButton>
+        {!active && (
+          <IconButton
+            label={t(copiedPath ? "已复制路径" : "复制结果文件路径")}
+            tooltip
+            disabled={workspace.busy}
+            onClick={async () => {
+              setCopiedPath(false);
+              const path = await workspace.run(() =>
+                bridge.copyResultPath("reading", report.taskId),
+              );
+              if (path) setCopiedPath(true);
+            }}
+          >
+            {copiedPath ? <Check /> : <Copy />}
+          </IconButton>
+        )}
         {!active && (
           <IconButton
             label={t("结果文件")}

@@ -123,12 +123,12 @@ test("new members share Gemini setup, enable Reddit guest use, and retain schedu
     }
     await page.getByRole("button", { name: "设置", exact: true }).click();
     await page.getByRole("button", { name: "AI 成员", exact: true }).click();
-    await expect(
-      page.getByRole("button", {
-        name: "Gemini YouTube 中文专家 英文专家 已连接",
-        exact: true,
-      }),
-    ).toBeVisible();
+    const geminiConnection = page.getByRole("button", {
+      name: /^Gemini YouTube /,
+    });
+    await expect(geminiConnection).toBeVisible();
+    for (const label of ["中文专家", "英文专家", "已连接"])
+      await expect(geminiConnection).toContainText(label);
     await expect(
       page.getByRole("button", {
         name: "Reddit AI Reddit 英文专家 未连接",

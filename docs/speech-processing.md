@@ -74,6 +74,8 @@ Archive transfers use native fetch. A transport reset or timeout retries the sou
 
 Runtime preparation checks archive digests before extraction, records installed-file digests, and replaces the target directory after executable verification. `check()` validates target, versions, installed-file digests, and the model checksum independently. Runtime/model status remains separate from website access and background text-model checks.
 
+macOS packaging signs the nested speech executables, refreshes their manifest with the signed file digests, and then signs the containing application. Package verification compares every speech resource with this final manifest before application startup.
+
 Model download is an explicit operation. Calling `transcribe` checks the saved resources. The model download streams a pinned resource into the selected profile and verifies its exact size and SHA-256 before replacing the saved model. A failed or cancelled download retains the previous model file. The model-preparation command requires an absolute profile path; the application binds `downloadModel(signal)` to the installation control. Model transfer has a 30-minute timeout and accepts cancellation throughout the transfer.
 
 The default resource is the multilingual `small-q5_1` model, about 181 MiB on disk. Recognition keeps the original language. The model pin identifies the exact quantized bytes used by each result.

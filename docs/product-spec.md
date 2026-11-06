@@ -6,7 +6,7 @@ Postrove presents questions as topics. Selected AI members reply independently t
 
 The top navigation contains Topics, Reading, and Scheduled messages. Settings and Members open from the top bar. A topic contains the original question, selected members, their replies, source links, and member receipts. Opening a card shows its conversation. The topic list supports all, unread, and scheduled views.
 
-The composer sends the question to its selected enabled members. An HTTPS link opens Add link. Source collection offers individual, selected, and all-source actions. Selecting a collected source opens its reading record. AI members produce independent replies to the original question.
+The composer sends the question to its selected enabled members. An HTTPS address or a domain address opens Add link. Source collection offers individual, selected, and all-source actions. Selecting a collected source opens its reading record. AI members produce independent replies to the original question.
 
 On Windows, closing the final window shuts down services and exits the application; minimizing keeps it running. On macOS, closing a window keeps the application running, and the Dock reopens the workspace.
 
@@ -14,7 +14,7 @@ On Windows, closing the final window shuts down services and exits the applicati
 
 A website connection owns its shared browser session. Each source-platform/AI route enables its own language experts. X/Grok and YouTube/Gemini offer Chinese and English; Xiaohongshu/点点 offers Chinese; Reddit AI offers English. Gemini routes share Google sign-in. Reddit supports guest questions and optional sign-in. Members opens platform connection cards, a focused sign-in step, login verification, language selection, and sign-out confirmation.
 
-Platform status labels reflect the shared session's sign-in state: Connected after detected sign-in and Disconnected while signed out. The member catalog, connection detail, and Settings use the same labels. Reddit's English expert remains available for guest use while its connection shows Disconnected.
+Connection settings show the saved account name and platform handle when available. Login completion captures the account name once. Refresh account name captures and saves a fresh observation; ordinary settings views retain the saved value. A failed refresh retains the current session’s prior name and shows inline feedback. The home icon opens the platform homepage in the same visible Chrome profile. Connected sessions awaiting an observed self identity show Account name pending in connection detail. Platform status labels reflect the shared session's sign-in state: Connected after detected sign-in and Disconnected while signed out. The member catalog, connection detail, and Settings use the same labels. Reddit's English expert remains available for guest use while its connection shows Disconnected.
 
 While signed out, the platform connection detail shows one inline account-risk reminder above Open sign-in window, recommending a secondary account. Confirmed sign-in hides the reminder.
 
@@ -28,7 +28,7 @@ Main saves the platform answer before asking the same browser session to extract
 
 Topic receipts expose Stop for active members, Stop all, result-file access, and native Pi log export. Stopping one member lets the other selected members continue. A captured answer survives cancellation and later citation or translation failure. A submitted checkpoint records the existing conversation; crash recovery observes that conversation before continuing. An unavailable conversation produces a bridge failure. A fresh send creates a new topic.
 
-Topics run in admission order. Within one topic, different AI connections search concurrently. Language experts sharing an AI connection take turns through answer capture and citation extraction. Reading-version processing runs independently while the next expert searches. Topic completion waits for every expert and its reading processing. Search and reading enter independent queues. Collection, sign-in, sign-out, and explicit browser-mode changes take exclusive browser access. The application retries transient browser/model failures within fixed budgets. Login, verification, and account agreements return an actionable platform state. A reading failure retains saved source content and completed translation chunks.
+Topics run in admission order. Within one topic, different AI connections search concurrently. Language experts sharing an AI connection take turns through answer capture and citation extraction. Reading-version processing runs independently while the next expert searches. Topic completion waits for every expert and its reading processing. Search and reading enter independent queues. Collection, sign-in, sign-out, and explicit browser-mode changes take exclusive browser access. The application retries transient browser/model failures within fixed budgets. Login, verification, and account agreements return an actionable platform state. A reading failure retains saved source content and completed translation chunks. A source acquisition issue keeps its material partial after text processing finishes. Retry captures affected sources again, preserves saved content during capture failure, and refreshes reading text when captured content changes.
 
 ## Scheduled messages
 
@@ -44,7 +44,7 @@ Member changes update future recipient sets. A schedule with zero enabled recipi
 
 ## Reading and link intake
 
-Reading contains saved and partial materials. Add link accepts HTTPS addresses. Telegram and Feishu authorized messages enter the same collection pipeline. Main saves the accepted message identity before acknowledging intake. Repeated message identities reuse their queue entry.
+Reading contains saved and partial materials. Add link accepts HTTPS addresses and domain addresses. Domain addresses receive an HTTPS prefix; path, query parameters, and fragments retain their submitted values. Telegram and Feishu authorized messages enter the same collection pipeline. Main saves the accepted message identity before acknowledging intake. Repeated message identities reuse their queue entry.
 
 Collection captures the main text, images, and one level of direct references. The capture Agent loads the source's reading Skill and chooses available tools and page controls for its scope. GitHub collection targets the default README. YouTube and Bilibili collection prefer native captions. When captions are absent, collection transcribes accessible audio through the local speech service. Metadata checkpoints survive media and transcription failures; timestamp links retain video and part identity. Xiaohongshu video uses the same local speech service. Reddit collection reads the selected post or comment with its required context. Materials keep their individual sources, coverage, translated chunks, introductions, and issues. The reader offers a material selector, original/reading versions, source navigation, progress, Stop, retry, result files, and native logs. Markdown preserves links, code, images, and diagrams.
 
@@ -60,7 +60,7 @@ Main freezes model metadata and options for active execution through a lease. Ex
 
 ## Saved results and deletion
 
-Terminal runs publish immutable Markdown packages. Result file opens the current run's location. [Result contracts](data-contracts.md#result-packages) define stable paths and latest results for further Agent work.
+Terminal runs publish immutable Markdown packages. Result file opens the current run's location. The reading header's copy icon copies the current attempt's absolute `result.md` path and briefly shows a check after copying. [Result contracts](data-contracts.md#result-packages) define stable paths and latest results for further Agent work.
 
 Deleting a topic or reading record changes visibility and offers Undo for eight seconds. Main stops active execution before deleting it. Source associations, material evidence, logs, and receipt identities remain saved. Undo restores the same record identity. Recollecting a hidden reading result creates a fresh reading identity.
 

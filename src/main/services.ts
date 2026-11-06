@@ -41,7 +41,7 @@ import { searchChannels } from "../shared/ipc-contracts";
 import { z } from "zod";
 import { handle } from "./ipc";
 import type { Language } from "../shared/language";
-import { app, safeStorage, shell, utilityProcess } from "electron";
+import { app, clipboard, safeStorage, shell, utilityProcess } from "electron";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
@@ -744,7 +744,12 @@ export async function initializeServices(
     changed();
     return preferences.view();
   });
-  for (const channel of ["advisors:view", "advisors:save", "results:reveal"])
+  for (const channel of [
+    "advisors:view",
+    "advisors:save",
+    "results:reveal",
+    "results:copy-path",
+  ])
     handle(channel, async (event, ...args: unknown[]) => {
       if (
         event.senderFrame !== event.sender.mainFrame ||
@@ -781,7 +786,13 @@ export async function initializeServices(
           value = await results.publishReading(detail);
         }
         if (!value) throw new Error("Result is still running");
-        shell.showItemInFolder(value);
+        if (channel === "results:copy-path") {
+          try {
+            await clipboard.writeText(value);
+          } catch {
+            return { ok: false, message: "操作未完成，请重试" };
+          }
+        } else shell.showItemInFolder(value);
         return { ok: true, value };
       } catch {
         return { ok: false, message: "结果文件暂不可用" };
@@ -949,10 +960,19 @@ export async function initializeServices(
           return { ok: true, value: await browser.status(connection.site) };
         if (channel === platformConnectionChannels.login)
           await browser.login(connection.site);
+        else if (channel === platformConnectionChannels.refreshAccount)
+          await browser.refreshAccount(connection.site);
+        else if (channel === platformConnectionChannels.home)
+          await browser.openHome(connection.site);
         else await browser.logout(connection.site);
         return { ok: true, value: undefined };
       } catch {
-        return { ok: false, message: "平台登录操作未完成，请稍后重试" };
+        return {
+          ok: false,
+          message: channel.endsWith(":refresh-account")
+            ? "账号名称刷新失败，请稍后重试"
+            : "平台登录操作未完成，请稍后重试",
+        };
       }
     });
 
@@ -971,10 +991,19 @@ export async function initializeServices(
           return { ok: true, value: await browser.status("bilibili") };
         if (channel === readingSiteChannels.login)
           await browser.login("bilibili");
+        else if (channel === readingSiteChannels.refreshAccount)
+          await browser.refreshAccount("bilibili");
+        else if (channel === readingSiteChannels.home)
+          await browser.openHome("bilibili");
         else await browser.logout("bilibili");
         return { ok: true, value: undefined };
       } catch {
-        return { ok: false, message: "平台登录操作未完成，请稍后重试" };
+        return {
+          ok: false,
+          message: channel.endsWith(":refresh-account")
+            ? "账号名称刷新失败，请稍后重试"
+            : "平台登录操作未完成，请稍后重试",
+        };
       }
     });
 
