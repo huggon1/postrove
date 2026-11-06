@@ -38,6 +38,8 @@ Fixtures use isolated profiles and controlled external responses.
 
 ## Service and contract scope
 
+`tests/rules/link-input.test.ts` covers completed domain addresses, retained access parameters, rejected protocols and malformed input, bot single-link rules, and Main-process persistence. The application E2E submits domain addresses through Reading, Composer, and IPC, with bilingual desktop and compact captures.
+
 `tests/rules/schedules.test.ts` covers recurrence contracts, calendar anchors, month ends, daylight-saving transitions, fixed intervals, and legacy normalization. `tests/rules/search-follow-lifecycle.test.ts` covers exhausted rules, recipient changes, offline expiration, and clock rollback. `tests/rules/` also covers search/follow admission, expert cancellation, text fidelity, immutable results, upgrade retention, profiles, and prompt identity. Update-driver checks exercise Windows EXE selection and staged-file integrity, plus macOS native staging. Release checks exercise both platform feeds and reject incomplete or mixed package sets. The reading fixture can invoke internal recovery directly. That scope establishes saved-state behavior independently of available UI actions.
 
 `tests/rules/reading-diagnostics.test.ts` covers bilingual model-output-limit feedback, typed causes, component readiness, access parameters, caption observations, HTTP 403, unknown errors, and legacy issue text. `tests/rules/reading-diagnostic-receipts.test.ts` covers durable task diagnostics and partial processing receipts with original content and completed translations.
