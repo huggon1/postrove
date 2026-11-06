@@ -7,8 +7,16 @@ import type { Platform } from "../../platforms/types";
 import type { XhsAuth } from "./xhs-auth";
 import { ChromeProfiles, chromeExecutable } from "./chrome-profiles";
 import { BrowserTaskQueue } from "./browser-task-queue";
+import {
+  accountFromPage,
+  accountFromSession,
+  accountHomes,
+  accountSession,
+  savedAccountsSchema,
+  type PlatformAccount,
+  type LoginSite,
+} from "./platform-account";
 type BrowserSite = Platform | "gemini";
-type LoginSite = "x" | "xiaohongshu" | "gemini" | "reddit" | "bilibili";
 const loginSites = [
   "x",
   "xiaohongshu",
@@ -108,6 +116,14 @@ export class PlatformBrowser {
   private activeTasks = 0;
   private activeHeadless?: boolean;
   private loginPages = new Map<BrowserSite, Page>();
+  private accounts: Record<
+    string,
+    { session: string; account: PlatformAccount }
+  > = {};
+  private accountMetadata?: Promise<void>;
+  private accountAttempts = new Map<string, Promise<void>>();
+  private observedSessions = new Map<LoginSite, string | undefined>();
+  private pendingLogins = new Set<LoginSite>();
   constructor(
     private root: string,
     private changed: () => void,
@@ -231,12 +247,15 @@ export class PlatformBrowser {
     }
   }
   async status(platform: LoginSite) {
+    await this.loadAccounts();
     // Query existing profiles without launching a browser just to paint settings.
     let cookies: any[] = [];
     const running = this.contexts.get("web");
     if (running) {
       try {
-        cookies = await (await running).cookies();
+        const context = await running;
+        cookies = await context.cookies();
+        this.updateAccounts(cookies);
       } catch {}
     } else {
       try {
@@ -254,12 +273,16 @@ export class PlatformBrowser {
             "utf8",
           );
         }
-        cookies = JSON.parse(metadata).cookies;
+        const saved = JSON.parse(metadata);
+        cookies = saved.cookies;
       } catch {}
     }
     return {
       signedIn: signedIn(platform, cookies, !running),
       installed: !!chromeExecutable(),
+      ...(signedIn(platform, cookies, !running) && this.accounts[platform]
+        ? { account: this.accounts[platform].account }
+        : {}),
     };
   }
   private saveStatus(platform: BrowserSite, context: BrowserContext) {
@@ -270,10 +293,13 @@ export class PlatformBrowser {
     return operation;
   }
   private async commitStatus(_platform: BrowserSite, context: BrowserContext) {
+    await this.loadAccounts();
     const cookies = await context.cookies();
+    this.updateAccounts(cookies);
     await writeFile(
       join(this.root, "shared", "postrove-session-status.json"),
       JSON.stringify({
+        accounts: this.accounts,
         cookies: cookies.map((c) => ({
           name: c.name,
           domain: c.domain,
@@ -284,12 +310,123 @@ export class PlatformBrowser {
     );
     if (this.xhs?.installed()) await this.xhs.importBrowserCookies(cookies);
     for (const platform of loginSites) {
-      const status = JSON.stringify({ signedIn: signedIn(platform, cookies) });
+      const status = JSON.stringify({
+        signedIn: signedIn(platform, cookies),
+        account: this.accounts[platform]?.account,
+      });
       if (this.statusCache.get(platform) !== status) {
         this.statusCache.set(platform, status);
         this.changed();
       }
     }
+  }
+
+  private loadAccounts() {
+    return (this.accountMetadata ??= (async () => {
+      try {
+        const { readFile } = await import("node:fs/promises");
+        const saved = JSON.parse(
+          await readFile(
+            join(this.root, "shared", "postrove-session-status.json"),
+            "utf8",
+          ),
+        );
+        this.accounts = savedAccountsSchema
+          .catch({})
+          .parse(saved.accounts ?? {});
+      } catch {}
+    })());
+  }
+  private updateAccounts(
+    cookies: Awaited<ReturnType<BrowserContext["cookies"]>>,
+  ) {
+    for (const site of loginSites) {
+      const session = signedIn(site, cookies)
+        ? accountSession(site, cookies)
+        : undefined;
+      const seen = this.observedSessions.has(site);
+      const previous = this.observedSessions.get(site);
+      this.observedSessions.set(site, session);
+      if (!session || this.accounts[site]?.session !== session)
+        delete this.accounts[site];
+      if (
+        session &&
+        ((seen && previous !== session) || this.pendingLogins.has(site))
+      ) {
+        this.pendingLogins.delete(site);
+        // Login capture shares the browser barrier with explicit account actions.
+        void this.refreshAccount(site).catch(() => {});
+      }
+    }
+  }
+  refreshAccount(site: LoginSite) {
+    return this.jobs.run(async () => {
+      const context = await this.openQueuedContext(
+        site,
+        this.contextHeadless ?? this.taskHeadless(),
+      );
+      const cookies = await context.cookies();
+      if (!signedIn(site, cookies)) throw new Error("Account login required");
+      const session = accountSession(site, cookies);
+      const key = `${site}:${session}`;
+      let pending = this.accountAttempts.get(key);
+      if (!pending) {
+        pending = this.captureAccount(site, context, session).finally(() =>
+          this.accountAttempts.delete(key),
+        );
+        this.accountAttempts.set(key, pending);
+      }
+      await pending;
+    });
+  }
+  private async captureAccount(
+    site: LoginSite,
+    context: BrowserContext,
+    session: string,
+  ) {
+    let account = await accountFromSession(
+      site,
+      context,
+      this.userAgent(context),
+    ).catch(() => undefined);
+    if (!account) {
+      const page = await context.newPage();
+      try {
+        await page.setViewportSize({ width: 1280, height: 900 });
+        if (this.contextHeadless) await this.chrome.useChromeIdentity(page);
+        await page.goto(accountHomes[site], {
+          waitUntil: "commit",
+          timeout: 20000,
+        });
+        const deadline = Date.now() + 15000;
+        do {
+          account = await accountFromPage(site, page).catch(() => undefined);
+          if (account) break;
+          await new Promise((resolve) => setTimeout(resolve, 250));
+        } while (Date.now() < deadline && !page.isClosed());
+      } finally {
+        await page.close().catch(() => {});
+      }
+    }
+    const current = await context.cookies();
+    if (!signedIn(site, current) || accountSession(site, current) !== session)
+      throw new Error("Account changed during refresh");
+    if (!account) throw new Error("Account name unavailable");
+    this.accounts[site] = { session, account };
+    await this.saveStatus(site, context);
+  }
+  openHome(platform: LoginSite) {
+    return this.jobs.run(async () => {
+      const context = await this.openQueuedContext(platform, false);
+      const page = await context.newPage();
+      await page.bringToFront();
+      await page.goto(accountHomes[platform], {
+        waitUntil: "commit",
+        timeout: 30_000,
+      });
+      await page.bringToFront();
+      await this.saveStatus(platform, context);
+    });
   }
 
   login(platform: LoginSite) {
@@ -304,6 +441,7 @@ export class PlatformBrowser {
     }
     const page = await context.newPage();
     this.loginPages.set(platform, page);
+    this.pendingLogins.add(platform);
     await page.goto(loginUrls[platform], { waitUntil: "domcontentloaded" });
     await page.bringToFront();
     page.on("close", () => {

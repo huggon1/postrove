@@ -598,5 +598,9 @@
   "模型下载超时": "Model download timed out",
   "模型保存失败，请检查磁盘空间": "Model could not be saved. Check disk space.",
   "账号可见字幕": "Account-accessible captions",
-  "账号可见视频转录": "Account-accessible video transcription"
+  "账号可见视频转录": "Account-accessible video transcription",
+  "打开账号主页": "Open account home",
+  "账号名称待识别": "Account name pending",
+  "刷新账号名称": "Refresh account name",
+  "账号名称刷新失败，请稍后重试": "Account name refresh failed. Try again."
 }

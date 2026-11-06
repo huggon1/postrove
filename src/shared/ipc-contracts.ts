@@ -92,12 +92,16 @@ export const platformConnectionChannels = {
   status: "platform-connection:status",
   login: "platform-connection:login",
   logout: "platform-connection:logout",
+  home: "platform-connection:home",
+  refreshAccount: "platform-connection:refresh-account",
 } as const;
 export type ReadingSiteId = "bilibili";
 export const readingSiteChannels = {
   status: "reading-site:status",
   login: "reading-site:login",
   logout: "reading-site:logout",
+  home: "reading-site:home",
+  refreshAccount: "reading-site:refresh-account",
 } as const;
 export const xChannels = {
   status: "x:status",
@@ -114,6 +118,12 @@ export const xhsChannels = {
 export const channels = {
   changed: "postrove:changed",
 } as const;
+
+export interface PlatformAccountStatus {
+  signedIn: boolean;
+  installed: boolean;
+  account?: { name: string; handle?: string };
+}
 
 export interface DesktopBridge {
   capabilityView(): Promise<CapabilityView>;
@@ -227,12 +237,16 @@ export interface DesktopBridge {
   cancelModelCheck(): Promise<ModelReply<void>>;
   platformStatus(
     id: PlatformConnectionId,
-  ): Promise<ModelReply<{ signedIn: boolean; installed: boolean }>>;
+  ): Promise<ModelReply<PlatformAccountStatus>>;
+  refreshPlatformAccount(id: PlatformConnectionId): Promise<ModelReply<void>>;
+  openPlatformHome(id: PlatformConnectionId): Promise<ModelReply<void>>;
   loginPlatform(id: PlatformConnectionId): Promise<ModelReply<void>>;
   logoutPlatform(id: PlatformConnectionId): Promise<ModelReply<void>>;
   readingSiteStatus(
     id: ReadingSiteId,
-  ): Promise<ModelReply<{ signedIn: boolean; installed: boolean }>>;
+  ): Promise<ModelReply<PlatformAccountStatus>>;
+  refreshReadingSiteAccount(id: ReadingSiteId): Promise<ModelReply<void>>;
+  openReadingSiteHome(id: ReadingSiteId): Promise<ModelReply<void>>;
   loginReadingSite(id: ReadingSiteId): Promise<ModelReply<void>>;
   logoutReadingSite(id: ReadingSiteId): Promise<ModelReply<void>>;
   xStatus(): Promise<ModelReply<{ signedIn: boolean }>>;

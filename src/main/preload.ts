@@ -24,10 +24,17 @@ const bridge: DesktopBridge = {
   installSpeech: () => ipcRenderer.invoke(capabilityChannels.install),
   cancelSpeechInstall: () => ipcRenderer.invoke(capabilityChannels.cancel),
   readingSiteStatus: (id) => ipcRenderer.invoke(readingSiteChannels.status, id),
+  refreshReadingSiteAccount: (id) =>
+    ipcRenderer.invoke(readingSiteChannels.refreshAccount, id),
+  openReadingSiteHome: (id) => ipcRenderer.invoke(readingSiteChannels.home, id),
   loginReadingSite: (id) => ipcRenderer.invoke(readingSiteChannels.login, id),
   logoutReadingSite: (id) => ipcRenderer.invoke(readingSiteChannels.logout, id),
   platformStatus: (id) =>
     ipcRenderer.invoke(platformConnectionChannels.status, id),
+  refreshPlatformAccount: (id) =>
+    ipcRenderer.invoke(platformConnectionChannels.refreshAccount, id),
+  openPlatformHome: (id) =>
+    ipcRenderer.invoke(platformConnectionChannels.home, id),
   loginPlatform: (id) =>
     ipcRenderer.invoke(platformConnectionChannels.login, id),
   logoutPlatform: (id) =>
