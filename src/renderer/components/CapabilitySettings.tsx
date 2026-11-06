@@ -3,6 +3,8 @@ import { ArrowRight, Check } from "@phosphor-icons/react";
 import { bridge } from "../bridge";
 import { t } from "../i18n";
 import type { CapabilityView } from "../../shared/capability-contracts";
+import type { PlatformAccountStatus } from "../../shared/ipc-contracts";
+import { PlatformHomeButton } from "../workspace/PlatformHomeButton";
 import type { Workspace } from "../workspace/use-workspace";
 import type { SettingsSection } from "../workspace/Settings";
 import { usePlatformStatus } from "../workspace/use-platform-status";
@@ -26,7 +28,7 @@ export function CapabilitySettings({
 }) {
   const [view, setView] = useState<CapabilityView>();
   const [platformStatus] = usePlatformStatus();
-  const [bilibili, setBilibili] = useState<boolean>();
+  const [bilibili, setBilibili] = useState<PlatformAccountStatus>();
   const [selected, setSelected] = useState<CapabilityPlatform>();
   const [groupName, setGroupName] = useState<string>();
   const [error, setError] = useState("");
@@ -43,7 +45,7 @@ export function CapabilitySettings({
         ]);
         if (!alive || current !== revision) return;
         setView(next);
-        setBilibili(bili.ok ? bili.value.signedIn : undefined);
+        setBilibili(bili.ok ? bili.value : undefined);
         setError(bili.ok ? "" : bili.message);
       } catch {
         if (alive && current === revision) setError(t("状态读取失败"));
@@ -58,7 +60,7 @@ export function CapabilitySettings({
   }, []);
   function signedIn(platform: CapabilityPlatform) {
     return platform.id === "bilibili"
-      ? bilibili
+      ? bilibili?.signedIn
       : "connection" in platform
         ? platformStatus[platform.connection]?.signedIn
         : false;
@@ -73,7 +75,7 @@ export function CapabilitySettings({
         if (!result.ok) setError(result.message);
         else {
           const status = await bridge.readingSiteStatus("bilibili");
-          if (status.ok) setBilibili(status.value.signedIn);
+          if (status.ok) setBilibili(status.value);
         }
       } catch {
         setError(t("平台登录操作未完成，请稍后重试"));
@@ -119,7 +121,19 @@ export function CapabilitySettings({
       <div className="capability-requirements">
         {items.map((requirement) => (
           <div className="capability-requirement" key={requirement.id}>
-            <span>{t(requirement.label)}</span>
+            <span>
+              {t(requirement.label)}
+              {requirement.id === "account" &&
+                selected?.id === "bilibili" &&
+                bilibili?.account && (
+                  <small className="platform-account-name">
+                    {bilibili.account.name}
+                  </small>
+                )}
+            </span>
+            {requirement.id === "account" && selected?.id === "bilibili" && (
+              <PlatformHomeButton connectionId="bilibili" onError={setError} />
+            )}
             {requirement.ready ? (
               <Check className="is-ready" aria-label={t("已配置")} />
             ) : (

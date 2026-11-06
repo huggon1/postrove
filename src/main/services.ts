@@ -949,10 +949,19 @@ export async function initializeServices(
           return { ok: true, value: await browser.status(connection.site) };
         if (channel === platformConnectionChannels.login)
           await browser.login(connection.site);
+        else if (channel === platformConnectionChannels.refreshAccount)
+          await browser.refreshAccount(connection.site);
+        else if (channel === platformConnectionChannels.home)
+          await browser.openHome(connection.site);
         else await browser.logout(connection.site);
         return { ok: true, value: undefined };
       } catch {
-        return { ok: false, message: "平台登录操作未完成，请稍后重试" };
+        return {
+          ok: false,
+          message: channel.endsWith(":refresh-account")
+            ? "账号名称刷新失败，请稍后重试"
+            : "平台登录操作未完成，请稍后重试",
+        };
       }
     });
 
@@ -971,10 +980,19 @@ export async function initializeServices(
           return { ok: true, value: await browser.status("bilibili") };
         if (channel === readingSiteChannels.login)
           await browser.login("bilibili");
+        else if (channel === readingSiteChannels.refreshAccount)
+          await browser.refreshAccount("bilibili");
+        else if (channel === readingSiteChannels.home)
+          await browser.openHome("bilibili");
         else await browser.logout("bilibili");
         return { ok: true, value: undefined };
       } catch {
-        return { ok: false, message: "平台登录操作未完成，请稍后重试" };
+        return {
+          ok: false,
+          message: channel.endsWith(":refresh-account")
+            ? "账号名称刷新失败，请稍后重试"
+            : "平台登录操作未完成，请稍后重试",
+        };
       }
     });
 
