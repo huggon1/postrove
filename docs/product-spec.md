@@ -6,7 +6,7 @@ Postrove presents questions as topics. Selected AI members reply independently t
 
 The top navigation contains Topics, Reading, and Scheduled messages. Settings and Members open from the top bar. A topic contains the original question, selected members, their replies, source links, and member receipts. Opening a card shows its conversation. The topic list supports all, unread, and scheduled views.
 
-The composer sends the question to its selected enabled members. An HTTPS link opens Add link. Source collection offers individual, selected, and all-source actions. Selecting a collected source opens its reading record. AI members produce independent replies to the original question.
+The composer sends the question to its selected enabled members. An HTTPS address or a domain address opens Add link. Source collection offers individual, selected, and all-source actions. Selecting a collected source opens its reading record. AI members produce independent replies to the original question.
 
 On Windows, closing the final window shuts down services and exits the application; minimizing keeps it running. On macOS, closing a window keeps the application running, and the Dock reopens the workspace.
 
@@ -44,7 +44,7 @@ Member changes update future recipient sets. A schedule with zero enabled recipi
 
 ## Reading and link intake
 
-Reading contains saved and partial materials. Add link accepts HTTPS addresses. Telegram and Feishu authorized messages enter the same collection pipeline. Main saves the accepted message identity before acknowledging intake. Repeated message identities reuse their queue entry.
+Reading contains saved and partial materials. Add link accepts HTTPS addresses and domain addresses. Domain addresses receive an HTTPS prefix; path, query parameters, and fragments retain their submitted values. Telegram and Feishu authorized messages enter the same collection pipeline. Main saves the accepted message identity before acknowledging intake. Repeated message identities reuse their queue entry.
 
 Collection captures the main text, images, and one level of direct references. The capture Agent loads the source's reading Skill and chooses available tools and page controls for its scope. GitHub collection targets the default README. YouTube and Bilibili collection prefer native captions. When captions are absent, collection transcribes accessible audio through the local speech service. Metadata checkpoints survive media and transcription failures; timestamp links retain video and part identity. Xiaohongshu video uses the same local speech service. Reddit collection reads the selected post or comment with its required context. Materials keep their individual sources, coverage, translated chunks, introductions, and issues. The reader offers a material selector, original/reading versions, source navigation, progress, Stop, retry, result files, and native logs. Markdown preserves links, code, images, and diagrams.
 

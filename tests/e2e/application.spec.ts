@@ -280,6 +280,65 @@ test("parsed materials retain their language and partial state across new submis
     contentType: "application/json",
   });
 });
+test("bare links submit through reading and composer in both languages and widths", async ({}, info) => {
+  test.setTimeout(120_000);
+  const page = await launch();
+  const evidence: unknown[] = [];
+  const state = async () =>
+    JSON.parse(await readFile(join(profile, "forwarding.json"), "utf8"));
+  for (const language of ["zh-CN", "en"] as const) {
+    await page.evaluate((value) => window.postrove.saveLanguage(value), language);
+    await page.reload();
+    const english = language === "en";
+    for (const width of [1280, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.getByRole("button", { name: english ? "Reading" : "阅读", exact: true }).click();
+      await page.getByRole("button", { name: english ? "Add a link" : "添加链接", exact: true }).click();
+      const dialog = page.getByRole("dialog", { name: english ? "Add a link" : "添加链接", exact: true });
+      const input = dialog.getByRole("textbox", { name: english ? "Link" : "链接", exact: true });
+      const submit = dialog.getByRole("button", { name: english ? "Add to reading" : "加入阅读", exact: true });
+      await input.fill("javascript:alert(1)");
+      await submit.click();
+      await expect(dialog.getByRole("alert")).toHaveText(english ? "Enter an HTTPS page link" : "请输入 HTTPS 网页链接");
+      await expect(input).toHaveValue("javascript:alert(1)");
+      await page.screenshot({ path: info.outputPath(`${language}-${width}-invalid-link.png`), animations: "disabled" });
+      const bare = `github.com/fixture/${language}-${width}?source=copy%2Fpaste#part`;
+      await input.fill(`  ${bare}  `);
+      await expect(dialog.getByRole("alert")).toHaveCount(0);
+      await page.screenshot({ path: info.outputPath(`${language}-${width}-bare-link.png`), animations: "disabled" });
+      const bounds = await dialog.evaluate((element) => ({
+        left: element.getBoundingClientRect().left,
+        right: element.getBoundingClientRect().right,
+        overflow: document.documentElement.scrollWidth - window.innerWidth,
+      }));
+      expect(bounds.left).toBeGreaterThanOrEqual(0);
+      expect(bounds.right).toBeLessThanOrEqual(width);
+      expect(bounds.overflow).toBeLessThanOrEqual(1);
+      await submit.click();
+      await expect(dialog).toHaveCount(0);
+      await expect.poll(async () => (await state()).tasks.find((task: any) => task.target.sourceUrl === `https://${bare}`)?.state).toBe("completed");
+      await expect(page.locator(".reading-card").first()).toBeVisible();
+      evidence.push({ language, width, input: bare, saved: `https://${bare}`, ...bounds });
+      await page.getByRole("button", { name: english ? "Topics" : "话题", exact: true }).click();
+      const composer = page.getByRole("region", { name: english ? "Start a topic" : "发起话题", exact: true });
+      await composer.getByRole("textbox").fill(bare);
+      await composer.getByRole("button", { name: english ? "Add a link" : "添加链接", exact: true }).click();
+      await expect(page.getByRole("dialog").getByRole("textbox")).toHaveValue(`https://${bare}`);
+      await page.getByRole("dialog").getByRole("button", { name: english ? "Close" : "关闭", exact: true }).click();
+    }
+  }
+  const direct = await page.evaluate(() => window.postrove.addLink("github.com/fixture/direct-ipc?ref=bare#anchor"));
+  expect(direct.ok).toBe(true);
+  await expect.poll(async () => (await state()).tasks.find((task: any) => task.taskId === (direct as any).value)?.target.sourceUrl).toBe("https://github.com/fixture/direct-ipc?ref=bare#anchor");
+  await info.attach("link-intake-review", {
+    body: JSON.stringify({
+      copyAdmission: "Existing control labels, placeholder, and invalid-link feedback retain their meaning. The existing error appears after invalid whole-address submission. This change adds zero interface messages.",
+      boundary: "Real renderer, IPC, admission and saved records; controlled source/model responses.",
+      evidence,
+    }, null, 2),
+    contentType: "application/json",
+  });
+});
 test("profile copying protects an active source and preserves independent follows", async ({}, info) => {
   let page = await launch();
   const saved = await page.evaluate(async () => {

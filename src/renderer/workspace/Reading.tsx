@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { sourceProfiles } from "../../shared/source-profiles";
+import { forwardingInputSchema } from "../../shared/source-contracts";
 import {
   ArrowRight,
   ArrowUpRight,
@@ -51,19 +52,12 @@ export function CollectLink({
         onSubmit={async (event) => {
           event.preventDefault();
           setError("");
-          try {
-            const parsed = new URL(url.trim());
-            if (
-              parsed.protocol !== "https:" ||
-              parsed.username ||
-              parsed.password
-            )
-              throw new Error();
-          } catch {
+          const parsed = forwardingInputSchema.safeParse(url);
+          if (!parsed.success) {
             setError(t("请输入 HTTPS 网页链接"));
             return;
           }
-          const taskId = await workspace.run(() => bridge.addLink(url.trim()));
+          const taskId = await workspace.run(() => bridge.addLink(parsed.data));
           if (taskId) onAdded(taskId);
         }}
       >
@@ -71,11 +65,17 @@ export function CollectLink({
           <span>{t("链接")}</span>
           <input
             aria-label={t("链接")}
-            type="url"
+            type="text"
+            inputMode="url"
+            autoCapitalize="none"
+            spellCheck={false}
             autoFocus
             required
             value={url}
-            onChange={(event) => setUrl(event.target.value)}
+            onChange={(event) => {
+              setUrl(event.target.value);
+              setError("");
+            }}
             placeholder="https://"
           />
         </label>
