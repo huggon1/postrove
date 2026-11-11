@@ -1,5 +1,11 @@
 import { useEffect, useState } from "react";
-import { Clock, PencilSimple, Plus, Trash } from "@phosphor-icons/react";
+import {
+  CircleNotch,
+  Clock,
+  PencilSimple,
+  Plus,
+  Trash,
+} from "@phosphor-icons/react";
 import {
   advisorById,
   legacyAdvisor,
@@ -93,14 +99,23 @@ export function ScheduleList({
                 className="schedule-switch"
                 aria-label={t(follow.paused ? "恢复定时发送" : "暂停定时发送")}
                 checked={!follow.paused && !!follow.nextRunAt}
-                disabled={workspace.busy || !follow.nextRunAt}
+                disabled={
+                  workspace.pending(`follow:${follow.followId}`) ||
+                  !follow.nextRunAt
+                }
                 onChange={() =>
-                  void workspace.booleanAction(() =>
-                    bridge.setFollowPaused(follow.followId, !follow.paused),
+                  void workspace.booleanAction(
+                    () =>
+                      bridge.setFollowPaused(follow.followId, !follow.paused),
+                    `follow:${follow.followId}`,
                   )
                 }
               />
+              {workspace.pending(`follow:${follow.followId}`) && (
+                <CircleNotch className="spin" aria-label={t("进行中")} />
+              )}
               <IconButton
+                disabled={workspace.pending(`follow:${follow.followId}`)}
                 label={t("编辑定时消息")}
                 onClick={() => onEdit(follow)}
               >
@@ -108,11 +123,31 @@ export function ScheduleList({
               </IconButton>
               <IconButton
                 label={t("删除定时消息")}
-                onClick={() => setConfirm(follow)}
+                disabled={workspace.pending(`follow:${follow.followId}`)}
+                onClick={() => {
+                  workspace.clearError(`follow:${follow.followId}`);
+                  setConfirm(follow);
+                }}
               >
                 <Trash />
               </IconButton>
             </div>
+            {workspace.errorFor(`follow:${follow.followId}`) && !confirm && (
+              <div className="schedule-operation-feedback">
+                <Feedback error>
+                  {workspace.errorFor(`follow:${follow.followId}`)}
+                </Feedback>
+                <button
+                  className="text-button"
+                  disabled={workspace.pending(`follow:${follow.followId}`)}
+                  onClick={() =>
+                    void workspace.retry(`follow:${follow.followId}`)
+                  }
+                >
+                  {t("重试")}
+                </button>
+              </div>
+            )}
           </article>
         ))}
       </div>
@@ -126,13 +161,19 @@ export function ScheduleList({
         <ConfirmDialog
           title={t("删除定时消息")}
           confirmLabel={t("删除")}
-          busy={workspace.busy}
-          error={workspace.error}
-          onClose={() => setConfirm(undefined)}
+          busy={workspace.pending(`follow:${confirm.followId}`)}
+          error={workspace.errorFor(`follow:${confirm.followId}`)}
+          onClose={() => {
+            if (!workspace.pending(`follow:${confirm.followId}`)) {
+              workspace.clearError(`follow:${confirm.followId}`);
+              setConfirm(undefined);
+            }
+          }}
           onConfirm={async () => {
             if (
-              await workspace.booleanAction(() =>
-                bridge.deleteFollow(confirm.followId),
+              await workspace.booleanAction(
+                () => bridge.deleteFollow(confirm.followId),
+                `follow:${confirm.followId}`,
               )
             )
               setConfirm(undefined);

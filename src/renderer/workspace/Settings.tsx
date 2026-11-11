@@ -21,7 +21,7 @@ import { selectLanguage, t } from "../i18n";
 import { Avatar } from "./ui";
 import { SectionHeading } from "./forms";
 import { PlatformHomeButton } from "./PlatformHomeButton";
-import { usePlatformStatus } from "./use-platform-status";
+import { usePlatformStatus, platformStatusLabel } from "./use-platform-status";
 import {
   advisors,
   advisorById,
@@ -57,7 +57,7 @@ export function Settings({
 }) {
   const [error, setError] = useState("");
   const [homeError, setHomeError] = useState("");
-  const [platformStatus] = usePlatformStatus();
+  const [platformStatus, , reloadStatus] = usePlatformStatus();
   async function telegramAction(operation: () => Promise<{ ok: boolean }>) {
     const reply = await operation();
     if (reply.ok) await workspace.refresh();
@@ -104,7 +104,7 @@ export function Settings({
             <div className="inbox-connections">
               <TelegramSettings
                 settings={workspace.settings}
-                busy={workspace.busy}
+                busy={false}
                 onSaveTelegramToken={(token) =>
                   telegramAction(() => workspace.ui.uiSaveTelegramToken(token))
                 }
@@ -130,6 +130,21 @@ export function Settings({
         {section === "members" && (
           <>
             <SectionHeading title={t("AI 成员")} />
+            {Object.values(platformStatus).some(
+              (value) => value.state === "error",
+            ) && (
+              <div className="platform-status-feedback">
+                <p className="inline-error" role="alert">
+                  {t("状态读取失败")}
+                </p>
+                <button
+                  className="text-button"
+                  onClick={() => void reloadStatus()}
+                >
+                  {t("重新加载")}
+                </button>
+              </div>
+            )}
             {homeError && (
               <p className="inline-error" role="alert">
                 {homeError}
@@ -186,13 +201,15 @@ export function Settings({
                         </span>
                       </span>
                       <span
-                        className={`connection-pill ${platformStatus[connection.connectionId]?.signedIn ? "connected" : ""}`}
+                        data-state={
+                          platformStatus[connection.connectionId]?.state ??
+                          "loading"
+                        }
+                        className={`connection-pill ${platformStatus[connection.connectionId]?.state === "ready" && platformStatus[connection.connectionId]?.signedIn ? "connected" : ""}`}
                       >
                         <i />
-                        {t(
-                          platformStatus[connection.connectionId]?.signedIn
-                            ? "已连接"
-                            : "未连接",
+                        {platformStatusLabel(
+                          platformStatus[connection.connectionId],
                         )}
                       </span>
                       <ArrowRight />

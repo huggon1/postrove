@@ -602,5 +602,7 @@
   "打开账号主页": "Open account home",
   "账号名称待识别": "Account name pending",
   "刷新账号名称": "Refresh account name",
-  "账号名称刷新失败，请稍后重试": "Account name refresh failed. Try again."
+  "账号名称刷新失败，请稍后重试": "Account name refresh failed. Try again.",
+  "重新加载": "Reload",
+  "影响 {0} 条定时消息，其中 {1} 条将暂停": "Affects {0} scheduled messages; {1} will be paused."
 }

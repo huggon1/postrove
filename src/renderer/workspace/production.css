@@ -1359,3 +1359,29 @@ select {
     transition: none;
   }
 }
+
+/* Operation results stay next to their controls. */
+.schedule-operation-feedback {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.schedule-operation-feedback .setup-feedback {
+  margin: 0;
+}
+.platform-status-feedback {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.connection-pill[data-state="error"],
+.identity-status[data-state="error"] {
+  color: var(--danger);
+}
+.connection-pill[data-state="error"] i {
+  background: currentColor;
+}

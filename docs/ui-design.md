@@ -35,6 +35,8 @@ At widths from 601 to 760 pixels, the top bar keeps the brand mark and the label
 
 Shared form components own labels, input spacing, validation feedback, and dialog actions. A failed operation retains the active form and its entered values. Secret controls retain the value while switching its visibility.
 
+Pending indicators and errors stay beside their operation's controls. Stop-and-delete and update-wait confirmations display their own errors. A failed pause or resume action keeps its retry beside the affected schedule. Account-status and speech-state read failures expose Reload in the corresponding settings region.
+
 A reading card's image fills and crops within its fixed-height cover. The cover and title each open their reading record through their own click target.
 
 ## Review evidence
@@ -46,6 +48,13 @@ For each interaction indicator, activate its control and compare the observed re
 The [workspace layout E2E](../tests/e2e/workspace-layout.spec.ts) checks page identity and overflow in both languages at desktop and compact widths. The [settings layout E2E](../tests/e2e/settings-layout.spec.ts) exercises setup, validation, member management, and model configuration through real controls. The [schedule E2E](../tests/e2e/schedules.spec.ts) exercises rich rules, previews, validation, pause, persistence, and both languages. It records copy admission sources and triggers. Tests save complete-window screenshots and layout measurements. The [test guide](../tests/README.md) owns broader verification scope.
 
 The [layout clarity E2E](../tests/e2e/ui-layout-clarity.spec.ts) compares the home and schedule-card time in a saved zone that differs from the device zone, checks one presentation of a repeated name, and captures both languages at desktop and compact widths. The home zone reuses the saved schedule zone as required feedback for its next-send control.
+
+The [operation feedback E2E](../tests/e2e/ui-operation-feedback.spec.ts) holds and fails controlled IPC responses through the production interface. It checks independent pending scopes, mutation retry, canceled-delete retry cleanup, errors in the active confirmation, account and speech read recovery, retained Bilibili identity, and disable-expert consequences in both interface languages.
+
+| Added copy | Admission source and trigger |
+| --- | --- |
+| Reload | Required recovery control after an account, speech, or workspace snapshot read fails. |
+| Affects {0} scheduled messages; {1} will be paused. | Required consequence feedback in the disable-expert confirmation when saved schedules include that expert. Counts come from the current saved schedules and enabled members. |
 
 ### Capability and speech settings
 
