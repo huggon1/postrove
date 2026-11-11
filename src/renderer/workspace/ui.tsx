@@ -3,11 +3,13 @@ import {
   useId,
   useRef,
   type ButtonHTMLAttributes,
+  type Ref,
   type ReactNode,
 } from "react";
 import { User, X } from "@phosphor-icons/react";
 import { advisorById, type AdvisorId } from "../../shared/advisor-contracts";
 import { t, useLanguage } from "../i18n";
+import "./ui-overlays.css";
 
 export function Avatar({
   id,
@@ -52,6 +54,7 @@ export function IconButton({
 }: ButtonHTMLAttributes<HTMLButtonElement> & {
   label: string;
   tooltip?: boolean;
+  ref?: Ref<HTMLButtonElement>;
 }) {
   const tooltipId = useId();
   return (
@@ -86,10 +89,16 @@ export function Modal({
   onClose(): void;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const backdropPointer = useRef(false);
   useEffect(() => {
     const dialog = ref.current!,
       focus = document.activeElement as HTMLElement | null;
     dialog.showModal();
+    const initial =
+      dialog.querySelector<HTMLElement>(
+        '[data-initial-focus], input:not(:disabled):not([type="checkbox"]), textarea:not(:disabled), select:not(:disabled)',
+      ) ?? dialog.querySelector<HTMLElement>("[data-modal-close]");
+    if (!dialog.querySelector("[autofocus]")) initial?.focus();
     if (!openModals.size) savedBodyOverflow = document.body.style.overflow;
     openModals.add(dialog);
     document.body.style.overflow = "hidden";
@@ -110,7 +119,17 @@ export function Modal({
         onClose();
       }}
       onClick={(event) => {
-        if (event.target === ref.current) onClose();
+        if (event.target === ref.current && backdropPointer.current) onClose();
+        backdropPointer.current = false;
+      }}
+      onPointerDown={(event) => {
+        backdropPointer.current = event.target === ref.current;
+      }}
+      onPointerUp={(event) => {
+        backdropPointer.current &&= event.target === ref.current;
+      }}
+      onPointerCancel={() => {
+        backdropPointer.current = false;
       }}
     >
       <div className="dialog-frame">{children}</div>
@@ -122,11 +141,13 @@ export function ModalHeader({
   onClose,
   children,
   leading,
+  closeDisabled = false,
 }: {
   title: string;
   children?: ReactNode;
   leading?: ReactNode;
   onClose(): void;
+  closeDisabled?: boolean;
 }) {
   return (
     <header className="modal-top">
@@ -136,7 +157,12 @@ export function ModalHeader({
       </div>
       <div className="modal-header-actions">
         {children}
-        <IconButton label={t("关闭")} onClick={onClose}>
+        <IconButton
+          label={t("关闭")}
+          data-modal-close
+          onClick={onClose}
+          disabled={closeDisabled}
+        >
           <X />
         </IconButton>
       </div>

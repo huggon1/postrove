@@ -9,6 +9,7 @@ import {
 import {
   Check,
   CheckCircle,
+  CircleNotch,
   Eye,
   EyeSlash,
   WarningCircle,
@@ -126,25 +127,35 @@ export function ConfirmDialog({
   onClose(): void;
   onConfirm(): void | Promise<void>;
 }) {
+  const close = () => {
+    if (!busy) onClose();
+  };
   return (
     <Modal
       label={title}
       className="compact-modal confirm-modal"
-      onClose={onClose}
+      onClose={close}
     >
-      <ModalHeader title={title} onClose={onClose} />
+      <ModalHeader title={title} onClose={close} closeDisabled={busy} />
       <div className="compact-body">
         {children && <div className="confirm-copy">{children}</div>}
         {error && <Feedback error>{error}</Feedback>}
         <div className="config-actions">
-          <button className="secondary" onClick={onClose}>
+          <button
+            className="secondary"
+            data-initial-focus
+            onClick={close}
+            disabled={busy}
+          >
             {cancelLabel}
           </button>
           <button
             className="primary"
             disabled={busy}
+            aria-busy={busy}
             onClick={() => void onConfirm()}
           >
+            {busy && <CircleNotch className="spin" aria-hidden="true" />}
             {confirmLabel}
           </button>
         </div>

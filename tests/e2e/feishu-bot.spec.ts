@@ -492,9 +492,10 @@ test("Feishu setup, durable receipts, history recovery and account isolation", a
       .locator(".telegram-summary")
       .click();
     section = page.getByRole("region", { name: "Feishu", exact: true });
-    await section
-      .getByRole("button", { name: "View setup steps", exact: true })
-      .click();
+    // Returning to setup retains the open step across the language/category change.
+    await expect(
+      section.getByRole("button", { name: "Use existing app", exact: true }),
+    ).toBeVisible();
     guide = page.getByRole("dialog", { name: "Feishu setup", exact: true });
     await guide
       .getByRole("button", { name: "Use existing app", exact: true })

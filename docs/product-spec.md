@@ -10,6 +10,10 @@ The composer sends the question to its selected enabled members. An HTTPS addres
 
 The renderer tracks pending states, errors, and retry actions by operation scope. Controls in independent scopes stay available while another scope runs. A failed mutation retains a retry of that mutation; a failed snapshot read offers Reload. Confirmation dialogs display their operation errors inside the active dialog. Cancelling a destructive confirmation clears its retry action.
 
+The current renderer session retains composer questions, schedule drafts, model-editor fields, and bot setup fields across page changes and temporary dismissal. Explicit Cancel discards schedule and model-editor drafts. Sending a topic or saving a schedule or model consumes its submitted draft. Bot verification clears the submitted secret. Credential drafts stay in renderer memory for the current window session.
+
+The composer presents selected members as a summary. Choose recipients opens the selection menu; an empty selection displays that control's label.
+
 On Windows, closing the final window shuts down services and exits the application; minimizing keeps it running. On macOS, closing a window keeps the application running, and the Dock reopens the workspace.
 
 ## Members and language

@@ -228,7 +228,13 @@ test("settings and nested forms retain the approved layout through real controls
         name: "Built-in providers",
         exact: true,
       }),
-    ).toHaveAttribute("aria-pressed", "true");
+    ).toHaveAttribute("aria-pressed", "false");
+    await expect(
+      englishModel.getByLabel("Provider ID", { exact: true }),
+    ).toHaveValue("draft-provider");
+    await englishModel
+      .getByRole("button", { name: "Built-in providers", exact: true })
+      .click();
     await capture("model-builtin-en-narrow");
     await englishModel
       .getByRole("button", { name: "Custom service", exact: true })

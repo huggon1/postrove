@@ -35,6 +35,10 @@ At widths from 601 to 760 pixels, the top bar keeps the brand mark and the label
 
 Shared form components own labels, input spacing, validation feedback, and dialog actions. A failed operation retains the active form and its entered values. Secret controls retain the value while switching its visibility.
 
+Menus dismiss on an outside pointer, Escape, or focus moving outside their region. Escape restores focus to the trigger. Menus choose the available space above or below their trigger and scroll internally; a trigger leaving the viewport dismisses its menu. A backdrop dismissal requires the pointer press and release to occur on the backdrop. Dialogs focus an explicit initial target, their first input, or Close in that order; confirmations choose Cancel. A pending form commit keeps its dialog open and displays a waiting indicator on the committing control.
+
+The model-options form submits through Enter or Save. Invalid temperature, token count, and JSON inputs retain their values, expose linked field errors, and receive focus. Opening a saved model editor retains the connection's identity through reauthorization according to the [model selection contract](data-contracts.md#pi-model-connections).
+
 Pending indicators and errors stay beside their operation's controls. Stop-and-delete and update-wait confirmations display their own errors. A failed pause or resume action keeps its retry beside the affected schedule. Account-status and speech-state read failures expose Reload in the corresponding settings region.
 
 A reading card's image fills and crops within its fixed-height cover. The cover and title each open their reading record through their own click target.
@@ -50,6 +54,8 @@ The [workspace layout E2E](../tests/e2e/workspace-layout.spec.ts) checks page id
 The [layout clarity E2E](../tests/e2e/ui-layout-clarity.spec.ts) compares the home and schedule-card time in a saved zone that differs from the device zone, checks one presentation of a repeated name, and captures both languages at desktop and compact widths. The home zone reuses the saved schedule zone as required feedback for its next-send control.
 
 The [operation feedback E2E](../tests/e2e/ui-operation-feedback.spec.ts) holds and fails controlled IPC responses through the production interface. It checks independent pending scopes, mutation retry, canceled-delete retry cleanup, errors in the active confirmation, account and speech read recovery, retained Bilibili identity, and disable-expert consequences in both interface languages.
+
+The [overlay E2E](../tests/e2e/ui-overlays.spec.ts) checks bilingual draft retention, explicit cancellation, backdrop dragging, keyboard and outside dismissal, focus, menu bounds, offscreen triggers, field validation, and alternating new/saved model drafts. The [native Pi connection E2E](../tests/e2e/pi-model-connections.spec.ts) covers reauthorization of a saved connection. The numeric bound errors are required feedback on an attempted save of an out-of-range temperature or a non-integer or out-of-range token count. Choose recipients and Manage connection reuse their existing control labels.
 
 | Added copy | Admission source and trigger |
 | --- | --- |

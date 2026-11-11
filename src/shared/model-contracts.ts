@@ -193,6 +193,7 @@ export interface ModelView {
     modelId: string;
   }[];
   selected?: {
+    replacesId?: string;
     catalogSource: "builtin" | "custom";
     id: string;
     providerId: string;

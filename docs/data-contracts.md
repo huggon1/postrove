@@ -127,6 +127,8 @@ Removing a connection first saves its retirement UUID and clears its active sele
 
 Reauthorizing a saved connection stages a new credential directory with its existing catalog, model, and options. Saving commits the replacement connection and retires the prior directory through the same lease-aware cleanup. Cancellation keeps the saved connection active.
 
+`ModelView.selected.replacesId` identifies the saved connection replaced by a staged reauthorization candidate. The editor accepts that candidate for the matching saved connection. A new-connection editor accepts candidates with a new identity and an empty replacement identity. Renderer-session drafts retain their candidate identity; resuming a draft after selecting another connection returns to connection setup or authentication for its original editor context.
+
 Credentials and file paths cross the private execution channel. Public task snapshots and model views contain connection metadata, option identities, and classified failures. Authentication errors use bounded application messages. Native session export follows the local trace boundary above.
 
 ## Telegram queue and upgrade retention
