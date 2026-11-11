@@ -7,8 +7,15 @@ import {
 } from "../../shared/advisor-contracts";
 import type { Follow } from "../../shared/focus-search-contracts";
 import { bridge } from "../bridge";
-import { t, tf, useLanguage } from "../i18n";
-import { Avatar, IconButton, Modal, ModalHeader, advisorName } from "./ui";
+import { t, tf } from "../i18n";
+import {
+  Avatar,
+  IconButton,
+  Modal,
+  ModalHeader,
+  Time,
+  advisorName,
+} from "./ui";
 import type { Workspace } from "./use-workspace";
 import { ConfirmDialog, Feedback } from "./forms";
 import { normalizeSchedule, scheduleOccurrences } from "../../shared/schedules";
@@ -31,7 +38,6 @@ export function ScheduleList({
   onEdit(follow: Follow): void;
 }) {
   const [confirm, setConfirm] = useState<Follow>();
-  const language = useLanguage();
   return (
     <>
       <div className="schedule-list">
@@ -46,7 +52,9 @@ export function ScheduleList({
               <span>{t(cadenceNames[follow.schedule.cadence])}</span>
             </div>
             <div className="schedule-content">
-              <span className="schedule-name">{follow.name}</span>
+              {follow.name.trim() !== follow.question.trim() && (
+                <span className="schedule-name">{follow.name}</span>
+              )}
               <h2>{follow.question}</h2>
               <p className="schedule-rule-summary">
                 {scheduleSummary(follow.schedule)}
@@ -67,16 +75,10 @@ export function ScheduleList({
                 ) : (
                   <>
                     {t("下次发送")}{" "}
-                    <time dateTime={follow.nextRunAt}>
-                      {new Intl.DateTimeFormat(language, {
-                        timeZone: normalizeSchedule(follow.schedule).timeZone,
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        hourCycle: "h23",
-                      }).format(new Date(follow.nextRunAt))}
-                    </time>
+                    <Time
+                      value={follow.nextRunAt}
+                      timeZone={normalizeSchedule(follow.schedule).timeZone}
+                    />
                   </>
                 )}
               </p>

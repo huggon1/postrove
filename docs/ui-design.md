@@ -31,6 +31,8 @@ Update availability, installation preparation, and success share the floating ca
 
 The topic feed and its supporting column share the desktop viewport. Compact widths place supporting content below the feed, move navigation to its compact position, and adapt settings categories and dialogs to the available width. Text, controls, and saved content remain within their scroll containers. The scheduled-message dialog stacks its columns below 660 pixels and scrolls inside its frame.
 
+At widths from 601 to 760 pixels, the top bar keeps the brand mark and the labeled navigation. Every navigation and settings control fits within the window, including the 640-pixel native minimum. Source summaries, timestamps, reading status, and schedule metadata use a 12-pixel minimum and the shared muted text color. Reading-card delete actions use a 34-pixel target; language and source actions use a 32-pixel minimum height.
+
 Shared form components own labels, input spacing, validation feedback, and dialog actions. A failed operation retains the active form and its entered values. Secret controls retain the value while switching its visibility.
 
 A reading card's image fills and crops within its fixed-height cover. The cover and title each open their reading record through their own click target.
@@ -42,6 +44,8 @@ For each added or expanded message, record its admission source and triggering s
 For each interaction indicator, activate its control and compare the observed result with the table above. Check selected and unselected navigation, both disclosure states, internal destinations, and external-opening actions. Review desktop and compact widths in both languages, including the leading icons after a trailing indicator is removed.
 
 The [workspace layout E2E](../tests/e2e/workspace-layout.spec.ts) checks page identity and overflow in both languages at desktop and compact widths. The [settings layout E2E](../tests/e2e/settings-layout.spec.ts) exercises setup, validation, member management, and model configuration through real controls. The [schedule E2E](../tests/e2e/schedules.spec.ts) exercises rich rules, previews, validation, pause, persistence, and both languages. It records copy admission sources and triggers. Tests save complete-window screenshots and layout measurements. The [test guide](../tests/README.md) owns broader verification scope.
+
+The [layout clarity E2E](../tests/e2e/ui-layout-clarity.spec.ts) compares the home and schedule-card time in a saved zone that differs from the device zone, checks one presentation of a repeated name, and captures both languages at desktop and compact widths. The home zone reuses the saved schedule zone as required feedback for its next-send control.
 
 ### Capability and speech settings
 

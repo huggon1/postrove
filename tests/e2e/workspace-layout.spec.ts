@@ -30,8 +30,17 @@ test("topic navigation and settings fit both languages at desktop and compact wi
       await expect(
         page.getByRole("button", { name: settings, exact: true }),
       ).toBeVisible();
-      for (const width of [1280, 960, 390]) {
-        await page.setViewportSize({ width, height: 900 });
+      for (const width of [1280, 960, 760, 700, 640, 601, 390]) {
+        await page.setViewportSize({
+          width,
+          height: width === 640 ? 480 : 900,
+        });
+        for (const control of await page.locator(".topbar button").all()) {
+          await expect(control).toBeInViewport();
+          const bounds = await control.boundingBox();
+          expect(bounds!.x).toBeGreaterThanOrEqual(0);
+          expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);
+        }
         for (const name of english
           ? ["Topics", "Reading", "Scheduled sends", "Settings"]
           : ["话题", "阅读", "定时发送", "设置"]) {
