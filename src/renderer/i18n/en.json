@@ -604,5 +604,7 @@
   "刷新账号名称": "Refresh account name",
   "账号名称刷新失败，请稍后重试": "Account name refresh failed. Try again.",
   "重新加载": "Reload",
-  "影响 {0} 条定时消息，其中 {1} 条将暂停": "Affects {0} scheduled messages; {1} will be paused."
+  "影响 {0} 条定时消息，其中 {1} 条将暂停": "Affects {0} scheduled messages; {1} will be paused.",
+  "请输入 0 到 2 之间的数值": "Enter a number from 0 to 2",
+  "请输入 1 到 2000000 之间的整数": "Enter a whole number from 1 to 2000000"
 }

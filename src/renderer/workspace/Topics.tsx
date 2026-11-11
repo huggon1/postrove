@@ -1,13 +1,13 @@
 import { sourceProfiles } from "../../shared/source-profiles";
 import { forwardingInputSchema } from "../../shared/source-contracts";
-import { useState } from "react";
+import { useId, useState } from "react";
 import {
   ArrowRight,
   At,
   BookmarkSimple,
   CaretDown,
-  Check,
   CheckCircle,
+  CircleNotch,
   Clock,
   FileText,
   LinkSimple,
@@ -40,6 +40,8 @@ import {
   stateLabel,
 } from "./ui";
 import type { Workspace } from "./use-workspace";
+import { useSessionDraft } from "./use-session-draft";
+import { usePopover } from "./use-popover";
 
 export const sectionAdvisor = (section: SearchSection) =>
   section.advisorId ?? legacyAdvisor(section.platform, section.promptLanguage);
@@ -64,6 +66,8 @@ export function Composer({
   onMembers,
   onLink,
   onSent,
+  question: controlledQuestion,
+  onQuestion,
 }: {
   workspace: Workspace;
   selected: AdvisorId[];
@@ -71,9 +75,18 @@ export function Composer({
   onMembers(): void;
   onLink(url?: string): void;
   onSent(reportId: string): void;
+  question?: string;
+  onQuestion?(question: string): void;
 }) {
-  const [question, setQuestion] = useState("");
-  const [menu, setMenu] = useState(false);
+  const [draftQuestion, setDraftQuestion] = useSessionDraft(
+    "composer.question",
+    "",
+  );
+  const question = controlledQuestion ?? draftQuestion;
+  const setQuestion = onQuestion ?? setDraftQuestion;
+  const menu = usePopover();
+  const menuId = useId();
+  const busy = workspace.pending("composer");
   const enabled = workspace.members?.enabled ?? [];
   const linkInput = forwardingInputSchema.safeParse(question);
   const linkOnly = linkInput.success;
@@ -83,18 +96,20 @@ export function Composer({
       onLink(linkInput.data);
       return;
     }
-    const taskId = await workspace.run(() =>
-      bridge.startFocusSearch({
-        question: text,
-        advisorIds: selected,
-        platforms: [
-          ...new Set(
-            selected.map(
-              (id) => advisors.find((advisor) => advisor.id === id)!.platform,
+    const taskId = await workspace.run(
+      () =>
+        bridge.startFocusSearch({
+          question: text,
+          advisorIds: selected,
+          platforms: [
+            ...new Set(
+              selected.map(
+                (id) => advisors.find((advisor) => advisor.id === id)!.platform,
+              ),
             ),
-          ),
-        ],
-      }),
+          ],
+        }),
+      "composer",
     );
     if (taskId) {
       setQuestion("");
@@ -113,14 +128,16 @@ export function Composer({
         placeholder={t("有什么想问问大家的？")}
         maxLength={10000}
         value={question}
+        disabled={busy}
         onChange={(event) => setQuestion(event.target.value)}
         onKeyDown={(event) => {
           if (
             event.key === "Enter" &&
+            !event.nativeEvent.isComposing &&
             (event.metaKey || event.ctrlKey) &&
             question.trim() &&
             (selected.length || linkOnly) &&
-            !workspace.busy
+            !busy
           ) {
             event.preventDefault();
             void send();
@@ -129,24 +146,14 @@ export function Composer({
       />
       <div className="composer-bottom">
         <div className="recipient-chips" aria-label={t("本次接收成员")}>
-          {enabled.map((id) => (
-            <button
-              key={id}
-              aria-pressed={selected.includes(id)}
-              className={`member-chip ${selected.includes(id) ? "selected" : ""}`}
-              onClick={() =>
-                onSelected(
-                  selected.includes(id)
-                    ? selected.filter((other) => other !== id)
-                    : [...selected, id],
-                )
-              }
-            >
-              <Avatar id={id} small />
-              {advisorName(id)}
-              {selected.includes(id) && <Check />}
-            </button>
-          ))}
+          {selected
+            .filter((id) => enabled.includes(id))
+            .map((id) => (
+              <span key={id} className="member-chip selected">
+                <Avatar id={id} small />
+                {advisorName(id)}
+              </span>
+            ))}
           {!enabled.length && (
             <button className="text-button" onClick={onMembers}>
               <Plus />
@@ -155,21 +162,39 @@ export function Composer({
           )}
         </div>
         <div className="compose-actions">
-          <div className="recipient-menu-wrap">
+          <div className="recipient-menu-wrap" ref={menu.root}>
             <IconButton
+              ref={menu.trigger}
+              disabled={busy}
               label={t("选择接收成员")}
-              onClick={() => setMenu(!menu)}
-              aria-expanded={menu}
+              className={
+                !selected.length && enabled.length
+                  ? "recipient-picker-empty"
+                  : undefined
+              }
+              onClick={() => menu.setOpen(!menu.open)}
+              aria-expanded={menu.open}
+              aria-controls={menu.open ? menuId : undefined}
             >
               <At />
+              {!selected.length && !!enabled.length && (
+                <span>{t("选择接收成员")}</span>
+              )}
             </IconButton>
-            {menu && (
-              <div className="recipient-menu">
+            {menu.open && (
+              <div
+                className="recipient-menu"
+                id={menuId}
+                ref={menu.panel}
+                style={menu.style}
+                role="group"
+                aria-label={t("接收成员")}
+              >
                 <div className="recipient-menu-head">
                   <b>{t("接收成员")}</b>
                   <button
                     className="text-button"
-                    onClick={() => setMenu(false)}
+                    onClick={() => menu.close(true)}
                   >
                     {t("完成")}
                   </button>
@@ -178,6 +203,7 @@ export function Composer({
                   <label key={id}>
                     <input
                       type="checkbox"
+                      disabled={busy}
                       checked={selected.includes(id)}
                       onChange={() =>
                         onSelected(
@@ -194,7 +220,7 @@ export function Composer({
                 <button
                   className="text-button"
                   onClick={() => {
-                    setMenu(false);
+                    menu.close();
                     onMembers();
                   }}
                 >
@@ -206,19 +232,29 @@ export function Composer({
           </div>
           <button
             className="primary send-button"
+            aria-busy={busy}
             disabled={
               !question.trim() ||
               (!selected.length && !linkOnly) ||
-              workspace.busy ||
+              busy ||
               workspace.loading
             }
             onClick={() => void send()}
           >
             {t(linkOnly ? "添加链接" : "发送")}
-            <PaperPlaneTilt weight="fill" />
+            {busy ? (
+              <CircleNotch className="spin" />
+            ) : (
+              <PaperPlaneTilt weight="fill" />
+            )}
           </button>
         </div>
       </div>
+      {workspace.errorFor("composer") && (
+        <p className="inline-error" role="alert">
+          {workspace.errorFor("composer")}
+        </p>
+      )}
     </section>
   );
 }

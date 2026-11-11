@@ -1,0 +1,43 @@
+.recipient-menu,
+.model-connection-menu-items {
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.config-field > .field-error,
+.model-options-form .field-error {
+  color: var(--danger, #a33f50);
+  display: block;
+  font-size: 12px;
+  line-height: 1.6;
+  margin-top: 6px;
+  font-weight: 400;
+}
+
+.config-field [aria-invalid="true"],
+.config-field [aria-invalid="true"]:focus {
+  border-color: var(--danger, #a33f50);
+}
+
+.config-field [aria-invalid="true"]:focus {
+  box-shadow: 0 0 0 3px #a33f5012;
+}
+
+.model-options-form > .config-field:first-child {
+  margin-top: 0;
+}
+
+.schedule-editor fieldset.schedule-editor-columns {
+  margin: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.composer .recipient-picker-empty {
+  display: inline-flex;
+  width: auto;
+  gap: 6px;
+  padding: 8px;
+  white-space: nowrap;
+  font-size: 12px;
+}

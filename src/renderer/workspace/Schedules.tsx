@@ -25,6 +25,7 @@ import {
 import type { Workspace } from "./use-workspace";
 import { ConfirmDialog, Feedback } from "./forms";
 import { normalizeSchedule, scheduleOccurrences } from "../../shared/schedules";
+import { useSessionDraft } from "./use-session-draft";
 import {
   ScheduleFields,
   cadenceNames,
@@ -196,14 +197,23 @@ export function ScheduleEditor({
   onClose(): void;
   onMembers(): void;
 }) {
-  const [name, setName] = useState(value?.name ?? ""),
-    [question, setQuestion] = useState(value?.question ?? "");
-  const [selected, setSelected] = useState<AdvisorId[]>(
-    value
-      ? followAdvisors(value).filter((id) =>
-          workspace.members?.enabled.includes(id),
-        )
-      : (workspace.members?.enabled ?? []),
+  const key = `schedule.${value?.followId ?? "new"}.${value?.updatedAt ?? ""}`;
+  const [name, setName, discardName] = useSessionDraft(
+      `${key}.name`,
+      value?.name ?? "",
+    ),
+    [question, setQuestion, discardQuestion] = useSessionDraft(
+      `${key}.question`,
+      value?.question ?? "",
+    );
+  const [selected, setSelected, discardSelected] = useSessionDraft<AdvisorId[]>(
+    `${key}.selected`,
+    () =>
+      value
+        ? followAdvisors(value).filter((id) =>
+            workspace.members?.enabled.includes(id),
+          )
+        : (workspace.members?.enabled ?? []),
   );
   useEffect(() => {
     if (workspace.members)
@@ -211,7 +221,19 @@ export function ScheduleEditor({
         old.filter((id) => workspace.members!.enabled.includes(id)),
       );
   }, [workspace.members?.enabled.join(",")]);
-  const [draft, setDraft] = useState(() => scheduleDraft(value?.schedule));
+  const [draft, setDraft, discardDraft] = useSessionDraft(`${key}.rule`, () =>
+    scheduleDraft(value?.schedule),
+  );
+  const discard = () => {
+    discardName();
+    discardQuestion();
+    discardSelected();
+    discardDraft();
+  };
+  const busy = workspace.pending("schedule-editor");
+  const close = () => {
+    if (!busy) onClose();
+  };
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 30_000);
@@ -224,11 +246,12 @@ export function ScheduleEditor({
     <Modal
       label={t(value ? "编辑定时消息" : "新建定时消息")}
       className="compact-modal schedule-editor"
-      onClose={onClose}
+      onClose={close}
     >
       <ModalHeader
         title={t(value ? "编辑定时消息" : "新建定时消息")}
-        onClose={onClose}
+        onClose={close}
+        closeDisabled={busy}
       />
       <form
         className="compact-body"
@@ -249,16 +272,23 @@ export function ScheduleEditor({
             period: "all" as const,
             schedule: parsed.data,
           };
-          const result = await workspace.run(() =>
-            value
-              ? bridge.updateFollow({ ...input, followId: value.followId })
-              : bridge.saveFollow(input),
+          const result = await workspace.run(
+            () =>
+              value
+                ? bridge.updateFollow({ ...input, followId: value.followId })
+                : bridge.saveFollow(input),
+            "schedule-editor",
           );
-          if (result) onClose();
+          if (result) {
+            discard();
+            onClose();
+          }
         }}
       >
-        {workspace.error && <Feedback error>{workspace.error}</Feedback>}
-        <div className="schedule-editor-columns">
+        {workspace.errorFor("schedule-editor") && (
+          <Feedback error>{workspace.errorFor("schedule-editor")}</Feedback>
+        )}
+        <fieldset className="schedule-editor-columns" disabled={busy}>
           <div className="schedule-message-fields">
             <label className="config-field">
               <span>{t("名称")}</span>
@@ -315,20 +345,28 @@ export function ScheduleEditor({
             onChange={(patch) => setDraft((old) => ({ ...old, ...patch }))}
             now={now}
           />
-        </div>
+        </fieldset>
         <div className="schedule-editor-actions">
-          <button type="button" className="secondary" onClick={onClose}>
+          <button
+            type="button"
+            className="secondary"
+            disabled={busy}
+            onClick={() => {
+              discard();
+              workspace.clearError("schedule-editor");
+              onClose();
+            }}
+          >
             {t("取消")}
           </button>
           <button
             type="submit"
             className="primary"
-            disabled={
-              !selected.length || !question.trim() || !valid || workspace.busy
-            }
+            aria-busy={busy}
+            disabled={!selected.length || !question.trim() || !valid || busy}
           >
             {t("保存定时消息")}
-            <Clock />
+            {busy ? <CircleNotch className="spin" /> : <Clock />}
           </button>
         </div>
       </form>

@@ -8,6 +8,10 @@ import {
   ShieldCheck,
 } from "@phosphor-icons/react";
 import { bridge } from "../bridge";
+import {
+  hasSessionDraft,
+  useSessionDraft,
+} from "../workspace/use-session-draft";
 import { t } from "../i18n";
 import { ConfirmDialog, Feedback, SecretField } from "../workspace/forms";
 import {
@@ -35,8 +39,11 @@ export function TelegramSettings(props: TelegramSettingsProps) {
   const busy = pending || props.busy;
   const telegram = settings?.telegram;
   const [open, setOpen] = useState(false);
-  const [step, setStep] = useState<number | "manage">(0);
-  const [token, setToken] = useState("");
+  const [step, setStep, discardStep] = useSessionDraft<number | "manage">(
+    "telegram.step",
+    0,
+  );
+  const [token, setToken, discardToken] = useSessionDraft("telegram.token", "");
   const [error, setError] = useState("");
   const [confirmation, setConfirmation] = useState<{
     title: string;
@@ -56,13 +63,19 @@ export function TelegramSettings(props: TelegramSettingsProps) {
     : "Telegram";
   const start = () => {
     setError("");
-    setStep(telegram?.configured ? "manage" : 0);
+    if (!hasSessionDraft("telegram.step"))
+      setStep(telegram?.configured ? "manage" : 0);
     setOpen(true);
   };
   const finish = () => {
+    if (busy) return;
     setOpen(false);
-    setToken("");
     setError("");
+  };
+  const complete = () => {
+    discardToken();
+    discardStep();
+    finish();
   };
   async function action(work: () => Promise<boolean>) {
     setError("");
@@ -115,6 +128,7 @@ export function TelegramSettings(props: TelegramSettingsProps) {
           channel="telegram"
           title={t("Telegram 接入")}
           onClose={finish}
+          closeDisabled={busy}
           steps={
             step === "manage"
               ? undefined
@@ -124,9 +138,19 @@ export function TelegramSettings(props: TelegramSettingsProps) {
           footer={
             step === "manage" ? undefined : (
               <>
+                {telegram?.configured && (
+                  <button
+                    className="text-button"
+                    disabled={busy}
+                    onClick={() => setStep("manage")}
+                  >
+                    {t("管理连接")}
+                  </button>
+                )}
                 {step > 0 && (
                   <button
                     className="text-button"
+                    disabled={busy}
                     onClick={() => {
                       setStep(step - 1);
                       setError("");
@@ -136,7 +160,11 @@ export function TelegramSettings(props: TelegramSettingsProps) {
                     {t("上一步")}
                   </button>
                 )}
-                <button className="text-button" onClick={finish}>
+                <button
+                  className="text-button"
+                  disabled={busy}
+                  onClick={step === 2 ? complete : finish}
+                >
                   {t(step === 2 ? "完成" : "稍后继续")}
                 </button>
               </>
@@ -205,7 +233,7 @@ export function TelegramSettings(props: TelegramSettingsProps) {
                 void action(async () => {
                   if (!(await props.onSaveTelegramToken(token.trim())))
                     return false;
-                  setToken("");
+                  discardToken();
                   setStep(1);
                   return true;
                 });
@@ -296,7 +324,7 @@ export function TelegramSettings(props: TelegramSettingsProps) {
               <button
                 className="primary"
                 onClick={() => {
-                  finish();
+                  complete();
                   props.onOpenContent();
                 }}
               >
@@ -321,7 +349,10 @@ export function TelegramSettings(props: TelegramSettingsProps) {
           onConfirm={async () => {
             if (await action(confirmation.action)) {
               setConfirmation(undefined);
-              if (confirmation.clear) setStep(0);
+              if (confirmation.clear) {
+                discardToken();
+                setStep(0);
+              }
             }
           }}
         >
