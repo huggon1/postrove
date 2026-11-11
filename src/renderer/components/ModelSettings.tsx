@@ -301,6 +301,7 @@ export function ModelSettings() {
     operation: () => Promise<ModelReply<unknown>>,
     connectionId?: string,
   ) {
+    if (busy) return false;
     setBusy(true);
     setError("");
     setErrorConnectionId(connectionId);
@@ -824,6 +825,7 @@ export function ModelSettings() {
                         {event.instructions && <p>{event.instructions}</p>}
                         <button
                           className="secondary"
+                          disabled={busy}
                           onClick={() =>
                             void action(() =>
                               bridge.openModelAuthUrl(event.url),
@@ -841,6 +843,7 @@ export function ModelSettings() {
                         </p>
                         <button
                           className="secondary"
+                          disabled={busy}
                           onClick={() =>
                             void action(() =>
                               bridge.openModelAuthUrl(event.verificationUri),
@@ -857,6 +860,7 @@ export function ModelSettings() {
                           <button
                             className="text-button"
                             key={link.url}
+                            disabled={busy}
                             onClick={() =>
                               void action(() =>
                                 bridge.openModelAuthUrl(link.url),
@@ -875,16 +879,19 @@ export function ModelSettings() {
                     className="model-auth-prompt"
                     onSubmit={(event) => {
                       event.preventDefault();
+                      if (busy || !answer) return;
                       const value = answer;
-                      setAnswer("");
                       void action(() =>
                         bridge.respondModelAuth({ id: prompt.id, value }),
-                      );
+                      ).then((ok) => {
+                        if (ok) setAnswer("");
+                      });
                     }}
                   >
                     {prompt.type === "secret" ? (
                       <SecretField
                         label={prompt.message}
+                        disabled={busy}
                         autoFocus
                         value={answer}
                         placeholder={prompt.placeholder}
@@ -895,6 +902,7 @@ export function ModelSettings() {
                         <span>{prompt.message}</span>
                         {prompt.type === "select" ? (
                           <select
+                            disabled={busy}
                             value={answer}
                             onChange={(event) => setAnswer(event.target.value)}
                           >
@@ -908,6 +916,7 @@ export function ModelSettings() {
                         ) : (
                           <input
                             type="text"
+                            disabled={busy}
                             autoComplete="off"
                             autoFocus
                             value={answer}
@@ -921,7 +930,11 @@ export function ModelSettings() {
                       className="primary"
                       type="submit"
                       disabled={busy || !answer}
+                      aria-busy={busy}
                     >
+                      {busy && (
+                        <CircleNotch className="spin" aria-hidden="true" />
+                      )}
                       {t("继续认证")}
                     </button>
                   </form>

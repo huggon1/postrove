@@ -43,6 +43,8 @@ Pending indicators and errors stay beside their operation's controls. Stop-and-d
 
 A reading card's image fills and crops within its fixed-height cover. The cover and title each open their reading record through their own click target.
 
+The reader keeps its toolbar and material selector above the content scroll area. Long topic threads keep a horizontal member navigation below the dialog header. Source titles carry the external-opening indicator; collected material uses its separate Reading action. Individual and batch collection errors remain next to their triggering controls and scroll into view. Finished topic indicators match the recorded terminal outcome.
+
 ## Review evidence
 
 For each added or expanded message, record its admission source and triggering state. Review the rendered interface and both interface languages.
@@ -56,6 +58,17 @@ The [layout clarity E2E](../tests/e2e/ui-layout-clarity.spec.ts) compares the ho
 The [operation feedback E2E](../tests/e2e/ui-operation-feedback.spec.ts) holds and fails controlled IPC responses through the production interface. It checks independent pending scopes, mutation retry, canceled-delete retry cleanup, errors in the active confirmation, account and speech read recovery, retained Bilibili identity, and disable-expert consequences in both interface languages.
 
 The [overlay E2E](../tests/e2e/ui-overlays.spec.ts) checks bilingual draft retention, explicit cancellation, backdrop dragging, keyboard and outside dismissal, focus, menu bounds, offscreen triggers, field validation, and alternating new/saved model drafts. The [native Pi connection E2E](../tests/e2e/pi-model-connections.spec.ts) covers reauthorization of a saved connection. The numeric bound errors are required feedback on an attempted save of an out-of-range temperature or a non-integer or out-of-range token count. Choose recipients and Manage connection reuse their existing control labels.
+
+The [reading navigation E2E](../tests/e2e/ui-reading-navigation.spec.ts) checks bilingual fixed controls, material/version positions, late image sizing, unique source selection, local collection errors, member jumps, matching terminal states, phase translations, retained search, draft replacement, atomic link submission, and independent action feedback. Late image sizing uses a controlled dimension change, which exercises layout restoration independently of Chromium's decoded-image cache. Screenshots cover desktop and compact readers and the draft-replacement confirmation in both languages.
+
+The [authentication pending E2E](../tests/e2e/ui-auth-pending.spec.ts) holds a native authentication response, checks locked input and dialog dismissal, and verifies that a failed submission retains its answer. Ask again stays disabled while the composer admits its current question.
+
+| Added copy | Admission source and trigger |
+| --- | --- |
+| Clear search | Required control while the reading search contains a query. |
+| Ask again; Member replies | Required topic recovery and reply-navigation controls. Ask again appears for partial, failed, or stopped topics; reply navigation appears for multiple members. |
+| Replace current draft; Keep draft; Replace draft | Required choice when Ask again would replace a different unsent composer question. The confirmation previews the incoming question. |
+| Translating materials; Generating summary | Translations of the existing saved processing-phase labels. |
 
 | Added copy | Admission source and trigger |
 | --- | --- |
