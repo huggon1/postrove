@@ -1,8 +1,10 @@
 import { sourceProfiles } from "../../shared/source-profiles";
 import { forwardingInputSchema } from "../../shared/source-contracts";
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import {
   ArrowRight,
+  ArrowClockwise,
+  ArrowUpRight,
   At,
   BookmarkSimple,
   CaretDown,
@@ -42,6 +44,7 @@ import {
 import type { Workspace } from "./use-workspace";
 import { useSessionDraft } from "./use-session-draft";
 import { usePopover } from "./use-popover";
+import type { ModelReply } from "../../shared/model-contracts";
 
 export const sectionAdvisor = (section: SearchSection) =>
   section.advisorId ?? legacyAdvisor(section.platform, section.promptLanguage);
@@ -349,6 +352,7 @@ export function TopicThread({
   onClose,
   onRead,
   onDelete,
+  onAskAgain,
 }: {
   workspace: Workspace;
   report: FocusSearchReport;
@@ -356,14 +360,37 @@ export function TopicThread({
   onClose(): void;
   onRead(taskId: string): void;
   onDelete(): void;
+  onAskAgain(): void;
 }) {
+  const scroll = useRef<HTMLDivElement>(null);
+  const scope = (action: string) => `topic:${report.taskId}:${action}`;
+  const [lastAction, setLastAction] = useState<string>();
+  const actionError =
+    (lastAction && workspace.errorFor(scope(lastAction))) || workspace.error;
+  function runAction<T>(
+    action: string,
+    operation: () => Promise<ModelReply<T>>,
+  ) {
+    setLastAction(action);
+    return workspace.run(operation, scope(action));
+  }
   const [receipts, setReceipts] = useState(initialReceipts),
     [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState(new Set<string>());
   const [original, setOriginal] = useState(new Set<string>()),
     [prompt, setPrompt] = useState(new Set<string>());
-  const [saving, setSaving] = useState(false),
-    [error, setError] = useState("");
+  const [savingTarget, setSavingTarget] = useState<string>();
+  const saving = !!savingTarget;
+  const [error, setError] = useState<{ target: string; message: string }>();
+  const collectionFeedback = useRef<HTMLParagraphElement>(null);
+  useEffect(() => {
+    if (error) collectionFeedback.current?.scrollIntoView({ block: "nearest" });
+  }, [error]);
+  const outcome =
+    report.status ??
+    (report.sections.every((section) => section.state === "completed")
+      ? "completed"
+      : "partial");
   const candidates = report.sections.flatMap((section) => section.candidates);
   const allCandidates = [
     ...new Map(
@@ -376,19 +403,22 @@ export function TopicThread({
     else next.add(key);
     return next;
   };
-  async function collect(ids: string[]) {
-    setSaving(true);
-    setError("");
+  async function collect(ids: string[], target: string) {
+    setSavingTarget(target);
+    setError(undefined);
     try {
       const reply = await bridge.addSearchCandidates({
         reportId: report.reportId,
         candidateIds: ids,
       });
-      if (!reply.ok) setError(reply.message);
+      if (!reply.ok) setError({ target, message: reply.message });
       else {
         const failures = reply.value.filter((item) => item.error);
         if (failures.length)
-          setError(tf("{0} 个来源收取失败", failures.length));
+          setError({
+            target,
+            message: tf("{0} 个来源收取失败", failures.length),
+          });
         else {
           setSelecting(false);
           setSelected(new Set());
@@ -396,9 +426,9 @@ export function TopicThread({
         await workspace.refresh();
       }
     } catch {
-      setError(t("收取失败，请重试"));
+      setError({ target, message: t("收取失败，请重试") });
     } finally {
-      setSaving(false);
+      setSavingTarget(undefined);
     }
   }
   const source = (candidate: (typeof candidates)[number]) => {
@@ -413,59 +443,109 @@ export function TopicThread({
       ].find((item) => item.taskId === submission.taskId);
     const active = parsed?.reportState === "processing";
     return (
-      <div
-        key={candidate.candidateId}
-        className={`source-tile ${selected.has(candidate.candidateId) ? "selected" : ""}`}
-      >
-        {selecting && (
-          <input
-            type="checkbox"
-            aria-label={tf("选择来源：{0}", candidate.title)}
-            checked={selected.has(candidate.candidateId)}
-            disabled={!!submission}
-            onChange={() =>
-              setSelected(toggle(selected, candidate.candidateId))
-            }
-          />
-        )}
-        <span className="source-mark">
-          <LinkSimple />
-        </span>
-        <button
-          className="source-title"
-          onClick={() =>
-            parsed
-              ? onRead(parsed.taskId)
-              : void bridge.openSearchCandidate({
+      <div className="source-entry" key={candidate.candidateId}>
+        <div
+          className={`source-tile ${selected.has(candidate.postKey) ? "selected" : ""}`}
+        >
+          {selecting && (
+            <input
+              type="checkbox"
+              aria-label={tf("选择来源：{0}", candidate.title)}
+              checked={selected.has(candidate.postKey)}
+              disabled={!!submission}
+              onChange={() => setSelected(toggle(selected, candidate.postKey))}
+            />
+          )}
+          <span className="source-mark">
+            <LinkSimple />
+          </span>
+          <button
+            className="source-title"
+            disabled={workspace.pending(scope("open"))}
+            onClick={() =>
+              void runAction("open", () =>
+                bridge.openSearchCandidate({
                   reportId: report.reportId,
                   candidateIds: [candidate.candidateId],
-                })
-          }
-        >
-          <strong>{candidate.title}</strong>
-          {candidate.description && <small>{candidate.description}</small>}
-        </button>
-        <button
-          className={`tiny-button ${parsed ? "ready" : ""}`}
-          disabled={
-            saving ||
-            (active && !parsed?.materials?.some((material) => material.source))
-          }
-          onClick={() =>
-            parsed
-              ? onRead(parsed.taskId)
-              : void collect([candidate.candidateId])
-          }
-        >
-          {parsed ? (active ? t("收取中") : t("阅读")) : t("收取")}
-          <BookmarkSimple />
-        </button>
+                }),
+              )
+            }
+          >
+            <strong>{candidate.title}</strong>
+            {candidate.description && <small>{candidate.description}</small>}
+            <ArrowUpRight aria-hidden="true" />
+          </button>
+          <button
+            className={`tiny-button ${parsed ? "ready" : ""}`}
+            disabled={
+              saving ||
+              (active &&
+                !parsed?.materials?.some((material) => material.source))
+            }
+            onClick={() =>
+              parsed
+                ? onRead(parsed.taskId)
+                : void collect([candidate.candidateId], candidate.candidateId)
+            }
+          >
+            {parsed ? (active ? t("收取中") : t("阅读")) : t("收取")}
+            {savingTarget === candidate.candidateId ? (
+              <CircleNotch className="spin" />
+            ) : (
+              <BookmarkSimple />
+            )}
+          </button>
+        </div>
+        {error?.target === candidate.candidateId && (
+          <p
+            className="inline-error source-error"
+            role="alert"
+            ref={collectionFeedback}
+          >
+            {error.message}
+          </p>
+        )}
       </div>
     );
   };
+  const collectFeedback = (target: string) =>
+    error?.target === target ? (
+      <p className="inline-error" role="alert" ref={collectionFeedback}>
+        {error.message}
+      </p>
+    ) : null;
   return (
     <Modal label={t("话题详情")} className="thread-modal" onClose={onClose}>
       <ModalHeader title={t("话题")} onClose={onClose}>
+        {isRunning(report.status) ? (
+          <button
+            className="text-button danger-text"
+            disabled={workspace.pending(scope("stop"))}
+            onClick={() =>
+              void runAction("stop", () =>
+                bridge.cancelFocusSearch(report.taskId),
+              )
+            }
+          >
+            {workspace.pending(scope("stop")) ? (
+              <CircleNotch className="spin" />
+            ) : (
+              <StopCircle />
+            )}
+            {t("停止话题")}
+          </button>
+        ) : (
+          ["failed", "partial", "stopped"].includes(report.status ?? "") && (
+            <button
+              className="text-button"
+              disabled={workspace.pending("composer")}
+              onClick={onAskAgain}
+            >
+              <ArrowClockwise />
+              {t("再次提问")}
+            </button>
+          )
+        )}
         <IconButton label={t("删除话题")} onClick={onDelete}>
           <Trash />
         </IconButton>
@@ -478,12 +558,35 @@ export function TopicThread({
           <CaretDown className="disclosure-caret" />
         </button>
       </ModalHeader>
-      <div className="thread-scroll">
-        {workspace.error && (
-          <p className="inline-error" role="alert">
-            {workspace.error}
-          </p>
-        )}
+      {report.sections.length > 1 && (
+        <nav className="reply-jump-nav" aria-label={t("成员回复")}>
+          {report.sections.map((section) => (
+            <button
+              key={section.sectionId}
+              onClick={() => {
+                const reply = scroll.current?.querySelector<HTMLElement>(
+                  `[data-section="${section.sectionId}"]`,
+                );
+                if (reply && scroll.current) {
+                  scroll.current.scrollTop +=
+                    reply.getBoundingClientRect().top -
+                    scroll.current.getBoundingClientRect().top;
+                  reply.focus({ preventScroll: true });
+                }
+              }}
+            >
+              <Avatar id={sectionAdvisor(section)} small />
+              {advisorName(sectionAdvisor(section))}
+            </button>
+          ))}
+        </nav>
+      )}
+      {actionError && (
+        <p className="inline-error thread-action-error" role="alert">
+          {actionError}
+        </p>
+      )}
+      <div className="thread-scroll" ref={scroll}>
         <div className="thread-question">
           <div className="topic-meta">
             <Avatar small />
@@ -514,9 +617,11 @@ export function TopicThread({
                         "停止 {0}",
                         advisorName(sectionAdvisor(section)),
                       )}
-                      disabled={workspace.busy}
+                      disabled={workspace.pending(
+                        scope(`stop:${section.sectionId}`),
+                      )}
                       onClick={() =>
-                        void workspace.booleanAction(() =>
+                        void runAction(`stop:${section.sectionId}`, () =>
                           bridge.cancelAdvisorRun(
                             report.taskId,
                             section.sectionId,
@@ -524,7 +629,11 @@ export function TopicThread({
                         )
                       }
                     >
-                      <StopCircle />
+                      {workspace.pending(scope(`stop:${section.sectionId}`)) ? (
+                        <CircleNotch className="spin" />
+                      ) : (
+                        <StopCircle />
+                      )}
                     </IconButton>
                   )}
                 </div>
@@ -561,23 +670,12 @@ export function TopicThread({
               </div>
             ))}
             <div className="receipt-actions">
-              {isRunning(report.status) ? (
-                <button
-                  className="text-button danger-text"
-                  onClick={() =>
-                    void workspace.booleanAction(() =>
-                      bridge.cancelFocusSearch(report.taskId),
-                    )
-                  }
-                >
-                  <StopCircle />
-                  {t("停止话题")}
-                </button>
-              ) : (
+              {!isRunning(report.status) && (
                 <button
                   className="text-button"
+                  disabled={workspace.pending(scope("files"))}
                   onClick={() =>
-                    void workspace.run(() =>
+                    void runAction("files", () =>
                       bridge.revealResult("search", report.taskId),
                     )
                   }
@@ -588,8 +686,9 @@ export function TopicThread({
               )}
               <button
                 className="text-button"
+                disabled={workspace.pending(scope("logs"))}
                 onClick={() =>
-                  void workspace.run(() =>
+                  void runAction("logs", () =>
                     bridge.exportTaskPiLogs(report.taskId),
                   )
                 }
@@ -636,18 +735,27 @@ export function TopicThread({
                           ),
                       )
                       .map((candidate) => candidate.candidateId),
+                    "all",
                   )
                 }
               >
                 {t("收取全部")}
-                <BookmarkSimple />
+                {savingTarget === "all" ? (
+                  <CircleNotch className="spin" />
+                ) : (
+                  <BookmarkSimple />
+                )}
               </button>
             </div>
           )}
+          {collectFeedback("all")}
         </div>
         {report.sections.map((section) => (
           <article
             className="full-reply"
+            tabIndex={-1}
+            data-section={section.sectionId}
+            aria-label={advisorName(sectionAdvisor(section))}
             key={section.sectionId}
             data-advisor={sectionAdvisor(section)}
           >
@@ -789,27 +897,38 @@ export function TopicThread({
                                 ),
                             )
                             .map((candidate) => candidate.candidateId),
+                          section.sectionId,
                         )
                       }
                     >
                       {t("收取这些来源")}
+                      {savingTarget === section.sectionId && (
+                        <CircleNotch className="spin" />
+                      )}
                     </button>
                   </div>
+                  {collectFeedback(section.sectionId)}
                   {section.candidates.map(source)}
                 </div>
               )}
             </div>
           </article>
         ))}
-        {error && (
-          <p className="inline-error" role="alert">
-            {error}
-          </p>
-        )}
         {!isRunning(report.status) && (
-          <div className="thread-end">
+          <div
+            className={`thread-end outcome-${outcome}`}
+            role="status"
+            data-status={outcome}
+          >
             <span />
-            <CheckCircle />
+            {outcome === "completed" ? (
+              <CheckCircle />
+            ) : outcome === "stopped" ? (
+              <StopCircle />
+            ) : (
+              <WarningCircle />
+            )}
+            <b>{stateLabel(outcome)}</b>
             <span />
           </div>
         )}
@@ -817,13 +936,25 @@ export function TopicThread({
       {selecting && (
         <div className="selection-bar">
           <span>{tf("已选 {0} 个来源", selected.size)}</span>
+          {collectFeedback("selected")}
           <button
             className="primary"
             disabled={!selected.size || saving}
-            onClick={() => void collect([...selected])}
+            onClick={() =>
+              void collect(
+                allCandidates
+                  .filter((candidate) => selected.has(candidate.postKey))
+                  .map((candidate) => candidate.candidateId),
+                "selected",
+              )
+            }
           >
             {t("收取所选")}
-            <BookmarkSimple />
+            {savingTarget === "selected" ? (
+              <CircleNotch className="spin" />
+            ) : (
+              <BookmarkSimple />
+            )}
           </button>
         </div>
       )}

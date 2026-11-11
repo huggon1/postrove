@@ -14,7 +14,10 @@ import {
 } from "@phosphor-icons/react";
 import { advisorById, type AdvisorId } from "../shared/advisor-contracts";
 import { sourceProfiles } from "../shared/source-profiles";
-import type { Follow } from "../shared/focus-search-contracts";
+import type {
+  Follow,
+  FocusSearchReport,
+} from "../shared/focus-search-contracts";
 import { normalizeSchedule } from "../shared/schedules";
 import type { RecordDeletion, RecordRef } from "../shared/deletion-contracts";
 import { bridge } from "./bridge";
@@ -35,7 +38,14 @@ import {
   isRunning,
 } from "./workspace/ui";
 import { Members } from "./workspace/Members";
-import { Composer, TopicCard, TopicThread } from "./workspace/Topics";
+import {
+  Composer,
+  TopicCard,
+  TopicThread,
+  sectionAdvisor,
+} from "./workspace/Topics";
+import { useSessionDraft } from "./workspace/use-session-draft";
+import { ConfirmDialog } from "./workspace/forms";
 import { CollectLink, ReadingLibrary, ReadingView } from "./workspace/Reading";
 import { ScheduleEditor, ScheduleList } from "./workspace/Schedules";
 import { Settings, type SettingsSection } from "./workspace/Settings";
@@ -49,6 +59,8 @@ export function App() {
   useLanguage();
   const workspace = useWorkspace();
   const updates = useApplicationUpdates();
+  const [question, setQuestion] = useSessionDraft("composer.question", "");
+  const [readingQuery, setReadingQuery] = useSessionDraft("reading.query", "");
   const [page, setPage] = useState<Page>("topics"),
     [settingsSection, setSettingsSection] =
       useState<SettingsSection>("connections");
@@ -63,6 +75,7 @@ export function App() {
     [schedule, setSchedule] = useState<{ value?: Follow }>();
   const [undo, setUndo] = useState<RecordDeletion[]>([]);
   const [pendingDelete, setPendingDelete] = useState<RecordRef>();
+  const [pendingQuestion, setPendingQuestion] = useState<FocusSearchReport>();
   const [seen, setSeen] = useState<Record<string, string>>(() => {
     try {
       return JSON.parse(localStorage.getItem("postrove.read-topics") || "{}");
@@ -139,6 +152,21 @@ export function App() {
   const openTopic = (id: string, receipt = false) => {
     setTopicId(id);
     setReceipts(receipt);
+  };
+  const populateQuestion = (report: FocusSearchReport) => {
+    if (workspace.pending("composer")) return;
+    setQuestion(report.question);
+    setRecipients(
+      report.sections.map(sectionAdvisor).filter((id) => enabled?.includes(id)),
+    );
+    setTopicId("");
+    setPage("topics");
+    setPendingQuestion(undefined);
+    requestAnimationFrame(() => {
+      const input = document.getElementById("message");
+      input?.scrollIntoView({ block: "center" });
+      input?.focus();
+    });
   };
   async function remove(ref: RecordRef) {
     const active =
@@ -303,6 +331,8 @@ export function App() {
           {page === "topics" && (
             <>
               <Composer
+                question={question}
+                onQuestion={setQuestion}
                 workspace={workspace}
                 selected={recipients ?? []}
                 onSelected={setRecipients}
@@ -343,6 +373,8 @@ export function App() {
           )}
           {page === "reading" && (
             <ReadingLibrary
+              query={readingQuery}
+              onQuery={setReadingQuery}
               workspace={workspace}
               onOpen={setReaderId}
               onDelete={(id) => void remove({ kind: "parsed", id })}
@@ -460,7 +492,23 @@ export function App() {
           onClose={() => setTopicId("")}
           onRead={setReaderId}
           onDelete={() => void remove({ kind: "search", id: active.reportId })}
+          onAskAgain={() => {
+            if (question.trim() && question !== active.question)
+              setPendingQuestion(active);
+            else populateQuestion(active);
+          }}
         />
+      )}
+      {pendingQuestion && (
+        <ConfirmDialog
+          title={t("替换现有草稿")}
+          confirmLabel={t("替换草稿")}
+          cancelLabel={t("保留草稿")}
+          onClose={() => setPendingQuestion(undefined)}
+          onConfirm={() => populateQuestion(pendingQuestion)}
+        >
+          <p>{pendingQuestion.question}</p>
+        </ConfirmDialog>
       )}
       {reader && (
         <ReadingView
@@ -482,6 +530,7 @@ export function App() {
           initial={link.url}
           onClose={() => setLink(undefined)}
           onAdded={() => {
+            if (link.url) setQuestion("");
             setLink(undefined);
             setPage("reading");
           }}

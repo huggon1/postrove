@@ -1385,3 +1385,116 @@ select {
 .connection-pill[data-state="error"] i {
   background: currentColor;
 }
+
+/* Reading and topic controls keep recovery and navigation beside their content. */
+.reader-controls {
+  flex: none;
+  padding: 14px 30px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+  max-height: 45dvh;
+  overflow-y: auto;
+}
+.reader-controls .reader-toolbar {
+  margin: 0;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.reader-task-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.reader-controls .material-select {
+  margin: 12px 0 0;
+}
+.reader-controls .reader-receipt {
+  margin: 12px 0 0;
+}
+.reader-controls .setup-feedback {
+  margin-top: 12px;
+}
+.library-search input {
+  flex: 1;
+  width: 0;
+}
+.library-search .icon-button {
+  flex: none;
+}
+.reply-jump-nav {
+  display: flex;
+  flex: none;
+  gap: 7px;
+  padding: 10px 24px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+.reply-jump-nav button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  padding: 6px 9px;
+  border-radius: 9px;
+  font-size: 12px;
+  background: var(--soft);
+}
+.reply-jump-nav button:hover,
+.reply-jump-nav button:focus-visible {
+  background: var(--accent-light);
+  color: var(--accent);
+}
+.thread-action-error {
+  flex: none;
+  padding: 10px 24px;
+}
+.source-entry .source-title {
+  position: relative;
+  padding-right: 22px;
+}
+.source-title > svg {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  transform: translateY(-50%);
+}
+.source-error {
+  margin: 5px 0 10px;
+}
+.reply-section-head {
+  flex-wrap: wrap;
+}
+.reply-section-head > .inline-error {
+  flex-basis: 100%;
+}
+.selection-bar .inline-error {
+  flex: 1;
+}
+.thread-end {
+  gap: 9px;
+}
+.thread-end b {
+  font-size: 12px;
+  font-weight: 500;
+}
+.thread-end.outcome-failed,
+.thread-end.outcome-partial {
+  color: var(--danger);
+}
+.thread-end.outcome-stopped {
+  color: var(--muted);
+}
+@media (max-width: 600px) {
+  .reader-controls {
+    padding: 12px 20px;
+  }
+  .reader-task-actions {
+    gap: 10px;
+  }
+  .reply-jump-nav {
+    padding: 9px 16px;
+  }
+}
