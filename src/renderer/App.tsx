@@ -4,6 +4,7 @@ import {
   BookmarkSimple,
   ChatCircle,
   Check,
+  CircleNotch,
   Clock,
   GearSix,
   LinkSimple,
@@ -157,19 +158,24 @@ export function App() {
             )?.status,
           );
     if (active) {
+      workspace.setError("");
       setPendingDelete(ref);
       return;
     }
     await performRemove(ref);
   }
   async function performRemove(ref: RecordRef) {
-    const result = await workspace.run(() => bridge.deleteRecord(ref));
-    if (result) {
-      setUndo((old) => [...old, result]);
-      setPendingDelete(undefined);
-      if (ref.kind === "search") setTopicId("");
-      if (ref.kind === "parsed") setReaderId("");
-    }
+    await workspace.run(async () => {
+      const reply = await bridge.deleteRecord(ref);
+      if (reply.ok && reply.value) {
+        const deletion = reply.value;
+        setUndo((old) => [...old, deletion]);
+        setPendingDelete(undefined);
+        if (ref.kind === "search") setTopicId("");
+        if (ref.kind === "parsed") setReaderId("");
+      }
+      return reply;
+    });
   }
   const next = workspace.follows
     .filter((follow) => !follow.paused && follow.nextRunAt)
@@ -281,9 +287,10 @@ export function App() {
               <span>{workspace.error}</span>
               <button
                 className="text-button"
-                onClick={() => void workspace.refresh()}
+                disabled={workspace.busy}
+                onClick={() => void workspace.retry()}
               >
-                {t("重试")}
+                {t(workspace.errorIsRead ? "重新加载" : "重试")}
               </button>
               <IconButton
                 label={t("关闭")}
@@ -500,17 +507,36 @@ export function App() {
         <Modal
           label={t("停止并删除")}
           className="compact-modal"
-          onClose={() => setPendingDelete(undefined)}
+          onClose={() => {
+            if (!workspace.busy) {
+              workspace.clearError();
+              setPendingDelete(undefined);
+            }
+          }}
         >
           <ModalHeader
             title={t("停止并删除")}
-            onClose={() => setPendingDelete(undefined)}
+            onClose={() => {
+              if (!workspace.busy) {
+                workspace.clearError();
+                setPendingDelete(undefined);
+              }
+            }}
           />
-          <div className="compact-body">
+          <div className="compact-body" aria-busy={workspace.busy}>
+            {workspace.error && (
+              <p className="inline-error" role="alert">
+                {workspace.error}
+              </p>
+            )}
             <div className="config-actions">
               <button
                 className="secondary"
-                onClick={() => setPendingDelete(undefined)}
+                disabled={workspace.busy}
+                onClick={() => {
+                  workspace.clearError();
+                  setPendingDelete(undefined);
+                }}
               >
                 {t("保留记录")}
               </button>
@@ -519,6 +545,9 @@ export function App() {
                 disabled={workspace.busy}
                 onClick={() => void performRemove(pendingDelete)}
               >
+                {workspace.busy && (
+                  <CircleNotch className="spin" aria-hidden="true" />
+                )}
                 {t("停止并删除")}
               </button>
             </div>
@@ -532,21 +561,27 @@ export function App() {
             {t("已删除")}
             <button
               className="text-button"
-              onClick={async () => {
-                if (
-                  await workspace.booleanAction(() =>
-                    bridge.undoDeletion(entry.operationId),
-                  )
-                )
-                  setUndo((old) =>
-                    old.filter(
-                      (item) => item.operationId !== entry.operationId,
-                    ),
-                  );
-              }}
+              disabled={workspace.pending(`undo:${entry.operationId}`)}
+              onClick={() =>
+                void workspace.booleanAction(async () => {
+                  const reply = await bridge.undoDeletion(entry.operationId);
+                  if (reply.ok)
+                    setUndo((old) =>
+                      old.filter(
+                        (item) => item.operationId !== entry.operationId,
+                      ),
+                    );
+                  return reply;
+                }, `undo:${entry.operationId}`)
+              }
             >
               {t("撤销")}
             </button>
+            {workspace.errorFor(`undo:${entry.operationId}`) && (
+              <span role="alert">
+                {workspace.errorFor(`undo:${entry.operationId}`)}
+              </span>
+            )}
           </div>
         ))}
       </div>

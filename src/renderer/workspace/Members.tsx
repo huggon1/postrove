@@ -18,15 +18,16 @@ import {
   allowsGuest,
   advisorRoutes,
   platformConnections,
+  legacyAdvisor,
   type Advisor,
   type AdvisorId,
 } from "../../shared/advisor-contracts";
 import { bridge } from "../bridge";
-import { t } from "../i18n";
+import { t, tf } from "../i18n";
 import { Avatar, IconButton, Modal, ModalHeader, advisorName } from "./ui";
 import { ConfirmDialog, Feedback, SetupSteps } from "./forms";
 import { PlatformHomeButton } from "./PlatformHomeButton";
-import { usePlatformStatus } from "./use-platform-status";
+import { usePlatformStatus, platformStatusLabel } from "./use-platform-status";
 import type { Workspace } from "./use-workspace";
 
 const connections = platformConnections.map((connection) => ({
@@ -43,7 +44,7 @@ export function Members({
   initial?: string;
 }) {
   const [selected, setSelected] = useState(initial);
-  const [status, setStatus] = usePlatformStatus();
+  const [status, setStatus, reloadStatus] = usePlatformStatus();
   const [disabling, setDisabling] = useState<Advisor>();
   const [busy, setBusy] = useState(false),
     [waiting, setWaiting] = useState(false),
@@ -66,6 +67,15 @@ export function Members({
                 : bridge.logoutPlatform(current.connectionId));
       if (!reply.ok) {
         setError(reply.message);
+        if (kind === "check")
+          setStatus((old) => ({
+            ...old,
+            [current.connectionId]: {
+              ...old[current.connectionId],
+              state: "error",
+              error: t("状态读取失败"),
+            },
+          }));
         return false;
       }
       const check = await bridge.platformStatus(current.connectionId);
@@ -74,6 +84,7 @@ export function Members({
           ...old,
           [current.connectionId]: {
             ...check.value,
+            state: "ready",
             signedIn: check.value.signedIn,
             installed:
               "installed" in check.value ? !!check.value.installed : true,
@@ -81,6 +92,16 @@ export function Members({
         }));
         if (kind === "check" && !check.value.signedIn)
           setError(t("尚未检测到登录"));
+      } else {
+        setError(t("状态读取失败"));
+        setStatus((old) => ({
+          ...old,
+          [current.connectionId]: {
+            ...old[current.connectionId],
+            state: "error",
+            error: t("状态读取失败"),
+          },
+        }));
       }
       if (kind === "login") setWaiting(true);
       if (kind === "logout") setWaiting(false);
@@ -141,7 +162,8 @@ export function Members({
                       aria-checked={!!active}
                       disabled={
                         busy ||
-                        (!status[connection.connectionId]?.signedIn &&
+                        ((status[connection.connectionId]?.state !== "ready" ||
+                          !status[connection.connectionId]?.signedIn) &&
                           !allowsGuest(connection.connectionId) &&
                           !active)
                       }
@@ -172,6 +194,25 @@ export function Members({
     </div>
   );
   const connected = !!current && status[current.connectionId]?.signedIn;
+  const affected = disabling
+    ? workspace.follows.filter((follow) =>
+        (
+          follow.advisorIds ??
+          follow.platforms.map((platform) => legacyAdvisor(platform))
+        ).includes(disabling.id),
+      )
+    : [];
+  const pausedCount = affected.filter(
+    (follow) =>
+      !follow.paused &&
+      (
+        follow.advisorIds ??
+        follow.platforms.map((platform) => legacyAdvisor(platform))
+      ).every(
+        (id) =>
+          id === disabling?.id || !workspace.members?.enabled.includes(id),
+      ),
+  ).length;
   return (
     <Modal
       label={t("我的成员")}
@@ -215,14 +256,13 @@ export function Members({
                   )}
                 </div>
                 <span
-                  className={`connection-pill ${status[connection.connectionId]?.signedIn ? "connected" : ""}`}
+                  data-state={
+                    status[connection.connectionId]?.state ?? "loading"
+                  }
+                  className={`connection-pill ${status[connection.connectionId]?.state === "ready" && status[connection.connectionId]?.signedIn ? "connected" : ""}`}
                 >
                   <i />
-                  {t(
-                    status[connection.connectionId]?.signedIn
-                      ? "已连接"
-                      : "未连接",
-                  )}
+                  {platformStatusLabel(status[connection.connectionId])}
                 </span>
                 <button
                   className={
@@ -237,7 +277,8 @@ export function Members({
                   }}
                 >
                   {t(
-                    status[connection.connectionId]?.signedIn ||
+                    status[connection.connectionId]?.state !== "ready" ||
+                      status[connection.connectionId]?.signedIn ||
                       allowsGuest(connection.connectionId)
                       ? "管理配置"
                       : "连接平台",
@@ -246,6 +287,19 @@ export function Members({
                 </button>
               </header>
               {choices(connection)}
+              {status[connection.connectionId]?.state === "error" && (
+                <div className="platform-status-feedback">
+                  <p className="inline-error" role="alert">
+                    {status[connection.connectionId].error}
+                  </p>
+                  <button
+                    className="text-button"
+                    onClick={() => void reloadStatus()}
+                  >
+                    {t("重新加载")}
+                  </button>
+                </div>
+              )}
             </section>
           ))}
         </div>
@@ -271,9 +325,16 @@ export function Members({
               />
             )}
             <div className="identity-line" />
-            <span className="identity-status">
-              {connected ? <CheckCircle /> : <Globe />}
-              {t(connected ? "已连接" : "未连接")}
+            <span
+              className="identity-status"
+              data-state={status[current.connectionId]?.state ?? "loading"}
+            >
+              {connected && status[current.connectionId]?.state === "ready" ? (
+                <CheckCircle />
+              ) : (
+                <Globe />
+              )}
+              {platformStatusLabel(status[current.connectionId])}
             </span>
           </aside>
           <div className="member-workspace">
@@ -325,12 +386,11 @@ export function Members({
                     {waiting ? <CircleNotch className="spin" /> : <Globe />}
                   </span>
                   <h3>{t(waiting ? "等待完成平台登录" : "连接平台账号")}</h3>
-                  {!status[current.connectionId]?.installed &&
-                    status[current.connectionId] && (
-                      <p role="status">
-                        {t("请先安装 Google Chrome，再打开浏览器登录。")}
-                      </p>
-                    )}
+                  {status[current.connectionId]?.installed === false && (
+                    <p role="status">
+                      {t("请先安装 Google Chrome，再打开浏览器登录。")}
+                    </p>
+                  )}
                 </div>
               </>
             )}
@@ -343,9 +403,16 @@ export function Members({
                   </span>
                 </div>
               )}
+              {status[current.connectionId]?.state === "error" && (
+                <Feedback error>{status[current.connectionId].error}</Feedback>
+              )}
               <button
                 className="primary"
-                disabled={busy}
+                disabled={
+                  busy ||
+                  (!connected &&
+                    status[current.connectionId]?.state !== "ready")
+                }
                 onClick={() => void action(connected ? "home" : "login")}
               >
                 {t(connected ? "打开平台" : "打开登录窗口")}
@@ -407,7 +474,16 @@ export function Members({
             if (await toggle(disabling)) setDisabling(undefined);
           }}
         >
-          {advisorName(disabling.id)}
+          <p>{advisorName(disabling.id)}</p>
+          {affected.length > 0 && (
+            <p>
+              {tf(
+                "影响 {0} 条定时消息，其中 {1} 条将暂停",
+                affected.length,
+                pausedCount,
+              )}
+            </p>
+          )}
         </ConfirmDialog>
       )}
     </Modal>

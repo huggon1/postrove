@@ -11,7 +11,7 @@
 | `workspace/Schedules.tsx`                                                       | Scheduled messages and editor                                                                          |
 | `workspace/ScheduleFields.tsx`                                                  | Repeat-rule draft, controls, localized summary, and occurrence preview                                 |
 | `workspace/Settings.tsx`                                                        | Settings categories and preferences                                                                    |
-| `workspace/use-workspace.ts`                                                    | Snapshot refresh, operation/error state                                                                |
+| `workspace/use-workspace.ts`                                                    | Snapshot refresh, scoped operation state and mutation retry                                             |
 | `workspace/ui.tsx`                                                              | Avatars, accessible modal with nested focus/scroll restoration, icon controls and saved-time rendering |
 | `workspace/forms.tsx`                                                           | Section headings, setup steps, masked credentials, inline feedback and confirmations                   |
 | `workspace/use-platform-status.ts`                                              | Shared platform connection status for settings and members                                             |

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowDown,
   ArrowClockwise,
@@ -17,6 +17,8 @@ export function useApplicationUpdates() {
   const [view, setView] = useState<ApplicationUpdateView>();
   const [confirmation, setConfirmation] = useState(false);
   const [error, setError] = useState("");
+  const [pending, setPending] = useState(false);
+  const installing = useRef(false);
   useEffect(() => {
     let active = true;
     const refresh = () =>
@@ -36,23 +38,47 @@ export function useApplicationUpdates() {
     };
   }, []);
   const requestInstall = async (wait = false) => {
+    if (installing.current) return;
+    installing.current = true;
+    setPending(true);
+    setError("");
     try {
       const reply = await bridge.installUpdate(wait);
       if (reply.ok) setConfirmation(reply.value.requiresWait);
       else setError(reply.message);
     } catch {
       setError(t("更新操作失败，请重试"));
+    } finally {
+      installing.current = false;
+      setPending(false);
     }
   };
   const action = async (callback: () => Promise<unknown>) => {
     setError("");
     try {
-      await callback();
+      const reply = await callback();
+      if (
+        reply &&
+        typeof reply === "object" &&
+        "ok" in reply &&
+        reply.ok === false &&
+        "message" in reply
+      )
+        setError(String(reply.message));
     } catch {
       setError(t("更新操作失败，请重试"));
     }
   };
-  return { view, confirmation, setConfirmation, requestInstall, action, error };
+  return {
+    view,
+    confirmation,
+    setConfirmation,
+    requestInstall,
+    action,
+    error,
+    pending,
+    clearError: () => setError(""),
+  };
 }
 type Controller = ReturnType<typeof useApplicationUpdates>;
 const bytes = (value: number) =>
@@ -194,6 +220,7 @@ export function UpdateSettings({
           <>
             <button
               className="primary"
+              disabled={updates.pending}
               onClick={() => void updates.requestInstall()}
             >
               {t("安装并重启")}
@@ -319,7 +346,14 @@ export function UpdateExperience({
           title={tf("{0} 个任务正在运行", view.jobs.length)}
           cancelLabel={t("返回")}
           confirmLabel={t("任务完成后安装")}
-          onClose={() => updates.setConfirmation(false)}
+          busy={updates.pending}
+          error={updates.error}
+          onClose={() => {
+            if (!updates.pending) {
+              updates.setConfirmation(false);
+              updates.clearError();
+            }
+          }}
           onConfirm={() => updates.requestInstall(true)}
         >
           <p>{t("当前任务完成后再安装更新。等待期间，新任务会暂缓开始。")}</p>

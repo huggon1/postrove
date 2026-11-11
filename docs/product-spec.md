@@ -8,6 +8,8 @@ The top navigation contains Topics, Reading, and Scheduled messages. Settings an
 
 The composer sends the question to its selected enabled members. An HTTPS address or a domain address opens Add link. Source collection offers individual, selected, and all-source actions. Selecting a collected source opens its reading record. AI members produce independent replies to the original question.
 
+The renderer tracks pending states, errors, and retry actions by operation scope. Controls in independent scopes stay available while another scope runs. A failed mutation retains a retry of that mutation; a failed snapshot read offers Reload. Confirmation dialogs display their operation errors inside the active dialog. Cancelling a destructive confirmation clears its retry action.
+
 On Windows, closing the final window shuts down services and exits the application; minimizing keeps it running. On macOS, closing a window keeps the application running, and the Dock reopens the workspace.
 
 ## Members and language
@@ -15,6 +17,8 @@ On Windows, closing the final window shuts down services and exits the applicati
 A website connection owns its shared browser session. Each source-platform/AI route enables its own language experts. X/Grok and YouTube/Gemini offer Chinese and English; Xiaohongshu/点点 offers Chinese; Reddit AI offers English. Gemini routes share Google sign-in. Reddit supports guest questions and optional sign-in. Members opens platform connection cards, a focused sign-in step, login verification, language selection, and sign-out confirmation.
 
 Connection settings show the saved account name and platform handle when available. Login completion captures the account name once. Refresh account name captures and saves a fresh observation; ordinary settings views retain the saved value. A failed refresh retains the current session’s prior name and shows inline feedback. The home icon opens the platform homepage in the same visible Chrome profile. Connected sessions awaiting an observed self identity show Account name pending in connection detail. Platform status labels reflect the shared session's sign-in state: Connected after detected sign-in and Disconnected while signed out. The member catalog, connection detail, and Settings use the same labels. Reddit's English expert remains available for guest use while its connection shows Disconnected.
+
+Initial account-status reads show a loading state. A failed read retains the last valid account observation and displays Read failed with Reload. Member setup displays its missing-Chrome message after an explicit missing-installation observation. Capability requirements use the same account-read feedback, including Bilibili's reading connection.
 
 While signed out, the platform connection detail shows one inline account-risk reminder above Open sign-in window, recommending a secondary account. Confirmed sign-in hides the reminder.
 
@@ -43,6 +47,8 @@ Scheduled-message cards and the home next-send card display each occurrence in i
 Each due occurrence creates a new topic with frozen conditions. The running application admits occurrences; occurrences missed while closed expire. An outstanding run for the same schedule skips that occurrence. Edits affect later admissions; pause and delete affect future occurrences.
 
 Member changes update future recipient sets. A schedule with zero enabled recipients becomes paused. The editor requires an enabled recipient before save or resume. Already admitted topics retain their member snapshot. Historical time-range fields remain readable; new sends use the exact question and the post-enhancement sentence.
+
+Before disabling an expert, the confirmation shows the number of affected saved schedules and the number that will become paused.
 
 ## Reading and link intake
 
