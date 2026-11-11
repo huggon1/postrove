@@ -143,15 +143,28 @@ export function ModalHeader({
     </header>
   );
 }
-export function Time({ value }: { value: string }) {
+export function Time({
+  value,
+  timeZone,
+}: {
+  value: string;
+  timeZone?: string;
+}) {
   const language = useLanguage();
   const date = new Date(value);
   return (
-    <time dateTime={value} title={date.toLocaleString(language)}>
-      {date.toLocaleDateString(language, { month: "short", day: "numeric" })} ·{" "}
+    <time dateTime={value} title={date.toLocaleString(language, { timeZone })}>
+      {date.toLocaleDateString(language, {
+        month: "short",
+        day: "numeric",
+        timeZone,
+      })}{" "}
+      ·{" "}
       {date.toLocaleTimeString(language, {
         hour: "2-digit",
         minute: "2-digit",
+        timeZone,
+        hourCycle: timeZone ? "h23" : undefined,
       })}
     </time>
   );

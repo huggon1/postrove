@@ -38,6 +38,8 @@ Each rule saves its time zone and start date. Repeating rules accept an inclusiv
 
 The editor previews up to three upcoming occurrences in the saved zone. A one-time rule previews its single occurrence. Save and resume require a future occurrence. An exhausted rule retains its record, displays Ended, and can be edited to a future date. Pause retains the rule's original interval anchor.
 
+Scheduled-message cards and the home next-send card display each occurrence in its saved zone. Both views identify that zone. A schedule whose name equals its question presents the question once.
+
 Each due occurrence creates a new topic with frozen conditions. The running application admits occurrences; occurrences missed while closed expire. An outstanding run for the same schedule skips that occurrence. Edits affect later admissions; pause and delete affect future occurrences.
 
 Member changes update future recipient sets. A schedule with zero enabled recipients becomes paused. The editor requires an enabled recipient before save or resume. Already admitted topics retain their member snapshot. Historical time-range fields remain readable; new sends use the exact question and the post-enhancement sentence.

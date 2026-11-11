@@ -14,6 +14,7 @@ import {
 import { advisorById, type AdvisorId } from "../shared/advisor-contracts";
 import { sourceProfiles } from "../shared/source-profiles";
 import type { Follow } from "../shared/focus-search-contracts";
+import { normalizeSchedule } from "../shared/schedules";
 import type { RecordDeletion, RecordRef } from "../shared/deletion-contracts";
 import { bridge } from "./bridge";
 import { t, tf, useLanguage } from "./i18n";
@@ -40,6 +41,7 @@ import { Settings, type SettingsSection } from "./workspace/Settings";
 import "./workspace/workspace.css";
 import "./workspace/settings.css";
 import "./workspace/production.css";
+import "./workspace/layout-clarity.css";
 
 type Page = "topics" | "reading" | "schedules" | "settings";
 export function App() {
@@ -415,8 +417,14 @@ export function App() {
                 >
                   <span>
                     <Clock />
-                    <Time value={next.nextRunAt!} />
+                    <Time
+                      value={next.nextRunAt!}
+                      timeZone={normalizeSchedule(next.schedule).timeZone}
+                    />
                   </span>
+                  <small className="next-schedule-zone">
+                    {normalizeSchedule(next.schedule).timeZone}
+                  </small>
                   <strong>{next.question}</strong>
                   <ArrowRight />
                 </button>

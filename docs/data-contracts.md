@@ -15,7 +15,7 @@ The [architecture](architecture-overview.md#runtime-boundaries-and-data-ownershi
 | `candidateId`, `postKey` | A candidate occurrence and its canonical source identity |
 | `resultId`, `materialId` | Parsing delivery identity and saved reading report       |
 
-Timestamps use ISO strings with timezone information. The interface displays local time. Saved follow snapshots keep reports readable after configuration edits or deletion.
+Timestamps use ISO strings with timezone information. Ordinary event timestamps display local time; scheduled occurrences follow the [saved-zone presentation](product-spec.md#scheduled-messages). Saved follow snapshots keep reports readable after configuration edits or deletion.
 
 Preferences and reading-task commits replace their JSON files atomically before publishing in-memory state. On Windows, a transient `EPERM`, `EBUSY`, or `EACCES` during replacement retries for up to two seconds. An exhausted retry returns the write error and retains the previously committed file and state.
 
