@@ -850,6 +850,34 @@ video {
   color: #bfcbe0;
   font-size: 10px;
 }
+.setup-details {
+  padding-block: 12px 80px;
+}
+.setup-details h2 {
+  font-size: clamp(28px, 4vw, 40px);
+  letter-spacing: -1px;
+  margin-bottom: 28px;
+}
+.setup-questions details {
+  border-top: 1px solid var(--line);
+  padding-block: 20px;
+}
+.setup-questions summary {
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.setup-questions summary:focus-visible {
+  outline: 3px solid #7396ef;
+  outline-offset: 5px;
+}
+.setup-questions p {
+  max-width: 840px;
+  margin-top: 14px;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.8;
+}
 .setup-line {
   grid-column: 1/-1;
   border-top: 1px solid #3a475e;

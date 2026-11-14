@@ -6,7 +6,13 @@ Postrove presents questions as topics. Selected AI members reply independently t
 
 The top navigation contains Topics, Reading, and Scheduled messages. Settings and Members open from the top bar. A topic contains the original question, selected members, their replies, source links, and member receipts. Opening a card shows its conversation. The topic list supports all, unread, and scheduled views.
 
-The composer sends the question to its selected enabled members. An HTTPS address or a domain address opens Add link. Source collection offers individual, selected, and all-source actions. Selecting a collected source opens its reading record. AI members produce independent replies to the original question.
+The composer sends the question to its selected enabled members. An HTTPS address or a domain address opens Add link. Source collection offers individual, selected, and all-source actions. Each source title opens its original page; the adjacent Reading action opens its collected reading record. Selecting either occurrence of a repeated source selects that source once across member replies. AI members produce independent replies to the original question.
+
+The renderer tracks pending states, errors, and retry actions by operation scope. Controls in independent scopes stay available while another scope runs. A failed mutation retains a retry of that mutation; a failed snapshot read offers Reload. Confirmation dialogs display their operation errors inside the active dialog. Cancelling a destructive confirmation clears its retry action.
+
+The current renderer session retains composer questions, schedule drafts, model-editor fields, and bot setup fields across page changes and temporary dismissal. Explicit Cancel discards schedule and model-editor drafts. Sending a topic or saving a schedule or model consumes its submitted draft. Bot verification clears the submitted secret. Credential drafts stay in renderer memory for the current window session.
+
+The composer presents selected members as a summary. Choose recipients opens the selection menu; an empty selection displays that control's label.
 
 On Windows, closing the final window shuts down services and exits the application; minimizing keeps it running. On macOS, closing a window keeps the application running, and the Dock reopens the workspace.
 
@@ -15,6 +21,8 @@ On Windows, closing the final window shuts down services and exits the applicati
 A website connection owns its shared browser session. Each source-platform/AI route enables its own language experts. X/Grok and YouTube/Gemini offer Chinese and English; Xiaohongshu/点点 offers Chinese; Reddit AI offers English. Gemini routes share Google sign-in. Reddit supports guest questions and optional sign-in. Members opens platform connection cards, a focused sign-in step, login verification, language selection, and sign-out confirmation.
 
 Connection settings show the saved account name and platform handle when available. Login completion captures the account name once. Refresh account name captures and saves a fresh observation; ordinary settings views retain the saved value. A failed refresh retains the current session’s prior name and shows inline feedback. The home icon opens the platform homepage in the same visible Chrome profile. Connected sessions awaiting an observed self identity show Account name pending in connection detail. Platform status labels reflect the shared session's sign-in state: Connected after detected sign-in and Disconnected while signed out. The member catalog, connection detail, and Settings use the same labels. Reddit's English expert remains available for guest use while its connection shows Disconnected.
+
+Initial account-status reads show a loading state. A failed read retains the last valid account observation and displays Read failed with Reload. Member setup displays its missing-Chrome message after an explicit missing-installation observation. Capability requirements use the same account-read feedback, including Bilibili's reading connection.
 
 While signed out, the platform connection detail shows one inline account-risk reminder above Open sign-in window, recommending a secondary account. Confirmed sign-in hides the reminder.
 
@@ -28,6 +36,8 @@ Main saves the platform answer before asking the same browser session to extract
 
 Topic receipts expose Stop for active members, Stop all, result-file access, and native Pi log export. Stopping one member lets the other selected members continue. A captured answer survives cancellation and later citation or translation failure. A submitted checkpoint records the existing conversation; crash recovery observes that conversation before continuing. An unavailable conversation produces a bridge failure. A fresh send creates a new topic.
 
+The topic header exposes Stop while its task is active. Partial, failed, and stopped topics offer Ask again, which fills the composer with the saved question and its currently enabled recipients. Replacing a different unsent question requires a Keep draft or Replace draft choice. The member navigation jumps to and focuses the selected reply. Terminal outcomes show their corresponding state label and icon. Source-collection failures appear beside the individual or batch control that initiated them.
+
 Topics run in admission order. Within one topic, different AI connections search concurrently. Language experts sharing an AI connection take turns through answer capture and citation extraction. Reading-version processing runs independently while the next expert searches. Topic completion waits for every expert and its reading processing. Search and reading enter independent queues. Collection, sign-in, sign-out, and explicit browser-mode changes take exclusive browser access. The application retries transient browser/model failures within fixed budgets. Login, verification, and account agreements return an actionable platform state. A reading failure retains saved source content and completed translation chunks. A source acquisition issue keeps its material partial after text processing finishes. Retry captures affected sources again, preserves saved content during capture failure, and refreshes reading text when captured content changes.
 
 ## Scheduled messages
@@ -38,13 +48,21 @@ Each rule saves its time zone and start date. Repeating rules accept an inclusiv
 
 The editor previews up to three upcoming occurrences in the saved zone. A one-time rule previews its single occurrence. Save and resume require a future occurrence. An exhausted rule retains its record, displays Ended, and can be edited to a future date. Pause retains the rule's original interval anchor.
 
+Scheduled-message cards and the home next-send card display each occurrence in its saved zone. Both views identify that zone. A schedule whose name equals its question presents the question once.
+
 Each due occurrence creates a new topic with frozen conditions. The running application admits occurrences; occurrences missed while closed expire. An outstanding run for the same schedule skips that occurrence. Edits affect later admissions; pause and delete affect future occurrences.
 
 Member changes update future recipient sets. A schedule with zero enabled recipients becomes paused. The editor requires an enabled recipient before save or resume. Already admitted topics retain their member snapshot. Historical time-range fields remain readable; new sends use the exact question and the post-enhancement sentence.
 
+Before disabling an expert, the confirmation shows the number of affected saved schedules and the number that will become paused.
+
 ## Reading and link intake
 
 Reading contains saved and partial materials. Add link accepts HTTPS addresses and domain addresses. Domain addresses receive an HTTPS prefix; path, query parameters, and fragments retain their submitted values. Telegram and Feishu authorized messages enter the same collection pipeline. Main saves the accepted message identity before acknowledging intake. Repeated message identities reuse their queue entry.
+
+The current window session retains the reading search query, selected material and version, and each material/version's scroll position. A new material opens at its top; reopening a visited material restores its position as images finish sizing, until the user moves within the reader. Switching material or version and closing the reader retain its current position. Fixed reader controls keep material selection, version selection, and state-specific Stop or Retry available while the content scrolls. Stop and Retry share their task's pending operation. The latest requested reader action owns its feedback. Phase names follow the interface language.
+
+Temporary Add link dismissal retains its URL draft. Submission keeps the form locked until its response. A successful submission clears the URL draft; a URL submitted from the composer also clears that composer's accepted URL.
 
 Collection captures the main text, images, and one level of direct references. The capture Agent loads the source's reading Skill and chooses available tools and page controls for its scope. GitHub collection targets the default README. YouTube and Bilibili collection prefer native captions. When captions are absent, collection transcribes accessible audio through the local speech service. Metadata checkpoints survive media and transcription failures; timestamp links retain video and part identity. Xiaohongshu video uses the same local speech service. Reddit collection reads the selected post or comment with its required context. Materials keep their individual sources, coverage, translated chunks, introductions, and issues. The reader offers a material selector, original/reading versions, source navigation, progress, Stop, retry, result files, and native logs. Markdown preserves links, code, images, and diagrams.
 

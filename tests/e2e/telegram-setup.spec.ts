@@ -223,6 +223,8 @@ test("collapsed Telegram settings guide connection and authorization", async ({}
     await page.keyboard.press("Escape");
     await expect(guide).toBeHidden();
     await page.locator(".telegram-settings .telegram-summary").click();
+    await expect(page.getByLabel("Bot Token", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "管理连接", exact: true }).click();
     await page.getByText("维护", { exact: true }).click();
     await page.getByRole("button", { name: "清除 Token", exact: true }).click();
     await page

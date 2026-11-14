@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { bridge } from "../bridge";
 import { t } from "../i18n";
 import type { SpeechInstallView } from "../../shared/capability-contracts";
@@ -27,27 +27,35 @@ export function SpeechSettings() {
 export function SpeechInstallCard() {
   const [view, setView] = useState<SpeechInstallView>();
   const [error, setError] = useState("");
+  const [readError, setReadError] = useState("");
   const [pending, setPending] = useState(false);
   const alive = useRef(true);
+  const revision = useRef(0);
+  const [reading, setReading] = useState(true);
+  const load = useCallback(async () => {
+    const current = ++revision.current;
+    setReading(true);
+    setReadError("");
+    try {
+      const next = await bridge.speechInstallView();
+      if (alive.current && current === revision.current) setView(next);
+    } catch {
+      if (alive.current && current === revision.current)
+        setReadError(t("状态读取失败"));
+    } finally {
+      if (alive.current && current === revision.current) setReading(false);
+    }
+  }, []);
   useEffect(() => {
     alive.current = true;
-    let revision = 0;
-    const load = async () => {
-      const current = ++revision;
-      try {
-        const next = await bridge.speechInstallView();
-        if (alive.current && current === revision) setView(next);
-      } catch {
-        if (alive.current && current === revision) setError(t("状态读取失败"));
-      }
-    };
     void load();
     const off = bridge.onChanged(() => void load());
     return () => {
       alive.current = false;
+      revision.current++;
       off();
     };
-  }, []);
+  }, [load]);
   async function act(cancel: boolean) {
     setPending(true);
     setError("");
@@ -64,7 +72,9 @@ export function SpeechInstallCard() {
   }
   const active = !!view && activeStates.has(view.state);
   const status = !view
-    ? "正在读取…"
+    ? readError && !reading
+      ? "读取失败"
+      : "正在读取…"
     : view.state === "ready"
       ? "已就绪"
       : view.state === "preparing"
@@ -85,7 +95,9 @@ export function SpeechInstallCard() {
     <section
       className="speech-install-card"
       aria-label={t("本地转写")}
-      data-install-state={view?.state || "loading"}
+      data-install-state={
+        view?.state || (readError && !reading ? "failed" : "loading")
+      }
     >
       <div className="speech-install-head">
         <strong>{t("本地转写")}</strong>
@@ -149,11 +161,19 @@ export function SpeechInstallCard() {
           )}
         </div>
       )}
-      {(error || view?.state === "failed") && (
+      {(readError || error || view?.state === "failed") && (
         <p className="inline-error" role="alert">
-          {error ||
+          {readError ||
+            error ||
             t(errors[view?.error || "download_failed"] || "安装未完成，请重试")}
         </p>
+      )}
+      {readError && !reading && (
+        <div className="speech-install-actions">
+          <button className="secondary" onClick={() => void load()}>
+            {t("重新加载")}
+          </button>
+        </div>
       )}
       {view && view.state !== "ready" && (
         <div className="speech-install-actions">

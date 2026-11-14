@@ -4,11 +4,13 @@ import { createServer } from "node:http";
 import path from "node:path";
 import { pipeline } from "node:stream/promises";
 import { fileURLToPath } from "node:url";
+import { buildHomepage } from "./build.mjs";
+import { legacyLanguageURL } from "../../website/routes.js";
 
 const repositoryRoot = fileURLToPath(new URL("../../", import.meta.url));
 let port = 4317;
-let pageDirectory = path.join(repositoryRoot, "website");
-let assetDirectory = path.join(repositoryRoot, "assets");
+let pageDirectory = path.join(repositoryRoot, "dist/homepage");
+let suppliedDirectory = false;
 
 for (let index = 2; index < process.argv.length; index += 1) {
   const option = process.argv[index];
@@ -19,7 +21,7 @@ for (let index = 2; index < process.argv.length; index += 1) {
       throw new Error("--port must be between 1 and 65535");
   } else if (option === "--dir" && value && !value.startsWith("--")) {
     pageDirectory = path.resolve(repositoryRoot, value);
-    assetDirectory = path.join(pageDirectory, "assets");
+    suppliedDirectory = true;
   } else {
     throw new Error(
       "Usage: npm run homepage:dev -- [--port 4317] [--dir dist/homepage]",
@@ -28,13 +30,14 @@ for (let index = 2; index < process.argv.length; index += 1) {
   index += 1;
 }
 
+if (!suppliedDirectory) await buildHomepage();
 const pageRoot = await realpath(pageDirectory);
-const assetRoot = await realpath(assetDirectory);
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8",
+  ".xml": "application/xml; charset=utf-8",
   ".svg": "image/svg+xml",
   ".png": "image/png",
   ".jpg": "image/jpeg",
@@ -62,6 +65,11 @@ function respond(response, status, message) {
   response.end(message);
 }
 
+function redirect(response, location, status = 301) {
+  response.writeHead(status, { Location: location });
+  response.end();
+}
+
 const server = createServer(async (request, response) => {
   response.setHeader("X-Content-Type-Options", "nosniff");
   response.setHeader("Cache-Control", "no-store");
@@ -86,25 +94,49 @@ const server = createServer(async (request, response) => {
       return;
     }
 
-    const isAsset = pathname.startsWith("/assets/");
-    const root = isAsset ? assetRoot : pageRoot;
-    const relativePath = isAsset
-      ? pathname.slice("/assets/".length)
-      : pathname === "/"
-        ? "index.html"
-        : pathname.slice(1);
+    const url = new URL(request.url, "http://localhost");
+    if (pathname === "/postrove") {
+      redirect(response, `/postrove/${url.search}`);
+      return;
+    }
+    const relativePath = pathname.startsWith("/postrove/")
+      ? pathname.slice("/postrove/".length)
+      : pathname.slice(1);
+    if (
+      ["", "index.html", "zh-CN/", "zh-CN/index.html"].includes(relativePath)
+    ) {
+      const legacy = legacyLanguageURL(url.href);
+      if (legacy) {
+        const destination = new URL(legacy);
+        redirect(response, `${destination.pathname}${destination.search}`, 302);
+        return;
+      }
+    }
+    const root = pageRoot;
     const requestedFile = path.resolve(root, relativePath);
     if (!isContained(root, requestedFile)) {
       respond(response, 403, "Forbidden");
       return;
     }
 
-    const file = await realpath(requestedFile);
+    let file = await realpath(requestedFile);
     if (!isContained(root, file)) {
       respond(response, 403, "Forbidden");
       return;
     }
-    const details = await stat(file);
+    let details = await stat(file);
+    if (details.isDirectory()) {
+      if (!pathname.endsWith("/")) {
+        redirect(response, `${url.pathname}/${url.search}`);
+        return;
+      }
+      file = await realpath(path.join(file, "index.html"));
+      if (!isContained(root, file)) {
+        respond(response, 403, "Forbidden");
+        return;
+      }
+      details = await stat(file);
+    }
     if (!details.isFile()) {
       respond(response, 404, "Not found");
       return;

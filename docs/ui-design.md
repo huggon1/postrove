@@ -31,9 +31,19 @@ Update availability, installation preparation, and success share the floating ca
 
 The topic feed and its supporting column share the desktop viewport. Compact widths place supporting content below the feed, move navigation to its compact position, and adapt settings categories and dialogs to the available width. Text, controls, and saved content remain within their scroll containers. The scheduled-message dialog stacks its columns below 660 pixels and scrolls inside its frame.
 
+At widths from 601 to 760 pixels, the top bar keeps the brand mark and the labeled navigation. Every navigation and settings control fits within the window, including the 640-pixel native minimum. Source summaries, timestamps, reading status, and schedule metadata use a 12-pixel minimum and the shared muted text color. Reading-card delete actions use a 34-pixel target; language and source actions use a 32-pixel minimum height.
+
 Shared form components own labels, input spacing, validation feedback, and dialog actions. A failed operation retains the active form and its entered values. Secret controls retain the value while switching its visibility.
 
+Menus dismiss on an outside pointer, Escape, or focus moving outside their region. Escape restores focus to the trigger. Menus choose the available space above or below their trigger and scroll internally; a trigger leaving the viewport dismisses its menu. A backdrop dismissal requires the pointer press and release to occur on the backdrop. Dialogs focus an explicit initial target, their first input, or Close in that order; confirmations choose Cancel. A pending form commit keeps its dialog open and displays a waiting indicator on the committing control.
+
+The model-options form submits through Enter or Save. Invalid temperature, token count, and JSON inputs retain their values, expose linked field errors, and receive focus. Opening a saved model editor retains the connection's identity through reauthorization according to the [model selection contract](data-contracts.md#pi-model-connections).
+
+Pending indicators and errors stay beside their operation's controls. Stop-and-delete and update-wait confirmations display their own errors. A failed pause or resume action keeps its retry beside the affected schedule. Account-status and speech-state read failures expose Reload in the corresponding settings region.
+
 A reading card's image fills and crops within its fixed-height cover. The cover and title each open their reading record through their own click target.
+
+The reader keeps its toolbar and material selector above the content scroll area. Long topic threads keep a horizontal member navigation below the dialog header. Source titles carry the external-opening indicator; collected material uses its separate Reading action. Individual and batch collection errors remain next to their triggering controls and scroll into view. Finished topic indicators match the recorded terminal outcome.
 
 ## Review evidence
 
@@ -42,6 +52,28 @@ For each added or expanded message, record its admission source and triggering s
 For each interaction indicator, activate its control and compare the observed result with the table above. Check selected and unselected navigation, both disclosure states, internal destinations, and external-opening actions. Review desktop and compact widths in both languages, including the leading icons after a trailing indicator is removed.
 
 The [workspace layout E2E](../tests/e2e/workspace-layout.spec.ts) checks page identity and overflow in both languages at desktop and compact widths. The [settings layout E2E](../tests/e2e/settings-layout.spec.ts) exercises setup, validation, member management, and model configuration through real controls. The [schedule E2E](../tests/e2e/schedules.spec.ts) exercises rich rules, previews, validation, pause, persistence, and both languages. It records copy admission sources and triggers. Tests save complete-window screenshots and layout measurements. The [test guide](../tests/README.md) owns broader verification scope.
+
+The [layout clarity E2E](../tests/e2e/ui-layout-clarity.spec.ts) compares the home and schedule-card time in a saved zone that differs from the device zone, checks one presentation of a repeated name, and captures both languages at desktop and compact widths. The home zone reuses the saved schedule zone as required feedback for its next-send control.
+
+The [operation feedback E2E](../tests/e2e/ui-operation-feedback.spec.ts) holds and fails controlled IPC responses through the production interface. It checks independent pending scopes, mutation retry, canceled-delete retry cleanup, errors in the active confirmation, account and speech read recovery, retained Bilibili identity, and disable-expert consequences in both interface languages.
+
+The [overlay E2E](../tests/e2e/ui-overlays.spec.ts) checks bilingual draft retention, explicit cancellation, backdrop dragging, keyboard and outside dismissal, focus, menu bounds, offscreen triggers, field validation, and alternating new/saved model drafts. The [native Pi connection E2E](../tests/e2e/pi-model-connections.spec.ts) covers reauthorization of a saved connection. The numeric bound errors are required feedback on an attempted save of an out-of-range temperature or a non-integer or out-of-range token count. Choose recipients and Manage connection reuse their existing control labels.
+
+The [reading navigation E2E](../tests/e2e/ui-reading-navigation.spec.ts) checks bilingual fixed controls, material/version positions, late image sizing, unique source selection, local collection errors, member jumps, matching terminal states, phase translations, retained search, draft replacement, atomic link submission, and independent action feedback. A material switch in the same event turn as scrolling verifies position retention while the browser scroll event is pending. Late image sizing uses a controlled dimension change, which exercises layout restoration independently of Chromium's decoded-image cache. Screenshots cover desktop and compact readers and the draft-replacement confirmation in both languages.
+
+The [authentication pending E2E](../tests/e2e/ui-auth-pending.spec.ts) holds a native authentication response, checks locked input and dialog dismissal, and verifies that a failed submission retains its answer. Ask again stays disabled while the composer admits its current question.
+
+| Added copy | Admission source and trigger |
+| --- | --- |
+| Clear search | Required control while the reading search contains a query. |
+| Ask again; Member replies | Required topic recovery and reply-navigation controls. Ask again appears for partial, failed, or stopped topics; reply navigation appears for multiple members. |
+| Replace current draft; Keep draft; Replace draft | Required choice when Ask again would replace a different unsent composer question. The confirmation previews the incoming question. |
+| Translating materials; Generating summary | Translations of the existing saved processing-phase labels. |
+
+| Added copy | Admission source and trigger |
+| --- | --- |
+| Reload | Required recovery control after an account, speech, or workspace snapshot read fails. |
+| Affects {0} scheduled messages; {1} will be paused. | Required consequence feedback in the disable-expert confirmation when saved schedules include that expert. Counts come from the current saved schedules and enabled members. |
 
 ### Capability and speech settings
 

@@ -69,6 +69,7 @@ export function BotDialog({
   footer,
   children,
   onClose,
+  closeDisabled = false,
 }: {
   channel: "telegram" | "feishu";
   title: string;
@@ -77,6 +78,7 @@ export function BotDialog({
   footer?: ReactNode;
   children: ReactNode;
   onClose(): void;
+  closeDisabled?: boolean;
 }) {
   return (
     <Modal
@@ -88,6 +90,7 @@ export function BotDialog({
         title={title}
         leading={<ChannelSymbol channel={channel} />}
         onClose={onClose}
+        closeDisabled={closeDisabled}
       />
       <div className="bot-workspace">
         {steps && <SetupSteps items={steps} current={step} />}

@@ -77,6 +77,8 @@
   "{0} 服务尚未连接。": "{0} service is not connected yet.",
   "等待处理": "Awaiting processing",
   "读取来源": "Reading source",
+  "翻译材料": "Translating materials",
+  "生成摘要": "Generating summary",
   "开始读取来源内容": "Reading source content",
   "已保存": "Saved",
   "解析失败": "Parsing failed",
@@ -602,5 +604,15 @@
   "打开账号主页": "Open account home",
   "账号名称待识别": "Account name pending",
   "刷新账号名称": "Refresh account name",
-  "账号名称刷新失败，请稍后重试": "Account name refresh failed. Try again."
+  "账号名称刷新失败，请稍后重试": "Account name refresh failed. Try again.",
+  "重新加载": "Reload",
+  "影响 {0} 条定时消息，其中 {1} 条将暂停": "Affects {0} scheduled messages; {1} will be paused.",
+  "请输入 0 到 2 之间的数值": "Enter a number from 0 to 2",
+  "请输入 1 到 2000000 之间的整数": "Enter a whole number from 1 to 2000000",
+  "清除搜索": "Clear search",
+  "再次提问": "Ask again",
+  "替换现有草稿": "Replace current draft",
+  "替换草稿": "Replace draft",
+  "保留草稿": "Keep draft",
+  "成员回复": "Member replies"
 }

@@ -1,0 +1,74 @@
+/* Keep labels and high-frequency controls legible at every workspace width. */
+.topic-meta time,
+.reply-author > div > span,
+.reader-meta,
+.receipt-source-state,
+.sources-heading > span,
+.source-title small,
+.reading-card-body > p,
+.reading-card-footer,
+.schedule-name,
+.schedule-content > p,
+.schedule-zone,
+.next-schedule > span,
+.next-schedule-zone {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.reply-peek > span:last-child > span,
+.open-topic {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.source-tile .tiny-button,
+.content-language-modes > button,
+.reply-section-head .text-button,
+.receipt-actions .text-button,
+.reader-toolbar .text-button {
+  min-height: 32px;
+  font-size: 12px;
+}
+
+.reading-card-footer .icon-button {
+  width: 34px;
+  height: 34px;
+  opacity: 1;
+}
+
+.next-schedule-zone {
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
+.schedule-actions .schedule-switch {
+  width: 38px;
+  height: 23px;
+}
+
+/* The mark keeps the brand target available while navigation retains its labels. */
+@media (min-width: 601px) and (max-width: 760px) {
+  .topbar-inner {
+    padding: 0 20px;
+    gap: 10px;
+  }
+
+  .brand > span:last-child {
+    display: none;
+  }
+
+  .main-nav {
+    margin: 0 auto;
+    gap: 2px;
+  }
+
+  .main-nav button {
+    padding: 0 10px;
+    gap: 6px;
+  }
+
+  .top-actions {
+    flex: none;
+  }
+}

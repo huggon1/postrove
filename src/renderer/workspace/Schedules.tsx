@@ -1,5 +1,11 @@
 import { useEffect, useState } from "react";
-import { Clock, PencilSimple, Plus, Trash } from "@phosphor-icons/react";
+import {
+  CircleNotch,
+  Clock,
+  PencilSimple,
+  Plus,
+  Trash,
+} from "@phosphor-icons/react";
 import {
   advisorById,
   legacyAdvisor,
@@ -7,11 +13,19 @@ import {
 } from "../../shared/advisor-contracts";
 import type { Follow } from "../../shared/focus-search-contracts";
 import { bridge } from "../bridge";
-import { t, tf, useLanguage } from "../i18n";
-import { Avatar, IconButton, Modal, ModalHeader, advisorName } from "./ui";
+import { t, tf } from "../i18n";
+import {
+  Avatar,
+  IconButton,
+  Modal,
+  ModalHeader,
+  Time,
+  advisorName,
+} from "./ui";
 import type { Workspace } from "./use-workspace";
 import { ConfirmDialog, Feedback } from "./forms";
 import { normalizeSchedule, scheduleOccurrences } from "../../shared/schedules";
+import { useSessionDraft } from "./use-session-draft";
 import {
   ScheduleFields,
   cadenceNames,
@@ -31,7 +45,6 @@ export function ScheduleList({
   onEdit(follow: Follow): void;
 }) {
   const [confirm, setConfirm] = useState<Follow>();
-  const language = useLanguage();
   return (
     <>
       <div className="schedule-list">
@@ -46,7 +59,9 @@ export function ScheduleList({
               <span>{t(cadenceNames[follow.schedule.cadence])}</span>
             </div>
             <div className="schedule-content">
-              <span className="schedule-name">{follow.name}</span>
+              {follow.name.trim() !== follow.question.trim() && (
+                <span className="schedule-name">{follow.name}</span>
+              )}
               <h2>{follow.question}</h2>
               <p className="schedule-rule-summary">
                 {scheduleSummary(follow.schedule)}
@@ -67,16 +82,10 @@ export function ScheduleList({
                 ) : (
                   <>
                     {t("下次发送")}{" "}
-                    <time dateTime={follow.nextRunAt}>
-                      {new Intl.DateTimeFormat(language, {
-                        timeZone: normalizeSchedule(follow.schedule).timeZone,
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        hourCycle: "h23",
-                      }).format(new Date(follow.nextRunAt))}
-                    </time>
+                    <Time
+                      value={follow.nextRunAt}
+                      timeZone={normalizeSchedule(follow.schedule).timeZone}
+                    />
                   </>
                 )}
               </p>
@@ -91,14 +100,23 @@ export function ScheduleList({
                 className="schedule-switch"
                 aria-label={t(follow.paused ? "恢复定时发送" : "暂停定时发送")}
                 checked={!follow.paused && !!follow.nextRunAt}
-                disabled={workspace.busy || !follow.nextRunAt}
+                disabled={
+                  workspace.pending(`follow:${follow.followId}`) ||
+                  !follow.nextRunAt
+                }
                 onChange={() =>
-                  void workspace.booleanAction(() =>
-                    bridge.setFollowPaused(follow.followId, !follow.paused),
+                  void workspace.booleanAction(
+                    () =>
+                      bridge.setFollowPaused(follow.followId, !follow.paused),
+                    `follow:${follow.followId}`,
                   )
                 }
               />
+              {workspace.pending(`follow:${follow.followId}`) && (
+                <CircleNotch className="spin" aria-label={t("进行中")} />
+              )}
               <IconButton
+                disabled={workspace.pending(`follow:${follow.followId}`)}
                 label={t("编辑定时消息")}
                 onClick={() => onEdit(follow)}
               >
@@ -106,11 +124,31 @@ export function ScheduleList({
               </IconButton>
               <IconButton
                 label={t("删除定时消息")}
-                onClick={() => setConfirm(follow)}
+                disabled={workspace.pending(`follow:${follow.followId}`)}
+                onClick={() => {
+                  workspace.clearError(`follow:${follow.followId}`);
+                  setConfirm(follow);
+                }}
               >
                 <Trash />
               </IconButton>
             </div>
+            {workspace.errorFor(`follow:${follow.followId}`) && !confirm && (
+              <div className="schedule-operation-feedback">
+                <Feedback error>
+                  {workspace.errorFor(`follow:${follow.followId}`)}
+                </Feedback>
+                <button
+                  className="text-button"
+                  disabled={workspace.pending(`follow:${follow.followId}`)}
+                  onClick={() =>
+                    void workspace.retry(`follow:${follow.followId}`)
+                  }
+                >
+                  {t("重试")}
+                </button>
+              </div>
+            )}
           </article>
         ))}
       </div>
@@ -124,13 +162,19 @@ export function ScheduleList({
         <ConfirmDialog
           title={t("删除定时消息")}
           confirmLabel={t("删除")}
-          busy={workspace.busy}
-          error={workspace.error}
-          onClose={() => setConfirm(undefined)}
+          busy={workspace.pending(`follow:${confirm.followId}`)}
+          error={workspace.errorFor(`follow:${confirm.followId}`)}
+          onClose={() => {
+            if (!workspace.pending(`follow:${confirm.followId}`)) {
+              workspace.clearError(`follow:${confirm.followId}`);
+              setConfirm(undefined);
+            }
+          }}
           onConfirm={async () => {
             if (
-              await workspace.booleanAction(() =>
-                bridge.deleteFollow(confirm.followId),
+              await workspace.booleanAction(
+                () => bridge.deleteFollow(confirm.followId),
+                `follow:${confirm.followId}`,
               )
             )
               setConfirm(undefined);
@@ -153,14 +197,23 @@ export function ScheduleEditor({
   onClose(): void;
   onMembers(): void;
 }) {
-  const [name, setName] = useState(value?.name ?? ""),
-    [question, setQuestion] = useState(value?.question ?? "");
-  const [selected, setSelected] = useState<AdvisorId[]>(
-    value
-      ? followAdvisors(value).filter((id) =>
-          workspace.members?.enabled.includes(id),
-        )
-      : (workspace.members?.enabled ?? []),
+  const key = `schedule.${value?.followId ?? "new"}.${value?.updatedAt ?? ""}`;
+  const [name, setName, discardName] = useSessionDraft(
+      `${key}.name`,
+      value?.name ?? "",
+    ),
+    [question, setQuestion, discardQuestion] = useSessionDraft(
+      `${key}.question`,
+      value?.question ?? "",
+    );
+  const [selected, setSelected, discardSelected] = useSessionDraft<AdvisorId[]>(
+    `${key}.selected`,
+    () =>
+      value
+        ? followAdvisors(value).filter((id) =>
+            workspace.members?.enabled.includes(id),
+          )
+        : (workspace.members?.enabled ?? []),
   );
   useEffect(() => {
     if (workspace.members)
@@ -168,7 +221,19 @@ export function ScheduleEditor({
         old.filter((id) => workspace.members!.enabled.includes(id)),
       );
   }, [workspace.members?.enabled.join(",")]);
-  const [draft, setDraft] = useState(() => scheduleDraft(value?.schedule));
+  const [draft, setDraft, discardDraft] = useSessionDraft(`${key}.rule`, () =>
+    scheduleDraft(value?.schedule),
+  );
+  const discard = () => {
+    discardName();
+    discardQuestion();
+    discardSelected();
+    discardDraft();
+  };
+  const busy = workspace.pending("schedule-editor");
+  const close = () => {
+    if (!busy) onClose();
+  };
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 30_000);
@@ -181,11 +246,12 @@ export function ScheduleEditor({
     <Modal
       label={t(value ? "编辑定时消息" : "新建定时消息")}
       className="compact-modal schedule-editor"
-      onClose={onClose}
+      onClose={close}
     >
       <ModalHeader
         title={t(value ? "编辑定时消息" : "新建定时消息")}
-        onClose={onClose}
+        onClose={close}
+        closeDisabled={busy}
       />
       <form
         className="compact-body"
@@ -206,16 +272,23 @@ export function ScheduleEditor({
             period: "all" as const,
             schedule: parsed.data,
           };
-          const result = await workspace.run(() =>
-            value
-              ? bridge.updateFollow({ ...input, followId: value.followId })
-              : bridge.saveFollow(input),
+          const result = await workspace.run(
+            () =>
+              value
+                ? bridge.updateFollow({ ...input, followId: value.followId })
+                : bridge.saveFollow(input),
+            "schedule-editor",
           );
-          if (result) onClose();
+          if (result) {
+            discard();
+            onClose();
+          }
         }}
       >
-        {workspace.error && <Feedback error>{workspace.error}</Feedback>}
-        <div className="schedule-editor-columns">
+        {workspace.errorFor("schedule-editor") && (
+          <Feedback error>{workspace.errorFor("schedule-editor")}</Feedback>
+        )}
+        <fieldset className="schedule-editor-columns" disabled={busy}>
           <div className="schedule-message-fields">
             <label className="config-field">
               <span>{t("名称")}</span>
@@ -272,20 +345,28 @@ export function ScheduleEditor({
             onChange={(patch) => setDraft((old) => ({ ...old, ...patch }))}
             now={now}
           />
-        </div>
+        </fieldset>
         <div className="schedule-editor-actions">
-          <button type="button" className="secondary" onClick={onClose}>
+          <button
+            type="button"
+            className="secondary"
+            disabled={busy}
+            onClick={() => {
+              discard();
+              workspace.clearError("schedule-editor");
+              onClose();
+            }}
+          >
             {t("取消")}
           </button>
           <button
             type="submit"
             className="primary"
-            disabled={
-              !selected.length || !question.trim() || !valid || workspace.busy
-            }
+            aria-busy={busy}
+            disabled={!selected.length || !question.trim() || !valid || busy}
           >
             {t("保存定时消息")}
-            <Clock />
+            {busy ? <CircleNotch className="spin" /> : <Clock />}
           </button>
         </div>
       </form>

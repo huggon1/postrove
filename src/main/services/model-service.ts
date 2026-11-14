@@ -363,6 +363,9 @@ export class ModelService {
         ? {
             selected: {
               catalogSource: candidate.catalogSource,
+              ...(candidate.replacesId
+                ? { replacesId: candidate.replacesId }
+                : {}),
               id: candidate.id,
               providerId: candidate.providerId,
               name:

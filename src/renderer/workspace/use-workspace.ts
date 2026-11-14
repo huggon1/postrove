@@ -14,6 +14,9 @@ import type { ModelReply } from "../../shared/model-contracts";
 import type { ApplicationPreferences } from "../../shared/preferences-contracts";
 import { selectLanguage, t } from "../i18n";
 
+type OperationState = { pending: boolean; error: string };
+const workspaceScope = "workspace";
+
 export function useWorkspace() {
   const ui = useMemo(() => productUiBridge(), []);
   const [reports, setReports] = useState<FocusSearchReport[]>([]);
@@ -30,11 +33,15 @@ export function useWorkspace() {
     readingLanguage: "app",
     taskBrowserVisible: false,
   });
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [operations, setOperations] = useState<Record<string, OperationState>>(
+    {},
+  );
+  const [snapshotError, setSnapshotError] = useState("");
   const [loading, setLoading] = useState(true);
   const generation = useRef(0),
     alive = useRef(true);
+  const inFlight = useRef(new Map<string, Promise<ModelReply<unknown>>>());
+  const retries = useRef(new Map<string, () => Promise<ModelReply<unknown>>>());
   const refresh = useCallback(async () => {
     const version = ++generation.current;
     const results = await Promise.allSettled([
@@ -53,9 +60,10 @@ export function useWorkspace() {
       setContent,
       setSettings,
     ] as ((value: any) => void)[];
+    let failure = "";
     results.forEach((result, index) => {
       if (result.status === "rejected") {
-        setError(t("状态读取失败"));
+        failure ||= t("状态读取失败");
         return;
       }
       if (index === 5) {
@@ -65,9 +73,10 @@ export function useWorkspace() {
       } else {
         const reply = result.value as ModelReply<unknown>;
         if (reply.ok) setters[index](reply.value);
-        else setError(reply.message);
+        else failure ||= reply.message;
       }
     });
+    setSnapshotError(failure);
     setLoading(false);
   }, [ui]);
   useEffect(() => {
@@ -85,42 +94,96 @@ export function useWorkspace() {
       off();
     };
   }, [refresh]);
-  async function run<T>(
-    operation: () => Promise<ModelReply<T>>,
-  ): Promise<T | undefined> {
-    setBusy(true);
-    setError("");
-    try {
-      const reply = await operation();
-      if (!reply.ok) {
-        setError(reply.message);
-        return;
+  const execute = useCallback(
+    async <T>(
+      operation: () => Promise<ModelReply<T>>,
+      scope: string,
+    ): Promise<ModelReply<T>> => {
+      const existing = inFlight.current.get(scope);
+      if (existing) return existing as Promise<ModelReply<T>>;
+      setOperations((old) => ({
+        ...old,
+        [scope]: { pending: true, error: "" },
+      }));
+      retries.current.delete(scope);
+      const work = (async (): Promise<ModelReply<T>> => {
+        let reply: ModelReply<T>;
+        try {
+          reply = await operation();
+        } catch {
+          reply = { ok: false, message: t("操作未完成，请重试") };
+        }
+        if (reply.ok) await refresh();
+        if (alive.current) {
+          setOperations((old) => ({
+            ...old,
+            [scope]: { pending: false, error: reply.ok ? "" : reply.message },
+          }));
+          if (!reply.ok)
+            retries.current.set(
+              scope,
+              operation as () => Promise<ModelReply<unknown>>,
+            );
+        }
+        return reply;
+      })();
+      inFlight.current.set(scope, work);
+      try {
+        return await work;
+      } finally {
+        if (inFlight.current.get(scope) === work)
+          inFlight.current.delete(scope);
       }
-      await refresh();
-      return reply.value;
-    } catch {
-      setError(t("操作未完成，请重试"));
-    } finally {
-      setBusy(false);
-    }
-  }
-  const booleanAction = async (
-    operation: () => Promise<ModelReply<unknown>>,
-  ) => {
-    setBusy(true);
-    setError("");
-    try {
-      const reply = await operation();
-      if (!reply.ok) setError(reply.message);
-      else await refresh();
-      return reply.ok;
-    } catch {
-      setError(t("操作未完成，请重试"));
-      return false;
-    } finally {
-      setBusy(false);
-    }
-  };
+    },
+    [refresh],
+  );
+  const run = useCallback(
+    async <T>(
+      operation: () => Promise<ModelReply<T>>,
+      scope = workspaceScope,
+    ): Promise<T | undefined> => {
+      const reply = await execute(operation, scope);
+      return reply.ok ? reply.value : undefined;
+    },
+    [execute],
+  );
+  const booleanAction = useCallback(
+    async (
+      operation: () => Promise<ModelReply<unknown>>,
+      scope = workspaceScope,
+    ) => (await execute(operation, scope)).ok,
+    [execute],
+  );
+  const clearError = useCallback((scope = workspaceScope) => {
+    retries.current.delete(scope);
+    setOperations((old) => ({
+      ...old,
+      [scope]: { pending: old[scope]?.pending ?? false, error: "" },
+    }));
+    if (scope === workspaceScope) setSnapshotError("");
+  }, []);
+  const setError = useCallback((message: string) => {
+    retries.current.delete(workspaceScope);
+    setSnapshotError("");
+    setOperations((old) => ({
+      ...old,
+      [workspaceScope]: {
+        pending: old[workspaceScope]?.pending ?? false,
+        error: message,
+      },
+    }));
+  }, []);
+  const retry = useCallback(
+    async (scope = workspaceScope) => {
+      const operation = retries.current.get(scope);
+      if (operation) return booleanAction(operation, scope);
+      if (scope === workspaceScope) await refresh();
+      return true;
+    },
+    [booleanAction, refresh],
+  );
+  const pending = (scope: string) => !!operations[scope]?.pending;
+  const errorFor = (scope: string) => operations[scope]?.error ?? "";
   return {
     reports,
     follows,
@@ -129,13 +192,18 @@ export function useWorkspace() {
     settings,
     preferences,
     setPreferences,
-    busy,
+    busy: pending(workspaceScope),
     loading,
-    error,
+    error: errorFor(workspaceScope) || snapshotError,
+    errorIsRead: !errorFor(workspaceScope) && !!snapshotError,
     setError,
     refresh,
     run,
     booleanAction,
+    pending,
+    errorFor,
+    clearError,
+    retry,
     ui,
   };
 }

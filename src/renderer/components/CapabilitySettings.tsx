@@ -27,12 +27,17 @@ export function CapabilitySettings({
   onMember(connectionId?: string): void;
 }) {
   const [view, setView] = useState<CapabilityView>();
-  const [platformStatus] = usePlatformStatus();
+  const [platformStatus, , reloadPlatformStatus] = usePlatformStatus();
   const [bilibili, setBilibili] = useState<PlatformAccountStatus>();
   const [selected, setSelected] = useState<CapabilityPlatform>();
   const [groupName, setGroupName] = useState<string>();
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
+  const [reloadCount, setReloadCount] = useState(0);
+  const reloadStatus = () => {
+    void reloadPlatformStatus();
+    setReloadCount((count) => count + 1);
+  };
   useEffect(() => {
     let alive = true,
       revision = 0;
@@ -45,7 +50,7 @@ export function CapabilitySettings({
         ]);
         if (!alive || current !== revision) return;
         setView(next);
-        setBilibili(bili.ok ? bili.value : undefined);
+        if (bili.ok) setBilibili(bili.value);
         setError(bili.ok ? "" : bili.message);
       } catch {
         if (alive && current === revision) setError(t("状态读取失败"));
@@ -57,7 +62,7 @@ export function CapabilitySettings({
       alive = false;
       off();
     };
-  }, []);
+  }, [reloadCount]);
   function signedIn(platform: CapabilityPlatform) {
     return platform.id === "bilibili"
       ? bilibili?.signedIn
@@ -100,6 +105,12 @@ export function CapabilitySettings({
     else if (requirement.id === "reader") onSection("about");
     else onMember("connection" in selected ? selected.connection : undefined);
   }
+  const accountReadError =
+    selected &&
+    "connection" in selected &&
+    platformStatus[selected.connection]?.state === "error"
+      ? platformStatus[selected.connection]?.error
+      : "";
   const selectedGroups =
     selected && view
       ? capabilityGroups(
@@ -170,6 +181,17 @@ export function CapabilitySettings({
           {error}
         </p>
       )}
+      {Object.values(platformStatus).some((item) => item.state === "error") &&
+        !selected && (
+          <div className="platform-status-feedback">
+            <p className="inline-error" role="alert">
+              {t("状态读取失败")}
+            </p>
+            <button className="text-button" onClick={reloadStatus}>
+              {t("重新加载")}
+            </button>
+          </div>
+        )}
       {!view ? (
         <p role="status">{t("正在读取…")}</p>
       ) : (
@@ -234,6 +256,16 @@ export function CapabilitySettings({
         >
           <ModalHeader title={t(selected.name)} onClose={closePlatform} />
           <div className="capability-detail">
+            {(error || accountReadError) && (
+              <div className="platform-status-feedback">
+                <p className="inline-error" role="alert">
+                  {error || accountReadError}
+                </p>
+                <button className="text-button" onClick={reloadStatus}>
+                  {t("重新加载")}
+                </button>
+              </div>
+            )}
             {selectedGroups.map((group) => (
               <section className="capability-group" key={group.name}>
                 <div className="capability-group-head">
@@ -281,10 +313,17 @@ export function CapabilitySettings({
                 </section>
               ) : null;
             })}
-            {error && (
-              <p className="inline-error" role="alert">
-                {error}
-              </p>
+            {(error || accountReadError) && (
+              <div className="platform-status-feedback">
+                <p className="inline-error" role="alert">
+                  {error || accountReadError}
+                </p>
+                {(accountReadError || error) && (
+                  <button className="text-button" onClick={reloadStatus}>
+                    {t("重新加载")}
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </Modal>

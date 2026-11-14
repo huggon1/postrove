@@ -9,6 +9,10 @@ import {
   ShieldCheck,
 } from "@phosphor-icons/react";
 import { bridge } from "../bridge";
+import {
+  hasSessionDraft,
+  useSessionDraft,
+} from "../workspace/use-session-draft";
 import { t } from "../i18n";
 import { ConfirmDialog, Feedback, SecretField } from "../workspace/forms";
 import {
@@ -27,10 +31,13 @@ export function FeishuSettings({
   const channel = "feishu" as const;
   const [status, setStatus] = useState<BotStatus>();
   const [open, setOpen] = useState(false);
-  const [step, setStep] = useState<number | "manage">(0);
-  const [manual, setManual] = useState(false);
-  const [appId, setAppId] = useState(""),
-    [secret, setSecret] = useState("");
+  const [step, setStep, discardStep] = useSessionDraft<number | "manage">(
+    "feishu.step",
+    0,
+  );
+  const [manual, setManual] = useSessionDraft("feishu.manual", false);
+  const [appId, setAppId, discardAppId] = useSessionDraft("feishu.app-id", ""),
+    [secret, setSecret, discardSecret] = useSessionDraft("feishu.secret", "");
   const [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
   const [now, setNow] = useState(Date.now());
@@ -93,13 +100,19 @@ export function FeishuSettings({
     void bridge.cancelBotRegistration(channel);
   };
   const finish = () => {
+    if (busy) return;
     setOpen(false);
-    setSecret("");
     setError("");
     cancelRegistration();
   };
+  const complete = () => {
+    discardSecret();
+    discardStep();
+    finish();
+  };
   const start = () => {
-    setStep(status?.configured ? "manage" : 0);
+    if (!hasSessionDraft("feishu.step"))
+      setStep(status?.configured ? "manage" : 0);
     setError("");
     setOpen(true);
   };
@@ -155,6 +168,7 @@ export function FeishuSettings({
           channel="feishu"
           title={t("飞书接入")}
           onClose={finish}
+          closeDisabled={busy}
           steps={
             step === "manage"
               ? undefined
@@ -164,9 +178,19 @@ export function FeishuSettings({
           footer={
             step === "manage" ? undefined : (
               <>
+                {status?.configured && (
+                  <button
+                    className="text-button"
+                    disabled={busy}
+                    onClick={() => setStep("manage")}
+                  >
+                    {t("管理连接")}
+                  </button>
+                )}
                 {step > 0 && (
                   <button
                     className="text-button"
+                    disabled={busy}
                     onClick={() => {
                       setStep(step - 1);
                       setError("");
@@ -176,7 +200,11 @@ export function FeishuSettings({
                     {t("上一步")}
                   </button>
                 )}
-                <button className="text-button" onClick={finish}>
+                <button
+                  className="text-button"
+                  disabled={busy}
+                  onClick={step === 3 ? complete : finish}
+                >
                   {t(step === 3 ? "完成" : "稍后继续")}
                 </button>
               </>
@@ -281,7 +309,7 @@ export function FeishuSettings({
                         appSecret: secret.trim(),
                       });
                       if (reply.ok) {
-                        setSecret("");
+                        discardSecret();
                         setStep(1);
                       }
                       return reply;
@@ -449,7 +477,7 @@ export function FeishuSettings({
               <button
                 className="primary"
                 onClick={() => {
-                  finish();
+                  complete();
                   onOpenContent();
                 }}
               >
@@ -473,7 +501,11 @@ export function FeishuSettings({
           }}
           onConfirm={async () => {
             if (await confirm.action()) {
-              if (confirm.clear) setStep(0);
+              if (confirm.clear) {
+                discardSecret();
+                discardAppId();
+                setStep(0);
+              }
               setConfirm(undefined);
             }
           }}

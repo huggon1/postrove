@@ -193,11 +193,13 @@ test("topic workspace connects experts, sends independently, reads and schedules
     await expect(members).toBeVisible();
     await members.getByRole("button", { name: "关闭", exact: true }).click();
     // Recipient selection is deliberate after membership changes.
+    await page.getByRole("button", { name: "选择接收成员", exact: true }).click();
     for (const name of ["Grok · 中文", "Grok · 英文", "点点 · 中文"])
       await page
         .getByRole("region", { name: "发起话题" })
-        .getByRole("button", { name, exact: false })
-        .click();
+        .getByRole("checkbox", { name, exact: true })
+        .check();
+    await page.getByRole("button", { name: "完成", exact: true }).click();
     await page
       .getByRole("textbox", { name: "话题内容" })
       .fill("大家怎样保存有用的阅读内容？");

@@ -19,6 +19,7 @@ import { failureMessages } from "../../shared/task-failure";
 import { bridge } from "../bridge";
 import { t } from "../i18n";
 import { Modal, ModalHeader } from "../workspace/ui";
+import { usePopover } from "../workspace/use-popover";
 import {
   ConfirmDialog,
   Feedback,
@@ -68,21 +69,8 @@ function ConnectionMenu({
   onEdit(): void;
   onRemove(): void;
 }) {
-  const [open, setOpen] = useState(false);
-  const root = useRef<HTMLDivElement>(null);
-  const trigger = useRef<HTMLButtonElement>(null);
+  const { open, setOpen, root, trigger, panel, style } = usePopover();
   const id = useId();
-  useEffect(() => {
-    if (!open) return;
-    root.current
-      ?.querySelector<HTMLButtonElement>('[role="menuitem"]')
-      ?.focus();
-    const dismiss = (event: PointerEvent) => {
-      if (!root.current?.contains(event.target as Node)) setOpen(false);
-    };
-    document.addEventListener("pointerdown", dismiss);
-    return () => document.removeEventListener("pointerdown", dismiss);
-  }, [open]);
   const invoke = (operation: () => void) => {
     trigger.current?.focus();
     setOpen(false);
@@ -149,6 +137,8 @@ function ConnectionMenu({
         <div
           id={id}
           className="model-connection-menu-items"
+          ref={panel}
+          style={style}
           role="menu"
           aria-label={t("连接操作")}
         >
@@ -175,6 +165,31 @@ function ConnectionMenu({
   );
 }
 
+type EditorDraft = {
+  candidateId?: string;
+  step: number;
+  providerId: string;
+  connectionMode: "builtin" | "custom";
+  modelId: string;
+  name: string;
+  options: PiOptions;
+  apiJson: string;
+  customJson: string;
+  customProvider: string;
+};
+const editorDrafts = new Map<string, EditorDraft>();
+const emptyEditor = (): EditorDraft => ({
+  step: 0,
+  providerId: "",
+  connectionMode: "builtin",
+  modelId: "",
+  name: "",
+  options: defaultPiOptions(),
+  apiJson: "{}",
+  customJson: customTemplate,
+  customProvider: "my-provider",
+});
+
 export function ModelSettings() {
   const [view, setView] = useState<ModelView>();
   const [editingConnectionId, setEditingConnectionId] = useState<string>();
@@ -195,6 +210,40 @@ export function ModelSettings() {
     [error, setError] = useState(""),
     [removing, setRemoving] = useState<string>();
   const [errorConnectionId, setErrorConnectionId] = useState<string>();
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const form = useRef<HTMLFormElement>(null);
+  const fieldId = useId();
+  const restoreDraft = (
+    draft: EditorDraft,
+    selectedId = view?.selected?.id,
+    savedEditor = false,
+  ) => {
+    setStep(
+      draft.step > 0 && draft.candidateId !== selectedId
+        ? savedEditor
+          ? 1
+          : 0
+        : draft.step,
+    );
+    setProviderId(draft.providerId);
+    setConnectionMode(draft.connectionMode);
+    setModelId(draft.modelId);
+    setName(draft.name);
+    setOptions(draft.options);
+    setApiJson(draft.apiJson);
+    setCustomJson(draft.customJson);
+    setCustomProvider(draft.customProvider);
+  };
+  const focusField = (field: string) =>
+    requestAnimationFrame(() => {
+      const input = document.querySelector<HTMLElement>(
+        `[data-model-field="${field}"]`,
+      );
+      const details = input?.closest("details");
+      if (details) details.open = true;
+      input?.focus();
+      input?.scrollIntoView({ block: "nearest" });
+    });
   useEffect(() => {
     let active = true,
       version = 0;
@@ -218,16 +267,41 @@ export function ModelSettings() {
   }, []);
   useEffect(() => {
     if (!view?.selected) return;
+    const savedDraft =
+      editorDrafts.get(view.selected.id) ??
+      (view.selected.replacesId
+        ? editorDrafts.get(view.selected.replacesId)
+        : undefined);
+    if (savedDraft) {
+      restoreDraft(savedDraft, view.selected.id, true);
+      return;
+    }
+    const pendingNew = editorDrafts.get("new");
+    if (
+      !editingConnectionId &&
+      pendingNew?.candidateId &&
+      pendingNew.providerId === view.selected.providerId &&
+      !view.connections.some(
+        (connection) => connection.id === view.selected!.id,
+      )
+    ) {
+      setModelId(pendingNew.modelId);
+      setName(pendingNew.name);
+      setOptions(pendingNew.options);
+      setApiJson(pendingNew.apiJson);
+      return;
+    }
     setModelId(view.selected.modelId ?? "");
     setName(view.selected.name);
     setOptions(view.selected.options);
     setApiJson(JSON.stringify(view.selected.options.apiOptions, null, 2));
-  }, [view?.selected?.id, editing]);
+  }, [view?.selected?.id]);
   useEffect(() => setAnswer(""), [view?.authPrompt?.id]);
   async function action(
     operation: () => Promise<ModelReply<unknown>>,
     connectionId?: string,
   ) {
+    if (busy) return false;
     setBusy(true);
     setError("");
     setErrorConnectionId(connectionId);
@@ -254,15 +328,50 @@ export function ModelSettings() {
   } catch {
     advanced = true;
   }
-  const update = <K extends keyof PiOptions>(key: K, value: PiOptions[K]) =>
+  const update = <K extends keyof PiOptions>(key: K, value: PiOptions[K]) => {
     setOptions((old) => ({ ...old, [key]: value }));
+    setFieldErrors((old) => ({ ...old, [key]: "" }));
+  };
   async function save() {
     if (!selected) return;
+    if (
+      editingConnectionId
+        ? selected.id !== editingConnectionId &&
+          selected.replacesId !== editingConnectionId
+        : !!selected.replacesId ||
+          view?.connections.some((connection) => connection.id === selected.id)
+    ) {
+      setStep(0);
+      return;
+    }
+    const invalid: Record<string, string> = {};
+    if (
+      options.temperature !== undefined &&
+      (!Number.isFinite(options.temperature) ||
+        options.temperature < 0 ||
+        options.temperature > 2)
+    )
+      invalid.temperature = t("请输入 0 到 2 之间的数值");
+    if (
+      options.maxTokens !== undefined &&
+      (!Number.isInteger(options.maxTokens) ||
+        options.maxTokens < 1 ||
+        options.maxTokens > 2_000_000)
+    )
+      invalid.maxTokens = t("请输入 1 到 2000000 之间的整数");
+    setFieldErrors(invalid);
+    if (Object.keys(invalid).length) {
+      setError("");
+      focusField(Object.keys(invalid)[0]);
+      return;
+    }
     let apiOptions: PiOptions["apiOptions"];
     try {
       apiOptions = jsonObject(apiJson);
     } catch {
       setError(t("请填写有效的 JSON 对象"));
+      setFieldErrors({ apiJson: t("请填写有效的 JSON 对象") });
+      focusField("apiJson");
       return;
     }
     if (
@@ -275,12 +384,30 @@ export function ModelSettings() {
           options: { ...options, apiOptions },
         }),
       )
-    )
+    ) {
+      editorDrafts.delete(editingConnectionId ?? "new");
       setEditing(false);
+    }
   }
-  const close = () => {
+  const currentDraft = (): EditorDraft => ({
+    candidateId: selected?.id,
+    step,
+    providerId: step > 0 ? (selected?.providerId ?? providerId) : providerId,
+    connectionMode,
+    modelId,
+    name,
+    options,
+    apiJson,
+    customJson,
+    customProvider,
+  });
+  const close = (preserve = true) => {
     if (busy) return;
     if (view?.auth === "logging_in") void bridge.cancelModelLogin();
+    if (preserve)
+      editorDrafts.set(editingConnectionId ?? "new", currentDraft());
+    else editorDrafts.delete(editingConnectionId ?? "new");
+    setFieldErrors({});
     setEditing(false);
     setAnswer("");
     setError("");
@@ -319,7 +446,20 @@ export function ModelSettings() {
       )
     ) {
       setEditingConnectionId(connection.id);
-      setStep(2);
+      const draft = editorDrafts.get(connection.id);
+      if (draft) restoreDraft(draft, connection.id, true);
+      else {
+        const fresh = await bridge.modelView();
+        if (fresh.ok && fresh.value.selected) {
+          const selected = fresh.value.selected;
+          setView(fresh.value);
+          setModelId(selected.modelId ?? "");
+          setName(selected.name);
+          setOptions(selected.options);
+          setApiJson(JSON.stringify(selected.options.apiOptions, null, 2));
+        }
+        setStep(2);
+      }
       setEditing(true);
     }
   };
@@ -334,9 +474,10 @@ export function ModelSettings() {
             onClick={() => {
               setEditingConnectionId(undefined);
               setEditing(true);
-              setStep(0);
-              setConnectionMode("builtin");
-              setProviderId("");
+              const draft = editorDrafts.get("new");
+              if (draft) restoreDraft(draft);
+              else restoreDraft(emptyEditor());
+              setFieldErrors({});
               setError("");
             }}
           >
@@ -492,9 +633,13 @@ export function ModelSettings() {
         <Modal
           label={editingTitle}
           className="connection-modal model-modal"
-          onClose={close}
+          onClose={() => close()}
         >
-          <ModalHeader title={editingTitle} onClose={close} />
+          <ModalHeader
+            title={editingTitle}
+            onClose={() => close()}
+            closeDisabled={busy}
+          />
           <div className="model-workspace">
             <SetupSteps
               items={[t("连接方式"), t("认证"), t("模型与参数")]}
@@ -514,6 +659,7 @@ export function ModelSettings() {
                     onClick={() => {
                       setConnectionMode("builtin");
                       setError("");
+                      setFieldErrors({});
                     }}
                   >
                     {t("内置供应商")}
@@ -525,6 +671,7 @@ export function ModelSettings() {
                     onClick={() => {
                       setConnectionMode("custom");
                       setError("");
+                      setFieldErrors({});
                     }}
                   >
                     {t("自定义服务")}
@@ -565,12 +712,31 @@ export function ModelSettings() {
                       <span>models.json</span>
                       <textarea
                         aria-label="Pi models.json"
+                        data-model-field="customJson"
+                        aria-invalid={!!fieldErrors.customJson}
+                        aria-describedby={
+                          fieldErrors.customJson
+                            ? `${fieldId}-customJson`
+                            : undefined
+                        }
                         className="code-input"
                         rows={10}
                         value={customJson}
                         disabled={busy}
-                        onChange={(event) => setCustomJson(event.target.value)}
+                        onChange={(event) => {
+                          setCustomJson(event.target.value);
+                          setFieldErrors((old) => ({ ...old, customJson: "" }));
+                          setError("");
+                        }}
                       />
+                      {fieldErrors.customJson && (
+                        <span
+                          id={`${fieldId}-customJson`}
+                          className="field-error"
+                        >
+                          {fieldErrors.customJson}
+                        </span>
+                      )}
                     </label>
                   </>
                 )}
@@ -588,6 +754,10 @@ export function ModelSettings() {
                         jsonObject(customJson);
                       } catch {
                         setError(t("请填写有效的 JSON 对象"));
+                        setFieldErrors({
+                          customJson: t("请填写有效的 JSON 对象"),
+                        });
+                        focusField("customJson");
                         return;
                       }
                       if (
@@ -633,11 +803,15 @@ export function ModelSettings() {
                         className="secondary"
                         disabled={busy}
                         key={method.type}
-                        onClick={() =>
+                        onClick={() => {
+                          editorDrafts.set(
+                            editingConnectionId ?? "new",
+                            currentDraft(),
+                          );
                           void action(() =>
                             bridge.loginModel({ authType: method.type }),
-                          )
-                        }
+                          );
+                        }}
                       >
                         {method.name}
                       </button>
@@ -651,6 +825,7 @@ export function ModelSettings() {
                         {event.instructions && <p>{event.instructions}</p>}
                         <button
                           className="secondary"
+                          disabled={busy}
                           onClick={() =>
                             void action(() =>
                               bridge.openModelAuthUrl(event.url),
@@ -668,6 +843,7 @@ export function ModelSettings() {
                         </p>
                         <button
                           className="secondary"
+                          disabled={busy}
                           onClick={() =>
                             void action(() =>
                               bridge.openModelAuthUrl(event.verificationUri),
@@ -684,6 +860,7 @@ export function ModelSettings() {
                           <button
                             className="text-button"
                             key={link.url}
+                            disabled={busy}
                             onClick={() =>
                               void action(() =>
                                 bridge.openModelAuthUrl(link.url),
@@ -702,16 +879,19 @@ export function ModelSettings() {
                     className="model-auth-prompt"
                     onSubmit={(event) => {
                       event.preventDefault();
+                      if (busy || !answer) return;
                       const value = answer;
-                      setAnswer("");
                       void action(() =>
                         bridge.respondModelAuth({ id: prompt.id, value }),
-                      );
+                      ).then((ok) => {
+                        if (ok) setAnswer("");
+                      });
                     }}
                   >
                     {prompt.type === "secret" ? (
                       <SecretField
                         label={prompt.message}
+                        disabled={busy}
                         autoFocus
                         value={answer}
                         placeholder={prompt.placeholder}
@@ -722,6 +902,7 @@ export function ModelSettings() {
                         <span>{prompt.message}</span>
                         {prompt.type === "select" ? (
                           <select
+                            disabled={busy}
                             value={answer}
                             onChange={(event) => setAnswer(event.target.value)}
                           >
@@ -735,6 +916,7 @@ export function ModelSettings() {
                         ) : (
                           <input
                             type="text"
+                            disabled={busy}
                             autoComplete="off"
                             autoFocus
                             value={answer}
@@ -748,7 +930,11 @@ export function ModelSettings() {
                       className="primary"
                       type="submit"
                       disabled={busy || !answer}
+                      aria-busy={busy}
                     >
+                      {busy && (
+                        <CircleNotch className="spin" aria-hidden="true" />
+                      )}
                       {t("继续认证")}
                     </button>
                   </form>
@@ -787,11 +973,20 @@ export function ModelSettings() {
               </>
             )}
             {step === 2 && (
-              <>
+              <form
+                ref={form}
+                className="model-options-form"
+                noValidate
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  if (!busy) void save();
+                }}
+              >
                 <label className="config-field">
                   <span>{t("连接名称")}</span>
                   <input
                     aria-label={t("连接名称")}
+                    disabled={busy}
                     maxLength={120}
                     value={name}
                     onChange={(event) => setName(event.target.value)}
@@ -870,6 +1065,15 @@ export function ModelSettings() {
                     <label className="config-field">
                       <span>Temperature</span>
                       <input
+                        data-model-field="temperature"
+                        disabled={busy}
+                        aria-label="Temperature"
+                        aria-invalid={!!fieldErrors.temperature}
+                        aria-describedby={
+                          fieldErrors.temperature
+                            ? `${fieldId}-temperature`
+                            : undefined
+                        }
                         type="number"
                         min="0"
                         max="2"
@@ -884,12 +1088,31 @@ export function ModelSettings() {
                           )
                         }
                       />
+                      {fieldErrors.temperature && (
+                        <span
+                          id={`${fieldId}-temperature`}
+                          className="field-error"
+                          role="alert"
+                        >
+                          {fieldErrors.temperature}
+                        </span>
+                      )}
                     </label>
                     <label className="config-field">
                       <span>{t("最大输出 token")}</span>
                       <input
+                        data-model-field="maxTokens"
+                        disabled={busy}
+                        aria-label={t("最大输出 token")}
+                        aria-invalid={!!fieldErrors.maxTokens}
+                        aria-describedby={
+                          fieldErrors.maxTokens
+                            ? `${fieldId}-maxTokens`
+                            : undefined
+                        }
                         type="number"
                         min="1"
+                        max="2000000"
                         value={options.maxTokens ?? ""}
                         onChange={(event) =>
                           update(
@@ -900,11 +1123,21 @@ export function ModelSettings() {
                           )
                         }
                       />
+                      {fieldErrors.maxTokens && (
+                        <span
+                          id={`${fieldId}-maxTokens`}
+                          className="field-error"
+                          role="alert"
+                        >
+                          {fieldErrors.maxTokens}
+                        </span>
+                      )}
                     </label>
                     <label className="config-field">
                       <span>{t("传输方式")}</span>
                       <select
                         value={options.transport}
+                        disabled={busy}
                         onChange={(event) =>
                           update(
                             "transport",
@@ -923,6 +1156,7 @@ export function ModelSettings() {
                       <span>{t("缓存偏好")}</span>
                       <select
                         value={options.cacheRetention}
+                        disabled={busy}
                         onChange={(event) =>
                           update(
                             "cacheRetention",
@@ -943,15 +1177,27 @@ export function ModelSettings() {
                     <span>Pi API options JSON</span>
                     <textarea
                       aria-label="Pi API options JSON"
+                      data-model-field="apiJson"
+                      disabled={busy}
+                      aria-invalid={!!fieldErrors.apiJson}
+                      aria-describedby={
+                        fieldErrors.apiJson ? `${fieldId}-apiJson` : undefined
+                      }
                       className="code-input"
                       rows={7}
                       value={apiJson}
                       onChange={(event) => {
                         setApiJson(event.target.value);
+                        setFieldErrors((old) => ({ ...old, apiJson: "" }));
                         setError("");
                       }}
                     />
                   </label>
+                  {fieldErrors.apiJson && (
+                    <span id={`${fieldId}-apiJson`} className="field-error">
+                      {fieldErrors.apiJson}
+                    </span>
+                  )}
                   {advanced && (
                     <p className="auth-state">{t("Reasoning 由 JSON 控制")}</p>
                   )}
@@ -960,16 +1206,25 @@ export function ModelSettings() {
                   className="primary full-width"
                   disabled={
                     busy ||
+                    !selected ||
+                    (editingConnectionId
+                      ? selected.id !== editingConnectionId &&
+                        selected.replacesId !== editingConnectionId
+                      : !!selected.replacesId ||
+                        view?.connections.some(
+                          (connection) => connection.id === selected.id,
+                        )) ||
                     !model?.compatible ||
                     !name.trim() ||
                     view?.auth !== "signed_in"
                   }
-                  onClick={() => void save()}
+                  type="submit"
+                  aria-busy={busy}
                 >
                   {t(editingConnectionId ? "保存连接" : "保存并使用")}
-                  <Check />
+                  {busy ? <CircleNotch className="spin" /> : <Check />}
                 </button>
-              </>
+              </form>
             )}
             {error && <Feedback error>{error}</Feedback>}
             <footer className="setup-footer">
@@ -985,7 +1240,11 @@ export function ModelSettings() {
                   {t("上一步")}
                 </button>
               )}
-              <button className="text-button" disabled={busy} onClick={close}>
+              <button
+                className="text-button"
+                disabled={busy}
+                onClick={() => close(false)}
+              >
                 {t("取消")}
               </button>
             </footer>
