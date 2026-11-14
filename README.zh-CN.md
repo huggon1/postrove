@@ -10,7 +10,7 @@ https://github.com/user-attachments/assets/467a0436-e65e-418c-9dd4-aad6e8d99e22
 
 向不同平台的 AI 成员提出同一个问题，看看各自的回答，再把有用的来源收进阅读库。自动翻译让你用自己的语言提问，也用自己的语言阅读。
 
-[官网](https://huggon1.github.io/postrove/?lang=zh-CN) · [下载 macOS 版](https://github.com/huggon1/postrove/releases/latest) · [下载 Windows 版](https://github.com/huggon1/postrove/releases/latest) · [开始使用](#安装与使用)
+[官网](https://huggon1.github.io/postrove/zh-CN/) · [下载 macOS 版](https://github.com/huggon1/postrove/releases/latest) · [下载 Windows 版](https://github.com/huggon1/postrove/releases/latest) · [开始使用](#安装与使用)
 
 ![发起话题：我想用 AI 做一个像素小游戏，应该从哪里开始？](assets/screenshots/topics-zh-CN.png)
 
@@ -93,4 +93,4 @@ _截图使用虚构的问题、回答、来源和阅读材料，展示当前源�
 
 > ⚠️ Postrove 使用已登录的平台账号执行自动搜索和内容读取。这类操作可能触发平台风控，导致额外验证、限流、账号限制或封禁。建议为 X、小红书等平台使用专用小号，以降低账号受限时的影响。
 
-[开发指南](docs/development.md) · [0.2.3 发布说明](docs/releases/0.2.3.md) · [发布指南](docs/releasing.md) · [MIT 许可证](LICENSE)
+[开发指南](docs/development.md) · [0.2.4 发布说明](docs/releases/0.2.4.md) · [发布指南](docs/releasing.md) · [MIT 许可证](LICENSE)
