@@ -322,6 +322,18 @@ export function ReadingView({
     : "";
 
   const positionKey = `${material?.id ?? ""}:${original ? "original" : "reading"}`;
+  const rememberPosition = () => {
+    if (scroll.current && !restoringPosition.current)
+      session.positions[positionKey] = scroll.current.scrollTop;
+  };
+  const close = () => {
+    rememberPosition();
+    onClose();
+  };
+  const selectVersion = (value: boolean) => {
+    rememberPosition();
+    setOriginal(value);
+  };
   useLayoutEffect(() => {
     session.materialId = material?.id ?? "";
     session.original = original;
@@ -367,8 +379,8 @@ export function ReadingView({
     };
   }, [report.taskId, material?.id, original]);
   return (
-    <Modal label={t("阅读内容")} className="reader-modal" onClose={onClose}>
-      <ModalHeader title={t("阅读")} onClose={onClose}>
+    <Modal label={t("阅读内容")} className="reader-modal" onClose={close}>
+      <ModalHeader title={t("阅读")} onClose={close}>
         <IconButton
           label={t("打开原链接")}
           disabled={workspace.pending(scope("open"))}
@@ -423,14 +435,14 @@ export function ReadingView({
               className={!original && hasReading ? "on" : ""}
               aria-pressed={!original && !!hasReading}
               disabled={!hasReading}
-              onClick={() => setOriginal(false)}
+              onClick={() => selectVersion(false)}
             >
               {t("阅读版本")}
             </button>
             <button
               className={original || !hasReading ? "on" : ""}
               aria-pressed={original || !hasReading}
-              onClick={() => setOriginal(true)}
+              onClick={() => selectVersion(true)}
             >
               {t("原文")}
             </button>
@@ -486,6 +498,7 @@ export function ReadingView({
               aria-label={t("材料")}
               value={material?.id}
               onChange={(event) => {
+                rememberPosition();
                 setMaterialId(event.target.value);
                 setOriginal(false);
               }}

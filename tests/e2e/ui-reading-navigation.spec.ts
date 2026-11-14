@@ -169,15 +169,19 @@ for (const language of ["zh-CN", "en"] as const) {
           exact: true,
         }),
       ).toBeVisible();
-      await scroll.evaluate((el) => {
-        el.scrollTop = 1200;
-      });
-      await expect.poll(() => scroll.evaluate((el) => el.scrollTop)).toBe(1200);
       const selector = reader.getByRole("combobox", {
         name: label("材料", "Material"),
         exact: true,
       });
-      await selector.selectOption("reference");
+      // Switch before the browser delivers its queued scroll event.
+      await selector.evaluate((element: HTMLSelectElement) => {
+        const content = element
+          .closest(".reader-modal")!
+          .querySelector(".reader-scroll")!;
+        content.scrollTop = 1200;
+        element.value = "reference";
+        element.dispatchEvent(new Event("change", { bubbles: true }));
+      });
       await expect.poll(() => scroll.evaluate((el) => el.scrollTop)).toBe(0);
       await scroll.evaluate((el) => {
         el.scrollTop = 800;
