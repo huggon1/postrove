@@ -1,46 +1,19 @@
 <!doctype html>
-<html lang="en">
+<html lang="{{language}}">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="theme-color" content="#f8f9fc" />
-    <meta
-      name="description"
-      content="Ask platform AI for answers and related posts. Forward posts to your bot; Postrove prepares them for reading and further work with your agent. Available for macOS and Windows."
+    {{head}}
+    <link
+      rel="icon"
+      href="{{assetPrefix}}assets/postrove-icon.svg"
+      type="image/svg+xml"
     />
-    <meta
-      property="og:title"
-      content="Postrove — Ask platform AI. Put saved posts to use."
-    />
-    <meta
-      property="og:description"
-      content="Ask platform AI for answers and related posts. Forward posts to your bot; Postrove prepares them for reading and further work with your agent."
-    />
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://huggon1.github.io/postrove/" />
-    <meta
-      property="og:image"
-      content="https://huggon1.github.io/postrove/assets/screenshots/reading-en.png"
-    />
-    <title>Postrove — Ask platform AI. Put saved posts to use.</title>
-    <link rel="icon" href="./assets/postrove-icon.svg" type="image/svg+xml" />
-    <link rel="canonical" href="https://huggon1.github.io/postrove/" />
-    <link rel="stylesheet" href="./styles.css" />
-    <script type="module" src="./main.js"></script>
+    <link rel="stylesheet" href="{{assetPrefix}}styles.css" />
+    <script type="module" src="{{assetPrefix}}main.js"></script>
   </head>
   <body>
-    <div id="app"></div>
-    <noscript
-      ><main class="section-width">
-        <h1>Postrove</h1>
-        <p>
-          Ask platform AI for related posts. Forward useful posts to prepare
-          them for reading and use.
-        </p>
-        <a href="https://github.com/huggon1/postrove"
-          >View Postrove on GitHub</a
-        >
-      </main></noscript
-    >
+    <div id="app">{{body}}</div>
   </body>
 </html>
