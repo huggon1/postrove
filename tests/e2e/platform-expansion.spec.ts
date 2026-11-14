@@ -92,15 +92,14 @@ test("new members share Gemini setup, enable Reddit guest use, and retain schedu
     });
     await page.setViewportSize({ width: 1280, height: 900 });
     await members.getByRole("button", { name: "关闭", exact: true }).click();
-    await expect(
-      page.getByRole("button", {
-        name: "Gemini · YouTube · 中文",
-        exact: true,
-      }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: "Reddit AI · 英文", exact: true }),
-    ).toBeVisible();
+    await page.getByRole("button", { name: "选择接收成员", exact: true }).click();
+    const recipients = page.getByRole("group", { name: "接收成员", exact: true });
+    for (const name of ["Gemini · YouTube · 中文", "Reddit AI · 英文"])
+      await recipients.getByRole("checkbox", { name, exact: true }).check();
+    await recipients.getByRole("button", { name: "完成", exact: true }).click();
+    const summary = page.locator(".recipient-chips");
+    await expect(summary).toContainText("Gemini · YouTube · 中文");
+    await expect(summary).toContainText("Reddit AI · 英文");
     for (const member of [
       { name: "Reddit AI · 英文 Reddit", heading: "Reddit AI · 配置" },
       { name: "Gemini · YouTube · 中文 YouTube", heading: "Gemini · 配置" },
