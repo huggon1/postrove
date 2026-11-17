@@ -74,14 +74,33 @@ Fixtures use isolated profiles and controlled external responses.
 
 The `@smoke` cases reuse the application tests for startup, browser-visibility settings across restart, saved language across system-language changes, and reading jobs with controlled source/model responses. `test:smoke` selects these cases with project dependencies disabled. The full suite also runs these cases.
 
-The [Checks workflow](../.github/workflows/checks.yml) selects verification by event:
+## CI scopes
 
-| Event | Verification |
+The [Checks workflow](../.github/workflows/checks.yml) always runs Linux shared checks (`npm run check`) and the `CI gate`. Automatic scope selection reads the complete Git diff:
+
+| Changed files | Application scope |
 | --- | --- |
-| PR targeting `dev`, push to `dev` or `main` | Linux shared checks and macOS smoke cases |
-| PR targeting `main`, manual Checks run | Linux shared checks, full macOS and Windows E2E, and Windows package/installation verification |
+| Documentation and homepage paths only, or an empty diff | `static`: shared checks |
+| Application inputs or other paths in a PR targeting `dev`, or a push to `dev` or `main` | `quick`: shared checks and macOS smoke cases |
+| Application inputs or other paths in a PR targeting `main`, or a manual run with `auto` | `full`: shared checks, full macOS and Windows E2E, and Windows package/installation verification |
 
-Windows application and package checks use separate jobs and evidence artifacts, so a failed stage can be rerun independently. The always-running `CI gate` requires each selected job to succeed and verifies that omitted Windows jobs match the quick scope. Failed, cancelled, missing, and unexpectedly skipped jobs fail the gate. [Contribution workflow](../docs/contributing.md) owns branch and merge rules. [Release](../.github/workflows/release.yml) owns both platform packages, signing, and native upgrade verification.
+Documentation and homepage paths are `docs/**`, `README.md` and `README.<language>.md` in any directory, root `AGENTS.md`, `tests/*.md`, `website/**`, `scripts/homepage/**`, and `assets/screenshots/**`. Shared application icons, runtime skill Markdown, dependencies, tests, CI configuration, and unknown paths retain the event's application scope. A mixed change follows its application paths. A missing comparison revision or failed Git diff also retains the event's application scope.
+
+PR comparisons use the event's base revision and the tested merge revision. Push comparisons include every commit between the event's previous and current revisions. Renames include both source and destination paths. Manual `auto` runs compare the selected branch with its merge base on `main`; selecting `main` compares its latest commit with its first parent.
+
+PR labels override automatic selection:
+
+| Label | Result |
+| --- | --- |
+| `ci:skip-app` | Select `static`; shared checks and the gate run |
+| `ci:full` | Select `full`, including documentation and homepage changes |
+| Both labels | Select `full` |
+
+Adding or removing a label starts a fresh PR Checks run. Labels apply to that PR; the resulting branch push uses its actual changed files. The scope step records its selected scope in the Actions summary.
+
+Actions → Checks → Run workflow offers `auto`, `quick`, and `full`. The default is `auto`. Choosing `quick` or `full` runs that application scope for the selected branch, including documentation and homepage changes.
+
+Windows application and package checks use separate jobs and evidence artifacts, so a failed stage can be rerun independently. The always-running `CI gate` requires each selected job to succeed and each omitted application job to report `skipped`. Failed, cancelled, missing, and unexpectedly skipped jobs fail the gate. [Contribution workflow](../docs/contributing.md) owns branch and merge rules. The [Homepage workflow](../.github/workflows/pages.yml) owns homepage builds and publication. [Release](../.github/workflows/release.yml) owns both platform packages, signing, and native upgrade verification.
 
 ## Native update acceptance
 
