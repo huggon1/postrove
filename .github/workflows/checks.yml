@@ -2,10 +2,20 @@ name: Checks
 on:
   pull_request:
     branches: [dev, main]
-    types: [opened, synchronize, reopened, edited]
+    types: [opened, synchronize, reopened, edited, labeled, unlabeled]
   push:
     branches: [dev, main]
   workflow_dispatch:
+    inputs:
+      scope:
+        description: Application check scope
+        required: true
+        default: auto
+        type: choice
+        options:
+          - auto
+          - quick
+          - full
 permissions:
   contents: read
 concurrency:
@@ -19,6 +29,8 @@ jobs:
       tier: ${{ steps.scope.outputs.tier }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v7
         with:
           node-version: 24
@@ -26,10 +38,13 @@ jobs:
       - id: scope
         name: Select check scope
         run: node scripts/checks/ci.mjs scope
+        env:
+          CI_SCOPE: ${{ inputs.scope }}
       - run: npm ci
       - run: npm run check
   application:
     needs: static
+    if: needs.static.outputs.tier == 'quick' || needs.static.outputs.tier == 'full'
     runs-on: macos-15
     timeout-minutes: 45
     steps:
