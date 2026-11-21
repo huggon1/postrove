@@ -51,6 +51,14 @@ For example, ask “I want to make a pixel game with AI. Where do I start?” Co
 
 The reader’s copy icon copies the absolute `result.md` path for a coding agent. Browser addresses can be added with an omitted HTTPS prefix.
 
+Install the [Postrove Reading skill](skills/postrove-reading/) from GitHub. This example installs it in the current project for Claude Code.
+
+```sh
+npx skills add huggon1/postrove --skill postrove-reading --agent claude-code --copy
+```
+
+Use `--agent codex` or `--agent cursor` for those clients. Invoke the skill explicitly to read saved results. For an agent that cannot disable automatic invocation, save `SKILL.md` outside its skill search paths and attach it when needed.
+
 ![Read a saved pixel-game tutorial with its summary, illustration, and original-text switch](assets/screenshots/reading-en.png)
 
 Reading rules define the content to capture. The Agent loads the relevant Skill for the observed page. Other pages use the general web rule, with the Agent identifying the main content and how to read it.
