@@ -239,7 +239,7 @@ export interface DesktopBridge {
   }): Promise<ModelReply<void>>;
   openModelAuthUrl(url: string): Promise<ModelReply<void>>;
   cancelModelLogin(): Promise<ModelReply<void>>;
-  refreshModels(): Promise<ModelReply<void>>;
+  refreshModels(connectionId: string): Promise<ModelReply<ModelView>>;
   checkModel(): Promise<ModelReply<void>>;
   cancelModelCheck(): Promise<ModelReply<void>>;
   platformStatus(

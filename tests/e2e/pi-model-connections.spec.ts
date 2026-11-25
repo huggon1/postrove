@@ -34,6 +34,7 @@ import {
   getBuiltinProviders,
   getBuiltinModels,
 } from "@earendil-works/pi-ai/providers/all";
+import { defaultPiOptions } from "../../src/shared/model-contracts";
 
 const pathWithoutCodex =
   process.platform === "win32"
@@ -73,6 +74,197 @@ async function saved(profile: string) {
     throw error;
   }
 }
+
+test("refreshes the selected Pi catalog from the model editor", async ({}, info) => {
+  const profile = await mkdtemp(join(tmpdir(), "postrove-pi-catalog-"));
+  const baseModel = getBuiltinModels("openai")[0]!;
+  const newModel = {
+    ...baseModel,
+    id: "fictional-new-catalog-model",
+    name: "New catalog model",
+  };
+  const connections = [
+    { id: "00000000-0000-4000-8000-000000000001", name: "Primary" },
+    { id: "00000000-0000-4000-8000-000000000002", name: "Secondary" },
+  ].map((connection) => ({
+    ...connection,
+    providerId: baseModel.provider,
+    modelId: baseModel.id,
+    options: defaultPiOptions(),
+    useEnvironment: false,
+  }));
+  const [primary, secondary] = connections;
+  for (const connection of connections) {
+    const directory = join(profile, "pi", "connections", connection.id);
+    await mkdir(directory, { recursive: true });
+    await writeFile(
+      join(directory, "auth.json"),
+      JSON.stringify({
+        openai: { type: "api_key", key: "fictional-catalog-key" },
+      }),
+    );
+  }
+  await writeFile(
+    join(profile, "pi", "connections.json"),
+    JSON.stringify({
+      version: 2,
+      activeId: primary.id,
+      connections,
+      retiredIds: [],
+      legacyMigrated: true,
+    }),
+  );
+
+  let app: ElectronApplication | undefined;
+  try {
+    const { app: running, page } = await launch(profile);
+    app = running;
+    await app.evaluate(() => {
+      const original = globalThis.fetch;
+      const fixture = { count: 0, respond: (_response: Response) => {} };
+      Object.assign(globalThis, { catalogFixture: fixture });
+      globalThis.fetch = (input, init) => {
+        const url = new URL(
+          typeof input === "object" && "url" in input ? input.url : input,
+        );
+        if (url.origin !== "https://pi.dev") return original(input, init);
+        if (url.pathname !== "/api/models/providers/openai")
+          throw new Error("Unexpected catalog provider");
+        fixture.count++;
+        return new Promise((resolve) => {
+          fixture.respond = resolve;
+        });
+      };
+    });
+
+    const capture = (name: string) =>
+      page.screenshot({
+        path: info.outputPath(`${name}.png`),
+        animations: "disabled",
+      });
+    const requestCount = () =>
+      running.evaluate(() => (globalThis as any).catalogFixture.count);
+    const respond = (status: number) =>
+      running.evaluate(
+        (_electron, { status, newModel }) => {
+          (globalThis as any).catalogFixture.respond(
+            new Response(JSON.stringify([newModel]), {
+              status,
+              headers: { "last-modified": new Date().toUTCString() },
+            }),
+          );
+        },
+        { status, newModel },
+      );
+
+    const original = await saved(profile);
+    for (const [index, language] of ["zh-CN", "en"].entries()) {
+      const en = language === "en";
+      await page.setViewportSize({ width: en ? 390 : 1180, height: 844 });
+      if (en) {
+        await page
+          .getByRole("button", { name: "偏好设置", exact: true })
+          .click();
+        await page
+          .getByRole("combobox", { name: "界面语言" })
+          .selectOption("en");
+        await page
+          .getByRole("button", { name: "Background models", exact: true })
+          .click();
+      }
+      await page
+        .getByRole("article", { name: secondary.name, exact: true })
+        .getByRole("button", { name: en ? "Connection actions" : "连接操作" })
+        .click();
+      const edit = en ? "Edit configuration" : "编辑配置";
+      await page.getByRole("menuitem", { name: edit, exact: true }).click();
+      const dialog = page.getByRole("dialog", { name: edit, exact: true });
+      const model = dialog.getByRole("combobox", {
+        name: en ? "Model" : "模型",
+        exact: true,
+      });
+      const refresh = dialog.getByRole("button", {
+        name: en ? "Refresh catalog" : "刷新目录",
+        exact: true,
+      });
+      const save = dialog.getByRole("button", {
+        name: en ? "Save connection" : "保存连接",
+        exact: true,
+      });
+      const name = dialog.getByRole("textbox", {
+        name: en ? "Connection name" : "连接名称",
+        exact: true,
+      });
+      await expect(model).toHaveValue(baseModel.id);
+      await expect(model.locator(`option[value="${newModel.id}"]`)).toHaveCount(
+        index,
+      );
+      expect(await requestCount()).toBe(index * 2);
+      await capture(`catalog-before-${language}`);
+      await name.fill("Unsaved name");
+      await expect(refresh).toBeVisible({ timeout: 5_000 });
+      await refresh.click();
+      await expect.poll(requestCount).toBe(index * 2 + 1);
+      await expect(refresh).toBeDisabled();
+      await expect(refresh).toHaveAttribute("aria-busy", "true");
+      await expect(save).toBeDisabled();
+      await capture(`catalog-pending-${language}`);
+      await respond(403);
+      await expect(dialog.getByRole("alert")).toHaveText(
+        en ? "Model catalog refresh failed" : "模型目录刷新失败",
+      );
+      await expect(model).toHaveValue(baseModel.id);
+      await expect(name).toHaveValue("Unsaved name");
+      await capture(`catalog-failed-${language}`);
+
+      await refresh.click();
+      await expect.poll(requestCount).toBe(index * 2 + 2);
+      await respond(200);
+      await expect(dialog.getByRole("status")).toHaveText(
+        en ? "Pi catalog refreshed" : "Pi 目录已刷新",
+      );
+      await expect(dialog.getByRole("alert")).toHaveCount(0);
+      await expect(model).toHaveValue(baseModel.id);
+      await expect(model.locator(`option[value="${newModel.id}"]`)).toHaveText(
+        newModel.name,
+      );
+      await expect(name).toHaveValue("Unsaved name");
+      expect(await saved(profile)).toEqual(original);
+      expect(await modelView(page)).toMatchObject({
+        current: { connectionId: primary.id, modelId: baseModel.id },
+      });
+      expect(
+        (await modelView(page)).currentModels.some(
+          (item: { id: string }) => item.id === newModel.id,
+        ),
+      ).toBe(false);
+      expect(
+        await dialog.evaluate(
+          (element) => element.scrollWidth <= element.clientWidth,
+        ),
+      ).toBe(true);
+      await capture(`catalog-refreshed-${language}`);
+
+      if (en) {
+        await model.selectOption(newModel.id);
+        await save.click();
+        await expect(dialog).toHaveCount(0);
+        expect(await saved(profile)).toMatchObject({
+          activeId: primary.id,
+          connections: [
+            primary,
+            { ...secondary, name: "Unsaved name", modelId: newModel.id },
+          ],
+        });
+      } else {
+        await dialog.getByRole("button", { name: "取消", exact: true }).click();
+      }
+    }
+  } finally {
+    await app?.close();
+    await rm(profile, { recursive: true, force: true });
+  }
+});
 
 // All fixture values are fictional. Requests and the evidence store record option
 // fields and credential-presence booleans, while native auth files stay in temp.
@@ -923,7 +1115,7 @@ test("native OAuth rotation is serialized across workers and drains after Stop",
     );
     let refreshReply: unknown = "pending";
     const refreshing = page
-      .evaluate(() => window.postrove.refreshModels())
+      .evaluate((id) => window.postrove.refreshModels(id), id)
       .then((reply) => {
         refreshReply = reply;
       })

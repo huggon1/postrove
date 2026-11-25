@@ -93,7 +93,6 @@ export class ModelService {
     | "authFailure"
     | "authPrompt"
     | "authEvents"
-    | "catalog"
     | "message"
     | "check"
     | "checkFailure"
@@ -103,7 +102,6 @@ export class ModelService {
   > = {
     auth: "signed_out",
     authEvents: [],
-    catalog: "ready",
     message: "",
     check: "idle",
   };
@@ -753,33 +751,31 @@ export class ModelService {
     this.answer?.reject(new Error("cancelled"));
     await this.loginWork;
   }
-  async refresh() {
+  async refresh(connectionId: unknown) {
     return this.serial(async () => {
       if (this.closed || this.loginAbort) throw new Error("请等待认证完成");
-      if (!this.candidate) {
-        this.changed();
-        return;
-      }
       const candidate = this.candidate;
+      if (!candidate || candidate.id !== connectionId)
+        throw new ModelSettingsError("连接选择已变化，请重试");
       try {
         // Finish native credential rotation before starting the cancellable catalog
         // fetch. Shutdown waits for this serialized operation to settle.
-        await candidate.runtime.getAuth(candidate.providerId);
+        if (!(await candidate.runtime.getAuth(candidate.providerId)))
+          throw new Error("Pi catalog authentication unavailable");
         const result = await candidate.runtime.refresh({
           providers: [candidate.providerId],
           allowNetwork: true,
+          force: true,
           signal: AbortSignal.timeout(20_000),
         });
         if (result.aborted || result.errors.size)
           throw new Error("Pi catalog refresh incomplete");
-        this.state.catalog = "ready";
-        this.state.message = "Pi 目录已刷新";
       } catch {
-        this.state.catalog = "failed";
-        this.state.message = "Pi 目录刷新失败，已保留当前目录和连接";
+        throw new ModelSettingsError("模型目录刷新失败");
+      } finally {
+        this.changed();
       }
-      this.syncAuth();
-      this.changed();
+      return this.view();
     });
   }
   async save(input: unknown) {

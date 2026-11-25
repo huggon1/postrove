@@ -67,6 +67,14 @@ The [topic connection recovery E2E](../tests/e2e/topic-connection-recovery.spec.
 
 The [authentication pending E2E](../tests/e2e/ui-auth-pending.spec.ts) holds a native authentication response, checks locked input and dialog dismissal, and verifies that a failed submission retains its answer. Ask again stays disabled while the composer admits its current question.
 
+The model editor places Refresh catalog next to the Model selector. The [native Pi connection E2E](../tests/e2e/pi-model-connections.spec.ts) captures the control and its feedback in Simplified Chinese at desktop width and English at compact width.
+
+| Added copy | Admission source and trigger |
+| --- | --- |
+| Refresh catalog | Existing action label. Available in Model and options for an authenticated built-in connection. |
+| Pi catalog refreshed | Existing result message, shown after the refresh succeeds. |
+| Model catalog refresh failed | Existing operation feedback, shown after the refresh fails. |
+
 | Added copy | Admission source and trigger |
 | --- | --- |
 | Clear search | Required control while the reading search contains a query. |

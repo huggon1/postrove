@@ -1149,6 +1149,7 @@ export async function initializeServices(
             modelChannels.respond,
             modelChannels.openAuthUrl,
             modelChannels.login,
+            modelChannels.refresh,
           ] as string[]
         ).includes(channel)
           ? 1
@@ -1189,7 +1190,7 @@ export async function initializeServices(
             await models!.cancelLogin();
             break;
           case modelChannels.refresh:
-            await models!.refresh();
+            value = await models!.refresh(args[0]);
             break;
           case modelChannels.check:
             await models!.runCheck();

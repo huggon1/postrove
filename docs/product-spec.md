@@ -80,6 +80,8 @@ Each connection's actions menu offers Edit configuration and Remove connection. 
 
 Main freezes model metadata and options for active execution through a lease. Existing API connections migrate to Pi. Native authorization commits when the user saves the connection. Historical Codex settings remain inactive. Cancellation retains the active connection. Browser visibility changes apply at the next task admission after active task pages drain; overlapping task pages retain their shared browser mode. Platform sign-in always opens a visible window.
 
+In Model and options, Refresh catalog fetches the authenticated built-in provider's current Pi catalog for the connection being edited. The model list updates in place and keeps the draft fields and model selection. The editor reports the outcome and allows a retry after failure. Applying a different model requires a selection and save.
+
 ## Saved results and deletion
 
 Terminal runs publish immutable Markdown packages. Result file opens the current run's location. The reading header's copy icon copies the current attempt's absolute `result.md` path and briefly shows a check after copying. [Result contracts](data-contracts.md#result-packages) define stable paths and latest results for further Agent work.
