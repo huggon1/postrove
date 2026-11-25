@@ -4,6 +4,8 @@ import type { ExecutionGate } from "../execution-gate";
 import { randomUUID } from "node:crypto";
 import {
   startFocusSearchSchema,
+  platformAccountActionSchema,
+  type ModelAuthorizationIssue,
   saveFollowSchema,
   updateFollowSchema,
   type FocusSearchReport,
@@ -31,6 +33,8 @@ import { QuestionPreparationPool } from "./question-preparation";
 export const nextFollowRun = nextScheduleRun;
 
 type SearchExecution = {
+  modelAuthorization?: ModelAuthorizationIssue;
+  onModelAuthorizationFailure?(): void;
   content?: (
     input: ContentRequest,
     signal: AbortSignal,
@@ -841,6 +845,8 @@ export class FocusSearchService {
       await update((section) => {
         section.state = "running";
         delete section.error;
+        delete section.modelAuthorization;
+        delete section.platformAccountAction;
       });
       this.changed();
       await this.tasks.receive(taskId, {
@@ -899,6 +905,9 @@ export class FocusSearchService {
           this.changed();
         },
       );
+      const citationAuth = result.citationExtraction?.error === "model_auth";
+      if (citationAuth && !sectionController.signal.aborted)
+        execution.onModelAuthorizationFailure?.();
       if (result.citationExtraction?.state === "failed")
         result.citationExtraction.error = citationFailureReason(
           result.citationExtraction.error,
@@ -915,6 +924,8 @@ export class FocusSearchService {
         });
         if (result.citationExtraction?.state === "failed")
           section.failureStage = "sources";
+        if (citationAuth)
+          section.modelAuthorization = execution.modelAuthorization;
       });
       onBridgeFinished();
       sectionController.signal.throwIfAborted();
@@ -940,9 +951,14 @@ export class FocusSearchService {
             await update((section) => {
               section.readingReply = readingReply;
             });
-        } catch {
-          if (!sectionController.signal.aborted)
+        } catch (error) {
+          if (!sectionController.signal.aborted) {
+            const modelAuth =
+              error instanceof Error && error.message === "model_auth";
+            if (modelAuth) execution.onModelAuthorizationFailure?.();
             await update((section) => {
+              if (modelAuth)
+                section.modelAuthorization = execution.modelAuthorization;
               section.processingIssue = localizedText(
                 language,
                 "阅读版本生成失败",
@@ -950,6 +966,7 @@ export class FocusSearchService {
               );
               section.failureStage = "processing";
             });
+          }
         }
       }
       if (!sectionController.signal.aborted)
@@ -960,6 +977,8 @@ export class FocusSearchService {
     } catch (error) {
       if (sectionController.signal.aborted) return;
       const code = error instanceof Error ? error.message : "";
+      const accountAction = platformAccountActionSchema.safeParse(code);
+      if (code === "model_auth") execution.onModelAuthorizationFailure?.();
       const accessMessages: Record<string, string> = {
         login_required: localizedText(
           language,
@@ -993,6 +1012,10 @@ export class FocusSearchService {
         ),
       };
       await update((section) => {
+        if (accountAction.success)
+          section.platformAccountAction = accountAction.data;
+        if (code === "model_auth")
+          section.modelAuthorization = execution.modelAuthorization;
         if (section.rawReply.trim()) {
           section.state = "completed";
           delete section.error;
@@ -1012,6 +1035,14 @@ export class FocusSearchService {
           : "bridge";
         section.error =
           accessMessages[code] ??
+          ([
+            "model_auth",
+            "model_network",
+            "model_rate_limit",
+            "model_unavailable",
+          ].includes(code)
+            ? citationFailureReason(code, language)
+            : undefined) ??
           localizedText(
             language,
             "平台获取失败，请检查平台状态和模型连接",

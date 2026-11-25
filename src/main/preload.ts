@@ -90,6 +90,9 @@ const bridge: DesktopBridge = {
   exportTaskPiLogs: (taskId) =>
     ipcRenderer.invoke("tasks:export-pi-logs", taskId),
   focusSearchReports: () => ipcRenderer.invoke(searchChannels.reports),
+  searchReadiness: (ids) => ipcRenderer.invoke(searchChannels.readiness, ids),
+  openPlatformAccountAction: (id) =>
+    ipcRenderer.invoke(platformConnectionChannels.openAccountAction, id),
   startFocusSearch: (input) => ipcRenderer.invoke(searchChannels.start, input),
   retryFocusSearch: (taskId) =>
     ipcRenderer.invoke(searchChannels.retry, taskId),

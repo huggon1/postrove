@@ -45,6 +45,8 @@ export function Settings({
   section,
   onSection,
   onMember,
+  modelRecovery,
+  onModelRecoveryHandled,
   onReading,
   updateSection,
 }: {
@@ -52,6 +54,8 @@ export function Settings({
   section: SettingsSection;
   onSection(section: SettingsSection): void;
   onMember(connectionId?: string): void;
+  modelRecovery?: string;
+  onModelRecoveryHandled(): void;
   onReading(): void;
   updateSection: ReactNode;
 }) {
@@ -126,7 +130,12 @@ export function Settings({
             </div>
           </>
         )}
-        {section === "models" && <ModelSettings />}
+        {section === "models" && (
+          <ModelSettings
+            reauthorize={modelRecovery}
+            onReauthorizeHandled={onModelRecoveryHandled}
+          />
+        )}
         {section === "members" && (
           <>
             <SectionHeading title={t("AI 成员")} />

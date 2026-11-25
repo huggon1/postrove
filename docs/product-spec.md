@@ -14,6 +14,8 @@ The current renderer session retains composer questions, schedule drafts, model-
 
 The composer presents selected members as a summary. Choose recipients opens the selection menu; an empty selection displays that control's label.
 
+Postrove checks the active OAuth model connection on startup, when the window becomes active or the device resumes, and when the active model changes. It uses the provider's existing credential refresh. A confirmed authorization failure blocks manual topic sends and opens the active connection's authentication step. The composer retains the question throughout recovery. Each selected, sign-in-required platform uses existing local session evidence. When other recipients are available, an explicit send action submits only those members. Reddit remains eligible for guest use. An unknown state or temporary connection failure allows the send. Link intake keeps its separate action.
+
 On Windows, closing the final window shuts down services and exits the application; minimizing keeps it running. On macOS, closing a window keeps the application running, and the Dock reopens the workspace.
 
 ## Members and language
@@ -33,6 +35,8 @@ Main prepares one question version per selected expert language within each topi
 ## Replies, receipts, and recovery
 
 Main saves the platform answer before asking the same browser session to extract its citations. Receipt details show each member's answer, source state, and observed failure stage: question preparation, bridge, platform, sources, or reading processing. Partial success keeps useful replies and verified links readable. Empty sources produce a partial topic.
+
+A shared model authorization failure appears once at the top of the topic. A platform login, verification, or account confirmation appears for its affected members and opens the corresponding platform page. Other members keep their execution and any saved replies. Ask again returns the original question to the composer.
 
 Topic receipts expose Stop for active members, Stop all, result-file access, and native Pi log export. Stopping one member lets the other selected members continue. A captured answer survives cancellation and later citation or translation failure. A submitted checkpoint records the existing conversation; crash recovery observes that conversation before continuing. An unavailable conversation produces a bridge failure. A fresh send creates a new topic.
 
