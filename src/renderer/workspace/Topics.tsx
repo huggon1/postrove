@@ -22,9 +22,14 @@ import {
 import type {
   FocusSearchReport,
   SearchSection,
+  SearchReadiness,
+  ModelAuthorizationIssue,
+  PlatformAccountAction,
 } from "../../shared/focus-search-contracts";
 import {
-  advisors,
+  advisorById,
+  platformConnections,
+  type PlatformConnectionId,
   legacyAdvisor,
   type AdvisorId,
 } from "../../shared/advisor-contracts";
@@ -62,11 +67,93 @@ const sourceCount = (report: FocusSearchReport) =>
     ),
   ).size;
 
+function modelAuthorizationMessage(issue: ModelAuthorizationIssue) {
+  return tf(
+    issue.oauth ? "{0} 授权已失效" : "{0} 认证失败",
+    issue.providerName,
+  );
+}
+
+function sharedModelAuthorization(report: FocusSearchReport) {
+  const issue = report.sections[0]?.modelAuthorization;
+  if (
+    issue &&
+    report.sections.every(
+      (section) =>
+        section.state === "failed" &&
+        section.modelAuthorization?.connectionId === issue.connectionId,
+    )
+  )
+    return issue;
+}
+
+function connectionName(id: PlatformConnectionId) {
+  const connection = platformConnections.find((item) => item.id === id)!;
+  return t(id === "gemini-web" ? connection.name : connection.source);
+}
+
+function ModelRecovery({
+  issue,
+  onOpen,
+}: {
+  issue: ModelAuthorizationIssue;
+  onOpen(id: string): void;
+}) {
+  return (
+    <div className="topic-connection-feedback" role="alert">
+      <span>{modelAuthorizationMessage(issue)}</span>
+      <button
+        className="text-button"
+        onClick={() => onOpen(issue.connectionId)}
+      >
+        {tf(issue.oauth ? "重新授权 {0}" : "重新认证 {0}", issue.providerName)}
+      </button>
+    </div>
+  );
+}
+
+function platformRecoveryCopy(
+  id: PlatformConnectionId,
+  action: PlatformAccountAction,
+) {
+  const name = connectionName(id);
+  const messages = {
+    login_required: ["{0} 需要登录", "登录 {0}"],
+    verification_required: ["{0} 需要验证", "打开平台完成验证"],
+    action_required: ["{0} 需要确认账号关联或协议", "打开平台处理"],
+  } as const;
+  return messages[action].map((message) => tf(message, name));
+}
+
+function PlatformRecovery({
+  id,
+  action,
+  onOpen,
+  busy,
+}: {
+  id: PlatformConnectionId;
+  action: PlatformAccountAction;
+  onOpen(): void;
+  busy: boolean;
+}) {
+  const [message, label] = platformRecoveryCopy(id, action);
+  return (
+    <div className="topic-connection-feedback" role="alert">
+      <span>{message}</span>
+      <button className="text-button" onClick={onOpen} disabled={busy}>
+        {label}
+        <ArrowUpRight />
+      </button>
+    </div>
+  );
+}
+
 export function Composer({
   workspace,
   selected,
   onSelected,
   onMembers,
+  onModelRecovery,
   onLink,
   onSent,
   question: controlledQuestion,
@@ -76,6 +163,7 @@ export function Composer({
   selected: AdvisorId[];
   onSelected(ids: AdvisorId[]): void;
   onMembers(): void;
+  onModelRecovery(id: string): void;
   onLink(url?: string): void;
   onSent(reportId: string): void;
   question?: string;
@@ -93,23 +181,59 @@ export function Composer({
   const enabled = workspace.members?.enabled ?? [];
   const linkInput = forwardingInputSchema.safeParse(question);
   const linkOnly = linkInput.success;
+  const [readiness, setReadiness] = useState<SearchReadiness>({
+    signInRequired: [],
+  });
+  const selectedKey = selected.join(",");
+  const refreshReadiness = useRef<() => void>(() => {});
+  useEffect(() => {
+    let active = true;
+    let request = 0;
+    const ids = selectedKey ? (selectedKey.split(",") as AdvisorId[]) : [];
+    const read = async () => {
+      const latest = ++request;
+      const reply = await bridge.searchReadiness(ids).catch(() => undefined);
+      if (active && latest === request && reply?.ok) setReadiness(reply.value);
+    };
+    const reload = () => void read();
+    refreshReadiness.current = reload;
+    reload();
+    const off = bridge.onChanged(reload);
+    window.addEventListener("focus", reload);
+    return () => {
+      active = false;
+      off();
+      window.removeEventListener("focus", reload);
+    };
+  }, [selectedKey]);
+  const signInRequired = !linkOnly
+    ? readiness.signInRequired.filter((connection) =>
+        selected.some((id) => advisorById(id).connectionId === connection),
+      )
+    : [];
+  const modelAuthorization = linkOnly
+    ? undefined
+    : readiness.modelAuthorization;
+  const available = selected.filter(
+    (id) => !signInRequired.includes(advisorById(id).connectionId),
+  );
+  const canSend =
+    !!question.trim() &&
+    (linkOnly || (!modelAuthorization && available.length > 0));
   async function send() {
     const text = question.trim();
     if (linkInput.success) {
       onLink(linkInput.data);
       return;
     }
+    if (!canSend) return;
     const taskId = await workspace.run(
       () =>
         bridge.startFocusSearch({
           question: text,
-          advisorIds: selected,
+          advisorIds: available,
           platforms: [
-            ...new Set(
-              selected.map(
-                (id) => advisors.find((advisor) => advisor.id === id)!.platform,
-              ),
-            ),
+            ...new Set(available.map((id) => advisorById(id).platform)),
           ],
         }),
       "composer",
@@ -117,7 +241,7 @@ export function Composer({
     if (taskId) {
       setQuestion("");
       onSent(taskId);
-    }
+    } else refreshReadiness.current();
   }
   return (
     <section className="composer" aria-label={t("发起话题")}>
@@ -139,8 +263,10 @@ export function Composer({
             !event.nativeEvent.isComposing &&
             (event.metaKey || event.ctrlKey) &&
             question.trim() &&
-            (selected.length || linkOnly) &&
-            !busy
+            canSend &&
+            !signInRequired.length &&
+            !busy &&
+            !workspace.loading
           ) {
             event.preventDefault();
             void send();
@@ -151,12 +277,21 @@ export function Composer({
         <div className="recipient-chips" aria-label={t("本次接收成员")}>
           {selected
             .filter((id) => enabled.includes(id))
-            .map((id) => (
-              <span key={id} className="member-chip selected">
-                <Avatar id={id} small />
-                {advisorName(id)}
-              </span>
-            ))}
+            .map((id) => {
+              const blocked = signInRequired.includes(
+                advisorById(id).connectionId,
+              );
+              return (
+                <span
+                  key={id}
+                  className={`member-chip selected${blocked ? " sign-in-required" : ""}`}
+                >
+                  <Avatar id={id} small />
+                  {advisorName(id)}
+                  {blocked && <WarningCircle aria-hidden="true" />}
+                </span>
+              );
+            })}
           {!enabled.length && (
             <button className="text-button" onClick={onMembers}>
               <Plus />
@@ -236,15 +371,18 @@ export function Composer({
           <button
             className="primary send-button"
             aria-busy={busy}
-            disabled={
-              !question.trim() ||
-              (!selected.length && !linkOnly) ||
-              busy ||
-              workspace.loading
-            }
+            disabled={!canSend || busy || workspace.loading}
             onClick={() => void send()}
           >
-            {t(linkOnly ? "添加链接" : "发送")}
+            {t(
+              linkOnly
+                ? "添加链接"
+                : !modelAuthorization &&
+                    signInRequired.length &&
+                    available.length
+                  ? "仅发送给可用成员"
+                  : "发送",
+            )}
             {busy ? (
               <CircleNotch className="spin" />
             ) : (
@@ -253,11 +391,35 @@ export function Composer({
           </button>
         </div>
       </div>
-      {workspace.errorFor("composer") && (
+      {modelAuthorization && (
+        <ModelRecovery issue={modelAuthorization} onOpen={onModelRecovery} />
+      )}
+      {signInRequired.map((id) => (
+        <PlatformRecovery
+          key={id}
+          id={id}
+          action="login_required"
+          busy={workspace.pending("composer:sign-in")}
+          onOpen={() =>
+            void workspace.run(
+              () => bridge.loginPlatform(id),
+              "composer:sign-in",
+            )
+          }
+        />
+      ))}
+      {workspace.errorFor("composer:sign-in") && (
         <p className="inline-error" role="alert">
-          {workspace.errorFor("composer")}
+          {workspace.errorFor("composer:sign-in")}
         </p>
       )}
+      {workspace.errorFor("composer") &&
+        !modelAuthorization &&
+        !signInRequired.length && (
+          <p className="inline-error" role="alert">
+            {workspace.errorFor("composer")}
+          </p>
+        )}
     </section>
   );
 }
@@ -270,6 +432,7 @@ export function TopicCard({
   unread: boolean;
   onOpen(receipts?: boolean): void;
 }) {
+  const modelAuthorization = sharedModelAuthorization(report);
   const answered = report.sections.filter(
     (section) => !!section.rawReply,
   ).length;
@@ -295,21 +458,33 @@ export function TopicCard({
       </div>
       <button className="topic-content" onClick={() => onOpen()}>
         <h2>{report.question}</h2>
-        <div className="reply-peeks">
-          {report.sections.slice(0, 2).map((section) => (
-            <div className="reply-peek" key={section.sectionId}>
-              <Avatar id={sectionAdvisor(section)} small />
-              <span>
-                <b>{advisorName(sectionAdvisor(section))}</b>
+        {modelAuthorization && (
+          <p className="inline-error">
+            {modelAuthorizationMessage(modelAuthorization)}
+          </p>
+        )}
+        {!modelAuthorization && (
+          <div className="reply-peeks">
+            {report.sections.slice(0, 2).map((section) => (
+              <div className="reply-peek" key={section.sectionId}>
+                <Avatar id={sectionAdvisor(section)} small />
                 <span>
-                  {excerpt(section.readingReply || section.rawReply) ||
-                    section.error ||
-                    stateLabel(section.state)}
+                  <b>{advisorName(sectionAdvisor(section))}</b>
+                  <span>
+                    {excerpt(section.readingReply || section.rawReply) ||
+                      (section.platformAccountAction
+                        ? platformRecoveryCopy(
+                            advisorById(sectionAdvisor(section)).connectionId,
+                            section.platformAccountAction,
+                          )[0]
+                        : section.error) ||
+                      stateLabel(section.state)}
+                  </span>
                 </span>
-              </span>
-            </div>
-          ))}
-        </div>
+              </div>
+            ))}
+          </div>
+        )}
       </button>
       <div className="topic-footer">
         <button
@@ -353,6 +528,7 @@ export function TopicThread({
   onRead,
   onDelete,
   onAskAgain,
+  onModelRecovery,
 }: {
   workspace: Workspace;
   report: FocusSearchReport;
@@ -361,6 +537,7 @@ export function TopicThread({
   onRead(taskId: string): void;
   onDelete(): void;
   onAskAgain(): void;
+  onModelRecovery(id: string): void;
 }) {
   const scroll = useRef<HTMLDivElement>(null);
   const scope = (action: string) => `topic:${report.taskId}:${action}`;
@@ -391,6 +568,44 @@ export function TopicThread({
     (report.sections.every((section) => section.state === "completed")
       ? "completed"
       : "partial");
+  const modelAuthorization = sharedModelAuthorization(report);
+  const connectionOf = (section: SearchSection) =>
+    advisorById(sectionAdvisor(section)).connectionId;
+  const sectionRecovery = (section: SearchSection) => {
+    if (section.modelAuthorization && !modelAuthorization)
+      return (
+        <ModelRecovery
+          issue={section.modelAuthorization}
+          onOpen={onModelRecovery}
+        />
+      );
+    const action = section.platformAccountAction;
+    if (!action) return;
+    const id = connectionOf(section);
+    if (
+      report.sections.find(
+        (item) =>
+          item.platformAccountAction === action && connectionOf(item) === id,
+      ) !== section
+    )
+      return;
+    return (
+      <PlatformRecovery
+        id={id}
+        action={action}
+        busy={workspace.pending(scope("account"))}
+        onOpen={() =>
+          void runAction("account", () =>
+            action === "login_required"
+              ? bridge.loginPlatform(id)
+              : bridge.openPlatformAccountAction(id),
+          )
+        }
+      />
+    );
+  };
+  const hasConnectionIssue = (section: SearchSection) =>
+    section.modelAuthorization || section.platformAccountAction;
   const candidates = report.sections.flatMap((section) => section.candidates);
   const allCandidates = [
     ...new Map(
@@ -558,6 +773,11 @@ export function TopicThread({
           <CaretDown className="disclosure-caret" />
         </button>
       </ModalHeader>
+      {modelAuthorization && (
+        <div className="thread-connection-feedback">
+          <ModelRecovery issue={modelAuthorization} onOpen={onModelRecovery} />
+        </div>
+      )}
       {report.sections.length > 1 && (
         <nav className="reply-jump-nav" aria-label={t("成员回复")}>
           {report.sections.map((section) => (
@@ -637,30 +857,32 @@ export function TopicThread({
                     </IconButton>
                   )}
                 </div>
-                {(section.error ||
-                  section.processingIssue ||
-                  section.citationExtraction?.error) && (
-                  <p className="receipt-reason">
-                    <WarningCircle />
-                    {section.failureStage && (
-                      <b>
-                        {t(
-                          {
-                            preparation: "提问翻译",
-                            bridge: "浏览器桥梁",
-                            platform: "平台账号",
-                            sources: "引用收取",
-                            processing: "阅读处理",
-                          }[section.failureStage],
-                        )}{" "}
-                        ·{" "}
-                      </b>
-                    )}
-                    {section.error ||
-                      section.processingIssue ||
-                      section.citationExtraction?.error}
-                  </p>
-                )}
+                {sectionRecovery(section)}
+                {!hasConnectionIssue(section) &&
+                  (section.error ||
+                    section.processingIssue ||
+                    section.citationExtraction?.error) && (
+                    <p className="receipt-reason">
+                      <WarningCircle />
+                      {section.failureStage && (
+                        <b>
+                          {t(
+                            {
+                              preparation: "提问翻译",
+                              bridge: "浏览器桥梁",
+                              platform: "平台账号",
+                              sources: "引用收取",
+                              processing: "阅读处理",
+                            }[section.failureStage],
+                          )}{" "}
+                          ·{" "}
+                        </b>
+                      )}
+                      {section.error ||
+                        section.processingIssue ||
+                        section.citationExtraction?.error}
+                    </p>
+                  )}
                 {section.rawReply && (
                   <div className="receipt-source-state">
                     {t("引用")} ·{" "}
@@ -848,24 +1070,29 @@ export function TopicThread({
                       ? section.rawReply
                       : section.readingReply}
                   </Markdown>
-                  {section.processingIssue && (
+                  {section.processingIssue && !hasConnectionIssue(section) && (
                     <p className="inline-error">{section.processingIssue}</p>
                   )}
                 </>
               ) : (
-                <div
-                  className={
-                    section.state === "failed" ? "reply-error" : "reply-waiting"
-                  }
-                >
-                  {section.state === "failed" ? (
-                    <WarningCircle />
-                  ) : (
-                    <span className="running-dot" />
-                  )}
-                  <span>{section.error || stateLabel(section.state)}</span>
-                </div>
+                !hasConnectionIssue(section) && (
+                  <div
+                    className={
+                      section.state === "failed"
+                        ? "reply-error"
+                        : "reply-waiting"
+                    }
+                  >
+                    {section.state === "failed" ? (
+                      <WarningCircle />
+                    ) : (
+                      <span className="running-dot" />
+                    )}
+                    <span>{section.error || stateLabel(section.state)}</span>
+                  </div>
+                )
               )}
+              {!receipts && sectionRecovery(section)}
               {section.candidates.length > 0 && (
                 <div className="reply-sources">
                   <div className="sources-heading">

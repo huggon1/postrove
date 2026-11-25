@@ -64,6 +64,7 @@ export function App() {
   const [page, setPage] = useState<Page>("topics"),
     [settingsSection, setSettingsSection] =
       useState<SettingsSection>("connections");
+  const [modelRecovery, setModelRecovery] = useState<string>();
   const [memberOpen, setMemberOpen] = useState(false),
     [memberConnection, setMemberConnection] = useState<string>();
   const [recipients, setRecipients] = useState<AdvisorId[]>(),
@@ -148,6 +149,12 @@ export function App() {
   const openMembers = (connectionId?: string) => {
     setMemberConnection(connectionId);
     setMemberOpen(true);
+  };
+  const openModelRecovery = (id: string) => {
+    setTopicId("");
+    setModelRecovery(id);
+    setSettingsSection("models");
+    setPage("settings");
   };
   const openTopic = (id: string, receipt = false) => {
     setTopicId(id);
@@ -337,6 +344,7 @@ export function App() {
                 selected={recipients ?? []}
                 onSelected={setRecipients}
                 onMembers={() => openMembers()}
+                onModelRecovery={openModelRecovery}
                 onLink={(url) => setLink({ url })}
                 onSent={(id) => openTopic(id)}
               />
@@ -392,6 +400,8 @@ export function App() {
               section={settingsSection}
               onSection={setSettingsSection}
               onMember={openMembers}
+              modelRecovery={modelRecovery}
+              onModelRecoveryHandled={() => setModelRecovery(undefined)}
               onReading={() => setPage("reading")}
               updateSection={
                 <UpdateSettings
@@ -492,6 +502,7 @@ export function App() {
           onClose={() => setTopicId("")}
           onRead={setReaderId}
           onDelete={() => void remove({ kind: "search", id: active.reportId })}
+          onModelRecovery={openModelRecovery}
           onAskAgain={() => {
             if (question.trim() && question !== active.question)
               setPendingQuestion(active);

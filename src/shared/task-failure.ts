@@ -41,6 +41,20 @@ export class ExecutionFailure extends Error {
     super(failureMessages[code]);
   }
 }
+// OAuth errors may be wrapped by Pi or flattened into an assistant error.
+export function oauthAuthorizationRejected(error: unknown): boolean {
+  for (let depth = 0; depth < 5; depth++) {
+    const message = error instanceof Error ? error.message : error;
+    if (
+      typeof message === "string" &&
+      /\b(?:invalid_grant|refresh_token_reused|token_revoked)\b/i.test(message)
+    )
+      return true;
+    error = error instanceof Error ? error.cause : undefined;
+  }
+  return false;
+}
+
 // Classify transient provider text in memory only. Never return its contents or cause.
 export function classifyModelError(error: unknown): FailureCode {
   if (error instanceof ExecutionFailure) return error.code;
@@ -51,6 +65,7 @@ export function classifyModelError(error: unknown): FailureCode {
         ? error
         : "";
   if (
+    oauthAuthorizationRejected(error) ||
     /401|unauthori[sz]ed|authentication|invalid.api.key|token.expired/i.test(
       text,
     )

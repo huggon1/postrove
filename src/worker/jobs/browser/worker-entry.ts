@@ -14,6 +14,11 @@ import {
   browserSystem,
   searchCitationInstruction,
 } from "../../../platforms/browser/prompts";
+import {
+  classifyModelError,
+  oauthAuthorizationRejected,
+  type FailureCode,
+} from "../../../shared/task-failure";
 import { createBrowserTools } from "../../../platforms/browser/tools";
 const port = process.parentPort!;
 let session: Awaited<ReturnType<typeof createPiCodingSession>> | undefined;
@@ -70,6 +75,7 @@ port.on("message", ({ data }) => {
       pending.set(requestId, { resolve, reject });
       port.postMessage({ type, requestId, ...body });
     });
+  let modelFailure: FailureCode | undefined;
   void (async () => {
     let count = 0;
     const captureIds = new Set<string>();
@@ -129,6 +135,7 @@ port.on("message", ({ data }) => {
         repairs = 0;
       for (;;) {
         if (controller.signal.aborted) throw new Error("Cancelled");
+        modelFailure = undefined;
         try {
           await session!.session.prompt(nextPrompt, {
             expandPromptTemplates: false,
@@ -138,10 +145,16 @@ port.on("message", ({ data }) => {
           const last = [...session!.session.messages]
             .reverse()
             .find((m) => m.role === "assistant");
-          if (!last || last.stopReason !== "stop")
+          if (!last || last.stopReason !== "stop") {
+            const code = classifyModelError(last?.errorMessage);
+            if (
+              ["model_auth", "model_network", "model_rate_limit"].includes(code)
+            )
+              modelFailure = code;
             throw new Error(
               last?.errorMessage || "Browser agent did not complete",
             );
+          }
           const text = last.content
             .filter((p) => p.type === "text")
             .map((p) => p.text)
@@ -238,6 +251,7 @@ port.on("message", ({ data }) => {
           }
           return output;
         } catch (error) {
+          if (oauthAuthorizationRejected(error)) modelFailure = "model_auth";
           if (
             controller.signal.aborted ||
             !retryableModelFailure(String(error)) ||
@@ -288,9 +302,10 @@ port.on("message", ({ data }) => {
     .catch((error) => {
       const code = controller.signal.aborted
         ? "Cancelled"
-        : retryableModelFailure(String(error))
-          ? "model_connection_failed"
-          : "browser_interaction_failed";
+        : (modelFailure ??
+          (retryableModelFailure(String(error))
+            ? "model_connection_failed"
+            : "browser_interaction_failed"));
       const diagnostic = diagnoseReadingError(error, "source");
       diagnostic.evidence = { ...diagnostic.evidence, failureCode: code };
       terminal =

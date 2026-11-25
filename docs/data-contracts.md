@@ -43,6 +43,8 @@ Legacy daily and weekly schedules retain their `time` and `weekday`. Opening the
 
 Report status is queued, running, completed, partial, failed, or stopped. `finishedAt` records its terminal time. `taskOutcome` persists completion, failure, or cancellation so startup can reconcile an interrupted task event after report commit. Each section saves `advisorId`, `connectionId`, independent `runId`, query language, prompt/Skill revisions, exact prepared and submitted prompts, original reply bytes, optional `readingReply`, candidates, state, warnings, and failure stage. `checkpoint` records prepared, submitted, or answered plus the observed conversation URL. `processingIssue` retains reading-version failure alongside the original answer. Cancellation is scoped to the section or parent topic.
 
+A section can preserve a bounded model authorization issue with the saved connection UUID, provider display name, and OAuth flag, or a platform account action code with its existing advisor identity. Historical sections without these fields keep their saved receipt text. The manual-send readiness response carries the current model issue and the requested sign-in-required platform connection IDs. Provider error bodies and session credentials stay inside their owning processes.
+
 Section `citationExtraction` records pending, running, completed, empty, or failed, with an optional error. The main process commits the captured answer before acknowledging source extraction. Interrupted reports retain those committed replies.
 
 Report loading keeps current schema fields and strips retired synthesis data. Existing platform replies, candidates, and submission associations remain available.

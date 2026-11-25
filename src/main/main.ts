@@ -5,7 +5,7 @@ import { updateChannels } from "../shared/update-contracts";
 import { claimProfile } from "./runtime/profile-lock";
 import { nativeText } from "./native-language";
 import { installMenu } from "./menu";
-import { app, BrowserWindow, dialog, protocol } from "electron";
+import { app, BrowserWindow, dialog, powerMonitor, protocol } from "electron";
 import { join, resolve } from "node:path";
 import { mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { channels } from "../shared/ipc-contracts";
@@ -71,6 +71,7 @@ if (!locked) {
       existing.focus();
     } else {
       mainWindow = createWindow(profileMode);
+      mainWindow.on("focus", () => services?.checkAuthorization());
       mainWindow.on("closed", () => {
         mainWindow = undefined;
       });
@@ -142,6 +143,8 @@ if (!locked) {
       startupStage = "menu";
       startupStage = "window";
       servicesReady = true;
+      powerMonitor.on("resume", services.checkAuthorization);
+      services.checkAuthorization();
       open();
       updates.start();
       const session = mainWindow!.webContents.session;

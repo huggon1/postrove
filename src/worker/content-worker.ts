@@ -4,6 +4,7 @@ import { contentRequestSchema } from "../shared/content-contracts";
 import { runWithPi, resolveModel } from "./pi-runtime";
 import { executeContent } from "./content/capabilities";
 import { piTraceContext } from "./pi-trace-context";
+import { classifyModelError } from "../shared/task-failure";
 import { splitMarkdown } from "./content/chunks";
 
 const port = process.parentPort!;
@@ -85,12 +86,20 @@ port.on("message", ({ data }) => {
           run,
         )
       : run()
-  ).catch(() =>
+  ).catch((error: unknown) => {
+    const code = classifyModelError(error);
     port.postMessage({
       type: "failed",
       message: controller.signal.aborted
         ? "cancelled"
-        : "content_processing_failed",
-    }),
-  );
+        : [
+              "model_auth",
+              "model_network",
+              "model_rate_limit",
+              "model_unavailable",
+            ].includes(code)
+          ? code
+          : "content_processing_failed",
+    });
+  });
 });

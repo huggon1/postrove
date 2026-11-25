@@ -13,11 +13,12 @@ import type {
   UpdateFollow,
   FocusSearchReport,
   StartFocusSearch,
+  SearchReadiness,
   SearchSelection,
   SearchAddition,
 } from "./focus-search-contracts";
 import type { Language } from "./language";
-import type { AdvisorSettings } from "./advisor-contracts";
+import type { AdvisorId, AdvisorSettings } from "./advisor-contracts";
 import type { ApplicationPreferences } from "./preferences-contracts";
 import type { TaskActivity, TaskSnapshot } from "./task-contracts";
 import type {
@@ -42,6 +43,7 @@ export const searchChannels = {
   pauseFollow: "search:pause-follow",
   deleteFollow: "search:delete-follow",
   start: "search:start",
+  readiness: "search:readiness",
   retry: "search:retry",
   cancel: "search:cancel",
   cancelSection: "search:cancel-section",
@@ -93,6 +95,7 @@ export const platformConnectionChannels = {
   login: "platform-connection:login",
   logout: "platform-connection:logout",
   home: "platform-connection:home",
+  openAccountAction: "platform-connection:open-account-action",
   refreshAccount: "platform-connection:refresh-account",
 } as const;
 export type ReadingSiteId = "bilibili";
@@ -185,6 +188,10 @@ export interface DesktopBridge {
   deleteFollow(followId: string): Promise<ModelReply<void>>;
   exportTaskPiLogs(taskId: string): Promise<ModelReply<string | undefined>>;
   focusSearchReports(): Promise<ModelReply<FocusSearchReport[]>>;
+  searchReadiness(ids: AdvisorId[]): Promise<ModelReply<SearchReadiness>>;
+  openPlatformAccountAction(
+    id: PlatformConnectionId,
+  ): Promise<ModelReply<void>>;
   startFocusSearch(input: StartFocusSearch): Promise<ModelReply<string>>;
   retryFocusSearch(taskId: string): Promise<ModelReply<string>>;
   cancelFocusSearch(taskId: string): Promise<ModelReply<void>>;

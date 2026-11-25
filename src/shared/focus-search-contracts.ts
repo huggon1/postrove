@@ -3,6 +3,7 @@ import {
   advisorIdSchema,
   advisorById,
   advisorRouteFor,
+  type PlatformConnectionId,
 } from "./advisor-contracts";
 import { xPostUrlSchema, xhsNoteUrlSchema } from "./source-contracts";
 import { redditPost, youtubeVideo } from "./source-profiles";
@@ -41,6 +42,29 @@ export const searchCandidateSchema = z
     publishedAt: z.string().max(120).optional(),
   })
   .strict();
+const modelAuthorizationIssueSchema = z
+  .object({
+    connectionId: z.string().uuid(),
+    providerName: z.string().min(1).max(120),
+    oauth: z.boolean(),
+  })
+  .strict();
+export type ModelAuthorizationIssue = z.infer<
+  typeof modelAuthorizationIssueSchema
+>;
+
+export const platformAccountActionSchema = z.enum([
+  "login_required",
+  "verification_required",
+  "action_required",
+]);
+export type PlatformAccountAction = z.infer<typeof platformAccountActionSchema>;
+
+export type SearchReadiness = {
+  modelAuthorization?: ModelAuthorizationIssue;
+  signInRequired: PlatformConnectionId[];
+};
+
 export const searchSectionSchema = z
   .object({
     sectionId: z.string().uuid(),
@@ -55,6 +79,8 @@ export const searchSectionSchema = z
     readingReply: z.string().optional(),
     cancelled: z.boolean().optional(),
     processingIssue: z.string().max(1000).optional(),
+    modelAuthorization: modelAuthorizationIssueSchema.optional(),
+    platformAccountAction: platformAccountActionSchema.optional(),
     failureStage: z
       .enum(["preparation", "bridge", "platform", "sources", "processing"])
       .optional(),
