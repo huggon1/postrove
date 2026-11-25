@@ -254,6 +254,7 @@ port.on("message", ({ data }) => {
           if (oauthAuthorizationRejected(error)) modelFailure = "model_auth";
           if (
             controller.signal.aborted ||
+            modelFailure === "model_auth" ||
             !retryableModelFailure(String(error)) ||
             ++failures >= 3
           )
@@ -302,10 +303,11 @@ port.on("message", ({ data }) => {
     .catch((error) => {
       const code = controller.signal.aborted
         ? "Cancelled"
-        : (modelFailure ??
-          (retryableModelFailure(String(error))
+        : modelFailure === "model_auth"
+          ? modelFailure
+          : retryableModelFailure(String(error))
             ? "model_connection_failed"
-            : "browser_interaction_failed"));
+            : (modelFailure ?? "browser_interaction_failed");
       const diagnostic = diagnoseReadingError(error, "source");
       diagnostic.evidence = { ...diagnostic.evidence, failureCode: code };
       terminal =
