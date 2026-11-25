@@ -15,7 +15,11 @@ import {
   type PiModelOption,
   type PiOptions,
 } from "../../shared/model-contracts";
-import { classifyModelError } from "../../shared/task-failure";
+import {
+  classifyModelError,
+  oauthAuthorizationRejected,
+} from "../../shared/task-failure";
+import type { ModelAuthorizationIssue } from "../../shared/focus-search-contracts";
 import {
   createModelRuntime,
   piSdk,
@@ -79,6 +83,9 @@ export class ModelService {
   private pending: Promise<unknown> = Promise.resolve();
   private checking?: Promise<void>;
   private checkAbort?: AbortController;
+  private authorizationIssue?: ModelAuthorizationIssue;
+  private authorizationProbe?: { id: string; startedAt: number };
+  private authorizationChecks = new Map<string, Promise<void>>();
   private state: Pick<
     ModelView,
     | "auth"
@@ -86,7 +93,6 @@ export class ModelService {
     | "authFailure"
     | "authPrompt"
     | "authEvents"
-    | "catalog"
     | "message"
     | "check"
     | "checkFailure"
@@ -96,7 +102,6 @@ export class ModelService {
   > = {
     auth: "signed_out",
     authEvents: [],
-    catalog: "ready",
     message: "",
     check: "idle",
   };
@@ -122,8 +127,13 @@ export class ModelService {
   private async persist(next: PiConnections) {
     const executionChanged =
       this.executionKey(this.data) !== this.executionKey(next);
+    const connectionChanged = this.data.activeId !== next.activeId;
     await this.store.save(next);
     this.data = next;
+    if (connectionChanged) {
+      this.authorizationIssue = undefined;
+      this.authorizationProbe = undefined;
+    }
     if (executionChanged) {
       this.generation++;
       this.checkAbort?.abort();
@@ -132,6 +142,7 @@ export class ModelService {
       this.state.checkConnectionId = undefined;
       this.state.checkModelId = undefined;
       this.state.checkIsCurrent = false;
+      void this.checkAuthorization();
     }
   }
   private paths(id: string): PiRuntimePaths {
@@ -287,7 +298,11 @@ export class ModelService {
     const status = this.candidate.runtime.getProviderAuthStatus(
       this.candidate.providerId,
     );
-    this.state.auth = status.configured ? "signed_in" : "signed_out";
+    this.state.auth =
+      status.configured &&
+      this.authorizationIssue?.connectionId !== this.candidate.id
+        ? "signed_in"
+        : "signed_out";
     this.state.authSource = status.source;
   }
   view(): ModelView {
@@ -736,33 +751,31 @@ export class ModelService {
     this.answer?.reject(new Error("cancelled"));
     await this.loginWork;
   }
-  async refresh() {
+  async refresh(connectionId: unknown) {
     return this.serial(async () => {
       if (this.closed || this.loginAbort) throw new Error("请等待认证完成");
-      if (!this.candidate) {
-        this.changed();
-        return;
-      }
       const candidate = this.candidate;
+      if (!candidate || candidate.id !== connectionId)
+        throw new ModelSettingsError("连接选择已变化，请重试");
       try {
         // Finish native credential rotation before starting the cancellable catalog
         // fetch. Shutdown waits for this serialized operation to settle.
-        await candidate.runtime.getAuth(candidate.providerId);
+        if (!(await candidate.runtime.getAuth(candidate.providerId)))
+          throw new Error("Pi catalog authentication unavailable");
         const result = await candidate.runtime.refresh({
           providers: [candidate.providerId],
           allowNetwork: true,
+          force: true,
           signal: AbortSignal.timeout(20_000),
         });
         if (result.aborted || result.errors.size)
           throw new Error("Pi catalog refresh incomplete");
-        this.state.catalog = "ready";
-        this.state.message = "Pi 目录已刷新";
       } catch {
-        this.state.catalog = "failed";
-        this.state.message = "Pi 目录刷新失败，已保留当前目录和连接";
+        throw new ModelSettingsError("模型目录刷新失败");
+      } finally {
+        this.changed();
       }
-      this.syncAuth();
-      this.changed();
+      return this.view();
     });
   }
   async save(input: unknown) {
@@ -829,6 +842,53 @@ export class ModelService {
       if (replacesId) await this.cleanupRetired(replacesId);
     });
   }
+  currentAuthorizationIssue() {
+    return this.authorizationIssue;
+  }
+  markAuthorizationFailed(issue: ModelAuthorizationIssue) {
+    if (
+      issue.connectionId !== this.data.activeId ||
+      this.authorizationIssue?.connectionId === issue.connectionId
+    )
+      return;
+    this.authorizationIssue = issue;
+    this.changed();
+  }
+  checkAuthorization() {
+    const id = this.data.activeId;
+    if (this.closed || !id || this.authorizationIssue) return;
+    const check = this.authorizationChecks.get(id);
+    if (check) return check;
+    const startedAt = Date.now();
+    if (
+      this.authorizationProbe?.id === id &&
+      startedAt - this.authorizationProbe.startedAt < 60_000
+    )
+      return;
+    this.authorizationProbe = { id, startedAt };
+    const work = this.probeAuthorization(id).finally(() =>
+      this.authorizationChecks.delete(id),
+    );
+    this.authorizationChecks.set(id, work);
+    return work;
+  }
+  private async probeAuthorization(id: string) {
+    const lease = await this.acquire().catch(() => undefined);
+    if (!lease) return;
+    try {
+      if (id !== lease.authorization.connectionId || !lease.authorization.oauth)
+        return;
+      const runtime = await this.runtime(id);
+      // Pi refreshes only when needed, locks its store and persists rotation.
+      if (!(await runtime.getAuth(lease.config.providerId)))
+        this.markAuthorizationFailed(lease.authorization);
+    } catch (error) {
+      if (oauthAuthorizationRejected(error))
+        this.markAuthorizationFailed(lease.authorization);
+    } finally {
+      await lease.release().catch(() => {});
+    }
+  }
   async acquire() {
     return this.serial(async () => {
       if (this.closed) throw new Error("应用正在退出");
@@ -878,6 +938,13 @@ export class ModelService {
       let released = false;
       return {
         config,
+        authorization: {
+          connectionId: active.id,
+          providerName: (
+            runtime.getProvider(active.providerId)?.name ?? active.providerId
+          ).slice(0, 120),
+          oauth: runtime.isUsingOAuth(active.providerId),
+        },
         generation: this.generation,
         release: async () => {
           if (released) return;
@@ -913,13 +980,18 @@ export class ModelService {
         lease = await this.acquire();
         controller.signal.throwIfAborted();
         await this.dependencies.check(lease.config, controller.signal);
-        if (generation === this.generation)
+        if (generation === this.generation) {
           this.state.check = controller.signal.aborted ? "cancelled" : "passed";
+          if (!controller.signal.aborted) this.authorizationIssue = undefined;
+        }
       } catch (error) {
         if (generation === this.generation) {
           this.state.check = controller.signal.aborted ? "cancelled" : "failed";
-          if (!controller.signal.aborted)
+          if (!controller.signal.aborted) {
             this.state.checkFailure = classifyModelError(error);
+            if (lease && this.state.checkFailure === "model_auth")
+              this.markAuthorizationFailed(lease.authorization);
+          }
         }
       } finally {
         await lease?.release();
@@ -1005,6 +1077,7 @@ export class ModelService {
     this.cancelCheck();
     await this.cancelLogin();
     await this.checking;
+    await Promise.allSettled(this.authorizationChecks.values());
     await this.pending;
     for (const id of this.drafts)
       await rm(join(this.dependencies.root, "connections", id), {

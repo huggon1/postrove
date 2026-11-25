@@ -31,6 +31,9 @@ import { createXhsAdapter } from "../platforms/adapters/xhs";
 import { PlatformAccess } from "./services/platform-access";
 import {
   searchSelectionSchema,
+  startFocusSearchSchema,
+  platformAccountActionSchema,
+  type SearchReadiness,
   type SearchSection,
 } from "../shared/focus-search-contracts";
 import { FocusSearchStore } from "./storage/focus-search-store";
@@ -84,6 +87,10 @@ import { ContentService } from "./services/content-service";
 import { ResultPublisher } from "./services/result-publisher";
 import {
   advisorRoutes,
+  advisorById,
+  advisorIdSchema,
+  allowsGuest,
+  type AdvisorId,
   platformConnectionIdSchema,
   platformConnections,
   legacyAdvisor,
@@ -381,6 +388,22 @@ export async function initializeServices(
   )
     usedAdvisors.add("xiaohongshu-diandian-zh");
   await advisorStore.open([...usedAdvisors]);
+  const searchReadiness = async (
+    ids: AdvisorId[],
+  ): Promise<SearchReadiness> => {
+    const selected = new Set(ids.map((id) => advisorById(id).connectionId));
+    const blocked = await Promise.all(
+      platformConnections
+        .filter(({ id }) => selected.has(id) && !allowsGuest(id))
+        .map(async ({ id, site }) =>
+          (await browser.searchSignInRequired(site)) ? id : undefined,
+        ),
+    );
+    return {
+      modelAuthorization: models!.currentAuthorizationIssue(),
+      signInRequired: blocked.filter((id) => id !== undefined),
+    };
+  };
   let deletions: RecordDeletions;
   const search = new FocusSearchService(
     searchStore,
@@ -409,8 +432,11 @@ export async function initializeServices(
               rawReply: string;
               candidates: SearchSection["candidates"];
               platformPrompt?: string;
+              error?: string;
               citationExtraction?: SearchSection["citationExtraction"];
             };
+            if (platformAccountActionSchema.safeParse(result.error).success)
+              throw new Error(result.error);
             if (result.citationExtraction?.state === "running") {
               await onProgress?.(result);
               const sources = await fetch(
@@ -431,25 +457,60 @@ export async function initializeServices(
           release: async () => {},
         };
       const lease = await models!.acquire();
+      const requireAuthorization = () => {
+        if (
+          models!.currentAuthorizationIssue()?.connectionId ===
+          lease.authorization.connectionId
+        )
+          throw new Error("model_auth");
+      };
       return {
-        content: (
+        modelAuthorization: lease.authorization,
+        onModelAuthorizationFailure: () =>
+          models!.markAuthorizationFailed(lease.authorization),
+        content: async (
           input: import("../shared/content-contracts").ContentRequest,
           signal: AbortSignal,
           runId: string,
-        ) => contentService.execute(input, signal, lease, runId),
-        execute: (
+        ) => {
+          requireAuthorization();
+          return contentService.execute(input, signal, lease, runId);
+        },
+        execute: async (
           section: SearchSection,
           signal: AbortSignal,
           taskId: string,
           onProgress?: (progress: SearchProgress) => Promise<void>,
-        ) =>
-          platformAccess.search(
-            section,
-            lease.config,
-            signal,
-            taskId,
-            onProgress,
-          ),
+        ) => {
+          requireAuthorization();
+          try {
+            return await platformAccess.search(
+              section,
+              lease.config,
+              signal,
+              taskId,
+              onProgress,
+            );
+          } catch (error) {
+            if (
+              !signal.aborted &&
+              error instanceof ReadingFailure &&
+              error.message === "login_required" &&
+              error.diagnostic.code === "login_required" &&
+              error.diagnostic.stage === "access"
+            ) {
+              const id =
+                section.advisorId ??
+                legacyAdvisor(section.platform, section.promptLanguage);
+              const connection = platformConnections.find(
+                (item) => item.id === advisorById(id).connectionId,
+              )!;
+              if (!allowsGuest(connection.id))
+                browser.observeSearchLoginRequired(connection.site);
+            }
+            throw error;
+          }
+        },
         release: () => lease.release(),
       };
     },
@@ -900,9 +961,20 @@ export async function initializeServices(
             .strict()
             .parse(args[0]);
           value = await search.setFollowPaused(input.followId, input.paused);
-        } else if (channel === searchChannels.start)
-          value = await search.start(args[0]);
-        else if (channel === searchChannels.retry)
+        } else if (channel === searchChannels.readiness) {
+          value = await searchReadiness(
+            z.array(advisorIdSchema).max(12).parse(args[0]),
+          );
+        } else if (channel === searchChannels.start) {
+          const input = startFocusSearchSchema.parse(args[0]);
+          const readiness = await searchReadiness(
+            input.advisorIds ??
+              input.platforms.map((platform) => legacyAdvisor(platform)),
+          );
+          if (readiness.modelAuthorization || readiness.signInRequired.length)
+            return { ok: false, message: "请先恢复连接" };
+          value = await search.start(input);
+        } else if (channel === searchChannels.retry)
           value = await search.retry(z.string().uuid().parse(args[0]));
         else if (channel === searchChannels.cancelSection) {
           const input = z
@@ -964,6 +1036,8 @@ export async function initializeServices(
           await browser.refreshAccount(connection.site);
         else if (channel === platformConnectionChannels.home)
           await browser.openHome(connection.site);
+        else if (channel === platformConnectionChannels.openAccountAction)
+          await browser.openAccountAction(connection.site);
         else await browser.logout(connection.site);
         return { ok: true, value: undefined };
       } catch {
@@ -1075,6 +1149,7 @@ export async function initializeServices(
             modelChannels.respond,
             modelChannels.openAuthUrl,
             modelChannels.login,
+            modelChannels.refresh,
           ] as string[]
         ).includes(channel)
           ? 1
@@ -1115,7 +1190,7 @@ export async function initializeServices(
             await models!.cancelLogin();
             break;
           case modelChannels.refresh:
-            await models!.refresh();
+            value = await models!.refresh(args[0]);
             break;
           case modelChannels.check:
             await models!.runCheck();
@@ -1139,6 +1214,7 @@ export async function initializeServices(
   return {
     executionGate,
     preferences,
+    checkAuthorization: () => void models?.checkAuthorization(),
     shutdown: async () => {
       executionGate.close();
       await Promise.all([

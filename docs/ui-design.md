@@ -45,6 +45,8 @@ A reading card's image fills and crops within its fixed-height cover. The cover 
 
 The reader keeps its toolbar and material selector above the content scroll area. Long topic threads keep a horizontal member navigation below the dialog header. Source titles carry the external-opening indicator; collected material uses its separate Reading action. Individual and batch collection errors remain next to their triggering controls and scroll into view. Finished topic indicators match the recorded terminal outcome.
 
+Composer connection feedback sits below its recipient and send controls. Selected members with a sign-in blocker show the warning icon in their recipient chips. A shared model failure sits directly below the topic dialog header. Platform account actions sit beside the affected member's feedback and share one control per connection and required action. External platform windows use the external-opening indicator.
+
 ## Review evidence
 
 For each added or expanded message, record its admission source and triggering state. Review the rendered interface and both interface languages.
@@ -61,7 +63,17 @@ The [overlay E2E](../tests/e2e/ui-overlays.spec.ts) checks bilingual draft reten
 
 The [reading navigation E2E](../tests/e2e/ui-reading-navigation.spec.ts) checks bilingual fixed controls, material/version positions, late image sizing, unique source selection, local collection errors, member jumps, matching terminal states, phase translations, retained search, draft replacement, atomic link submission, and independent action feedback. A material switch in the same event turn as scrolling verifies position retention while the browser scroll event is pending. Late image sizing uses a controlled dimension change, which exercises layout restoration independently of Chromium's decoded-image cache. Screenshots cover desktop and compact readers and the draft-replacement confirmation in both languages.
 
+The [topic connection recovery E2E](../tests/e2e/topic-connection-recovery.spec.ts) verifies connection feedback in both interface languages. Model authorization and authentication feedback is required when the active connection fails authentication. Sign-in, verification, and account confirmation feedback and controls are required when each action is observed. Send to available members only is required when selected members include a known sign-in blocker and an available member. The late-admission message is required when a confirmed blocker arrives between rendering and sending. Existing edit, authentication, and Ask again controls keep their wording and purpose.
+
 The [authentication pending E2E](../tests/e2e/ui-auth-pending.spec.ts) holds a native authentication response, checks locked input and dialog dismissal, and verifies that a failed submission retains its answer. Ask again stays disabled while the composer admits its current question.
+
+The model editor places Refresh catalog next to the Model selector. The [native Pi connection E2E](../tests/e2e/pi-model-connections.spec.ts) captures the control and its feedback in Simplified Chinese at desktop width and English at compact width.
+
+| Added copy | Admission source and trigger |
+| --- | --- |
+| Refresh catalog | Existing action label. Available in Model and options for an authenticated built-in connection. |
+| Pi catalog refreshed | Existing result message, shown after the refresh succeeds. |
+| Model catalog refresh failed | Existing operation feedback, shown after the refresh fails. |
 
 | Added copy | Admission source and trigger |
 | --- | --- |

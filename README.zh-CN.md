@@ -51,6 +51,14 @@ _截图使用虚构的问题、回答、来源和阅读材料，展示当前源�
 
 阅读窗口的复制图标可复制 `result.md` 的绝对路径，供 Coding Agent 使用。添加浏览器地址时可省略 HTTPS 前缀。
 
+从 GitHub 安装 [Postrove Reading Skill](skills/postrove-reading/)。下面的命令会将它安装到当前项目的 Claude Code 中。
+
+```sh
+npx skills add huggon1/postrove --skill postrove-reading --agent claude-code --copy
+```
+
+使用 Codex 或 Cursor 时，将参数改为 `--agent codex` 或 `--agent cursor`。需要读取收录结果时，主动调用这个 Skill。如果 Agent 无法关闭自动调用，请将 `SKILL.md` 保存到其 Skill 搜索路径之外，需要时在对话中附上。
+
 ![阅读页：查看像素小游戏教程的译文、摘要和配图，随时切回原文](assets/screenshots/reading-zh-CN.png)
 
 读取规则明确要采集的内容。Agent 按实际页面加载对应 Skill。其他页面使用通用网页规则，由 Agent 识别正文并选择读取方式。
@@ -93,4 +101,4 @@ _截图使用虚构的问题、回答、来源和阅读材料，展示当前源�
 
 > ⚠️ Postrove 使用已登录的平台账号执行自动搜索和内容读取。这类操作可能触发平台风控，导致额外验证、限流、账号限制或封禁。建议为 X、小红书等平台使用专用小号，以降低账号受限时的影响。
 
-[开发指南](docs/development.md) · [0.2.4 发布说明](docs/releases/0.2.4.md) · [发布指南](docs/releasing.md) · [MIT 许可证](LICENSE)
+[开发指南](docs/development.md) · [0.2.5 发布说明](docs/releases/0.2.5.md) · [发布指南](docs/releasing.md) · [MIT 许可证](LICENSE)

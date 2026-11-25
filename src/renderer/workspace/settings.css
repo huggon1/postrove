@@ -1324,6 +1324,20 @@
   min-width: 0;
   max-width: 100%;
 }
+.model-catalog-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.model-catalog-controls select {
+  min-width: 0;
+}
+.model-catalog-controls button {
+  flex: none;
+}
+.model-catalog-controls + .setup-feedback {
+  margin-top: 0;
+}
 .model-check-row {
   display: flex;
   align-items: center;

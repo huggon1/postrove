@@ -221,7 +221,6 @@ export interface ModelView {
     | { type: "auth_url"; url: string; instructions?: string }
     | { type: "device_code"; userCode: string; verificationUri: string }
   )[];
-  catalog: "empty" | "ready" | "failed";
   message: string;
   check: "idle" | "running" | "passed" | "failed" | "cancelled";
   checkFailure?: FailureCode;

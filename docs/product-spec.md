@@ -14,6 +14,8 @@ The current renderer session retains composer questions, schedule drafts, model-
 
 The composer presents selected members as a summary. Choose recipients opens the selection menu; an empty selection displays that control's label.
 
+Postrove checks the active OAuth model connection on startup, when the window becomes active or the device resumes, and when the active model changes. It uses the provider's existing credential refresh. A confirmed authorization failure blocks manual topic sends and opens the active connection's authentication step. The composer retains the question throughout recovery. Each selected, sign-in-required platform uses existing local session evidence. When other recipients are available, an explicit send action submits only those members. Reddit remains eligible for guest use. An unknown state or temporary connection failure allows the send. Link intake keeps its separate action.
+
 On Windows, closing the final window shuts down services and exits the application; minimizing keeps it running. On macOS, closing a window keeps the application running, and the Dock reopens the workspace.
 
 ## Members and language
@@ -33,6 +35,8 @@ Main prepares one question version per selected expert language within each topi
 ## Replies, receipts, and recovery
 
 Main saves the platform answer before asking the same browser session to extract its citations. Receipt details show each member's answer, source state, and observed failure stage: question preparation, bridge, platform, sources, or reading processing. Partial success keeps useful replies and verified links readable. Empty sources produce a partial topic.
+
+A shared model authorization failure appears once at the top of the topic. A platform login, verification, or account confirmation appears for its affected members and opens the corresponding platform page. Other members keep their execution and any saved replies. Ask again returns the original question to the composer.
 
 Topic receipts expose Stop for active members, Stop all, result-file access, and native Pi log export. Stopping one member lets the other selected members continue. A captured answer survives cancellation and later citation or translation failure. A submitted checkpoint records the existing conversation; crash recovery observes that conversation before continuing. An unavailable conversation produces a bridge failure. A fresh send creates a new topic.
 
@@ -75,6 +79,8 @@ Settings contains Capability map, Speech to text, Inbox connections, AI members,
 Each connection's actions menu offers Edit configuration and Remove connection. Model setup separates connection method, native Pi authentication, and model/options. The connection method selects either a built-in provider or a custom service configured with a provider ID and Pi `models.json`. Each method shows its own fields and advances through Continue. Switching methods retains field values and clears the previous method's validation feedback. A new connection ends with Save and use. Editing a saved connection opens its model/options; Save connection updates that connection and retains the active selection. Reauthorization replaces the edited connection on save and preserves its active or inactive status. Authentication controls follow the native provider's text, secret, selection, browser, or device-code prompts.
 
 Main freezes model metadata and options for active execution through a lease. Existing API connections migrate to Pi. Native authorization commits when the user saves the connection. Historical Codex settings remain inactive. Cancellation retains the active connection. Browser visibility changes apply at the next task admission after active task pages drain; overlapping task pages retain their shared browser mode. Platform sign-in always opens a visible window.
+
+In Model and options, Refresh catalog fetches the authenticated built-in provider's current Pi catalog for the connection being edited. The model list updates in place and keeps the draft fields and model selection. The editor reports the outcome and allows a retry after failure. Applying a different model requires a selection and save.
 
 ## Saved results and deletion
 

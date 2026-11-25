@@ -90,6 +90,9 @@ const bridge: DesktopBridge = {
   exportTaskPiLogs: (taskId) =>
     ipcRenderer.invoke("tasks:export-pi-logs", taskId),
   focusSearchReports: () => ipcRenderer.invoke(searchChannels.reports),
+  searchReadiness: (ids) => ipcRenderer.invoke(searchChannels.readiness, ids),
+  openPlatformAccountAction: (id) =>
+    ipcRenderer.invoke(platformConnectionChannels.openAccountAction, id),
   startFocusSearch: (input) => ipcRenderer.invoke(searchChannels.start, input),
   retryFocusSearch: (taskId) =>
     ipcRenderer.invoke(searchChannels.retry, taskId),
@@ -140,7 +143,8 @@ const bridge: DesktopBridge = {
   respondModelAuth: (input) => ipcRenderer.invoke(modelChannels.respond, input),
   openModelAuthUrl: (url) => ipcRenderer.invoke(modelChannels.openAuthUrl, url),
   cancelModelLogin: () => ipcRenderer.invoke(modelChannels.cancelLogin),
-  refreshModels: () => ipcRenderer.invoke(modelChannels.refresh),
+  refreshModels: (connectionId) =>
+    ipcRenderer.invoke(modelChannels.refresh, connectionId),
   checkModel: () => ipcRenderer.invoke(modelChannels.check),
   cancelModelCheck: () => ipcRenderer.invoke(modelChannels.cancelCheck),
   xStatus: () => ipcRenderer.invoke(xChannels.status),

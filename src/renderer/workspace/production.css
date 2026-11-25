@@ -234,6 +234,29 @@ select {
 .receipt-row > .receipt-error {
   color: var(--danger);
 }
+.topic-connection-feedback {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  color: var(--danger);
+  font-size: 13px;
+  margin-top: 8px;
+}
+.composer .member-chip.sign-in-required {
+  color: var(--danger);
+}
+.member-chip.sign-in-required > svg {
+  width: 14px;
+  height: 14px;
+  flex: none;
+}
+.topic-connection-feedback > .text-button {
+  color: var(--accent);
+}
+.thread-connection-feedback {
+  padding: 0 20px 8px;
+}
 .receipt-reason {
   display: flex;
   gap: 6px;
