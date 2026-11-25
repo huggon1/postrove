@@ -755,7 +755,7 @@ test("native OAuth rotation is serialized across workers and drains after Stop",
         type: "oauth",
         access: jwt("old"),
         refresh: "fictional-old-refresh",
-        expires: Date.now() - 1000,
+        expires: Date.now() + 3600_000,
         accountId: "fictional-account",
       },
     }),
@@ -798,6 +798,17 @@ test("native OAuth rotation is serialized across workers and drains after Stop",
           options,
         )) as typeof original;
     }, resolve("build/test-workers/pi-model-worker.mjs"));
+    // Startup sees a current credential. Expire it for the controlled worker
+    // rotation after the application's automatic check has opened the profile.
+    const original = JSON.parse(await readFile(authFile, "utf8"))[
+      "openai-codex"
+    ];
+    await writeFile(
+      authFile,
+      JSON.stringify({
+        "openai-codex": { ...original, expires: Date.now() - 1000 },
+      }),
+    );
     await page.getByRole("button", { name: "检查连接", exact: true }).click();
     await expect.poll(() => rotations).toBe(1);
     const paths = {
@@ -880,12 +891,6 @@ test("native OAuth rotation is serialized across workers and drains after Stop",
     });
     await app.close();
     app = undefined;
-    await writeFile(
-      authFile,
-      JSON.stringify({
-        "openai-codex": { ...native, expires: Date.now() - 1000 },
-      }),
-    );
     launched = await launch(profile);
     app = launched.app;
     page = launched.page;
@@ -910,6 +915,12 @@ test("native OAuth rotation is serialized across workers and drains after Stop",
             );
       };
     }, endpoint);
+    await writeFile(
+      authFile,
+      JSON.stringify({
+        "openai-codex": { ...native, expires: Date.now() - 1000 },
+      }),
+    );
     let refreshReply: unknown = "pending";
     const refreshing = page
       .evaluate(() => window.postrove.refreshModels())

@@ -15,9 +15,11 @@ import { advisors } from "../../src/shared/advisor-contracts";
 import type { ContentRequest } from "../../src/shared/content-contracts";
 import type {
   FocusSearchReport,
+  ModelAuthorizationIssue,
   QuestionPreparation,
   SearchSection,
 } from "../../src/shared/focus-search-contracts";
+import { classifyModelError } from "../../src/shared/task-failure";
 import type { ReadingMaterial } from "../../src/shared/reading-contracts";
 import type { ForwardingJobEventContract } from "../../src/worker/jobs/forwarding/contracts";
 
@@ -45,6 +47,7 @@ async function fixture(options: {
   ) => Promise<string>;
   execute?: (section: SearchSection) => Promise<ReturnType<typeof reply>>;
   release?: () => Promise<void>;
+  modelAuthorization?: ModelAuthorizationIssue;
 }) {
   const root = await mkdtemp(join(tmpdir(), "postrove-translation-rule-"));
   const file = join(root, "focus-search.json");
@@ -58,6 +61,7 @@ async function fixture(options: {
     {} as any,
     async () => ({
       content: options.content,
+      modelAuthorization: options.modelAuthorization,
       execute: options.execute ?? (async (section) => reply(section)),
       release: options.release ?? (async () => {}),
     }),
@@ -220,6 +224,56 @@ test("a failed language shares one correction budget, sends zero questions and l
         .every((s) => s.failureStage === "preparation" && s.state === "failed"),
     );
     assert.equal(report.status, "partial");
+  } finally {
+    await f.cleanup();
+  }
+});
+
+test("revoked OAuth reaches every dependent receipt without opening a platform", async () => {
+  const issue = {
+    connectionId: randomUUID(),
+    providerName: "OpenAI",
+    oauth: true,
+  };
+  const code = classifyModelError(
+    new Error("OAuth refresh failed", {
+      cause: new Error(
+        'OpenAI OAuth token request failed (400): {"error":"invalid_grant"}',
+      ),
+    }),
+  );
+  assert.equal(code, "model_auth");
+  const seen: string[] = [];
+  const f = await fixture({
+    modelAuthorization: issue,
+    content: async () => {
+      throw new Error(code);
+    },
+    execute: async (section) => {
+      seen.push(section.sectionId);
+      return reply(section);
+    },
+  });
+  try {
+    const id = await f.service.start({
+      question,
+      platforms: ["x", "reddit"],
+      advisorIds: ["x-grok-zh", "x-grok-en", "reddit-ai-en"],
+    });
+    await until(() => !!f.service.readTask(id).finishedAt);
+    assert.equal(f.service.readTask(id).status, "failed");
+    assert.deepEqual(seen, []);
+    const saved = JSON.parse(await readFile(f.file, "utf8"))
+      .reports[0] as FocusSearchReport;
+    for (const section of saved.sections) {
+      assert.deepEqual(section.modelAuthorization, issue);
+      assert.equal(section.failureStage, "preparation");
+      assert.equal(section.checkpoint?.state, "prepared");
+    }
+    assert.doesNotMatch(
+      JSON.stringify(saved),
+      /invalid_grant|OAuth token request failed/,
+    );
   } finally {
     await f.cleanup();
   }

@@ -190,7 +190,13 @@ const emptyEditor = (): EditorDraft => ({
   customProvider: "my-provider",
 });
 
-export function ModelSettings() {
+export function ModelSettings({
+  reauthorize,
+  onReauthorizeHandled,
+}: {
+  reauthorize?: string;
+  onReauthorizeHandled?(): void;
+} = {}) {
   const [view, setView] = useState<ModelView>();
   const [editingConnectionId, setEditingConnectionId] = useState<string>();
   const [editing, setEditing] = useState(false),
@@ -212,6 +218,7 @@ export function ModelSettings() {
   const [errorConnectionId, setErrorConnectionId] = useState<string>();
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const form = useRef<HTMLFormElement>(null);
+  const handledRecovery = useRef<string | undefined>(undefined);
   const fieldId = useId();
   const restoreDraft = (
     draft: EditorDraft,
@@ -434,6 +441,7 @@ export function ModelSettings() {
   const editingTitle = t(editingConnectionId ? "编辑配置" : "模型连接配置");
   const editConnection = async (
     connection: ModelView["connections"][number],
+    authentication = false,
   ) => {
     if (
       await action(
@@ -460,9 +468,21 @@ export function ModelSettings() {
         }
         setStep(2);
       }
+      if (authentication) setStep(1);
       setEditing(true);
     }
   };
+  useEffect(() => {
+    if (!reauthorize) {
+      handledRecovery.current = undefined;
+      return;
+    }
+    if (!view || handledRecovery.current === reauthorize) return;
+    handledRecovery.current = reauthorize;
+    const connection = view.connections.find((item) => item.id === reauthorize);
+    onReauthorizeHandled?.();
+    if (connection) void editConnection(connection, true);
+  }, [reauthorize, view]);
   return (
     <section className="model-settings" aria-label={t("后台模型")}>
       <SectionHeading

@@ -1,7 +1,7 @@
 import { capturedText } from "../../platforms/browser/dom";
 import { type BrowserContext, type Page } from "playwright-core";
 import { join } from "node:path";
-import { mkdir, writeFile, access } from "node:fs/promises";
+import { mkdir, writeFile, access, readFile } from "node:fs/promises";
 import { z } from "zod";
 import type { Platform } from "../../platforms/types";
 import type { XhsAuth } from "./xhs-auth";
@@ -31,6 +31,20 @@ const loginUrls: Record<LoginSite, string> = {
   reddit: "https://www.reddit.com/login/",
   bilibili: "https://passport.bilibili.com/login",
 };
+const accountActionUrls: Record<Exclude<LoginSite, "bilibili">, string> = {
+  x: "https://x.com/i/grok",
+  xiaohongshu: "https://www.xiaohongshu.com/ai_chat",
+  gemini: "https://gemini.google.com/app",
+  reddit: "https://www.reddit.com/answers/",
+};
+const sessionCookieSchema = z.array(
+  z.object({
+    name: z.string(),
+    domain: z.string().optional(),
+    expires: z.number(),
+  }),
+);
+type SessionCookies = z.infer<typeof sessionCookieSchema>;
 const sessionDomains: Record<LoginSite, RegExp> = {
   x: /(^|\.)x\.com$/,
   xiaohongshu: /(^|\.)xiaohongshu\.com$/,
@@ -124,6 +138,57 @@ export class PlatformBrowser {
   private accountAttempts = new Map<string, Promise<void>>();
   private observedSessions = new Map<LoginSite, string | undefined>();
   private pendingLogins = new Set<LoginSite>();
+  private searchLoginBlocked = new Set<LoginSite>();
+  private lastSessionCookies?: SessionCookies;
+  private async readSessionCookies(profile: string) {
+    const saved = JSON.parse(
+      await readFile(
+        join(this.root, profile, "postrove-session-status.json"),
+        "utf8",
+      ),
+    );
+    return sessionCookieSchema.parse(saved.cookies);
+  }
+  private async savedSessionCookies(platform: LoginSite) {
+    for (const profile of ["shared", platform]) {
+      try {
+        return await this.readSessionCookies(profile);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") return;
+      }
+    }
+  }
+  async searchSignInRequired(site: LoginSite) {
+    if (this.searchLoginBlocked.has(site)) return true;
+    const cookies =
+      this.lastSessionCookies ?? (await this.savedSessionCookies(site));
+    if (!cookies || signedIn(site, cookies, !this.lastSessionCookies))
+      return false;
+    if (!this.lastSessionCookies && (site === "x" || site === "xiaohongshu")) {
+      // A previous profile may still be waiting to import into shared Chrome.
+      const migrated = await access(
+        join(this.root, "shared", `migrated-${site}.json`),
+      ).then(
+        () => true,
+        () => false,
+      );
+      if (!migrated) {
+        const previous = await this.readSessionCookies(site).catch(
+          () => undefined,
+        );
+        if (previous && signedIn(site, previous, true)) return false;
+      }
+    }
+    return true;
+  }
+  observeSearchLoginRequired(site: LoginSite) {
+    if (this.searchLoginBlocked.has(site)) return;
+    this.searchLoginBlocked.add(site);
+    this.changed();
+  }
+  private forgetSearchLoginBlock(site: LoginSite) {
+    if (this.searchLoginBlocked.delete(site)) this.changed();
+  }
   constructor(
     private root: string,
     private changed: () => void,
@@ -258,29 +323,15 @@ export class PlatformBrowser {
         this.updateAccounts(cookies);
       } catch {}
     } else {
-      try {
-        const { readFile } = await import("node:fs/promises");
-        let metadata: string;
-        try {
-          metadata = await readFile(
-            join(this.root, "shared", "postrove-session-status.json"),
-            "utf8",
-          );
-        } catch (error) {
-          if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-          metadata = await readFile(
-            join(this.root, platform, "postrove-session-status.json"),
-            "utf8",
-          );
-        }
-        const saved = JSON.parse(metadata);
-        cookies = saved.cookies;
-      } catch {}
+      cookies = (await this.savedSessionCookies(platform)) ?? [];
     }
+    const connected =
+      !this.searchLoginBlocked.has(platform) &&
+      signedIn(platform, cookies, !running);
     return {
-      signedIn: signedIn(platform, cookies, !running),
+      signedIn: connected,
       installed: !!chromeExecutable(),
-      ...(signedIn(platform, cookies, !running) && this.accounts[platform]
+      ...(connected && this.accounts[platform]
         ? { account: this.accounts[platform].account }
         : {}),
     };
@@ -295,16 +346,17 @@ export class PlatformBrowser {
   private async commitStatus(_platform: BrowserSite, context: BrowserContext) {
     await this.loadAccounts();
     const cookies = await context.cookies();
+    this.lastSessionCookies = cookies.map(({ name, domain, expires }) => ({
+      name,
+      domain,
+      expires,
+    }));
     this.updateAccounts(cookies);
     await writeFile(
       join(this.root, "shared", "postrove-session-status.json"),
       JSON.stringify({
         accounts: this.accounts,
-        cookies: cookies.map((c) => ({
-          name: c.name,
-          domain: c.domain,
-          expires: c.expires,
-        })),
+        cookies: this.lastSessionCookies,
       }),
       { mode: 0o600 },
     );
@@ -347,6 +399,7 @@ export class PlatformBrowser {
       const seen = this.observedSessions.has(site);
       const previous = this.observedSessions.get(site);
       this.observedSessions.set(site, session);
+      if (seen && previous !== session) this.forgetSearchLoginBlock(site);
       if (!session || this.accounts[site]?.session !== session)
         delete this.accounts[site];
       if (
@@ -416,11 +469,19 @@ export class PlatformBrowser {
     await this.saveStatus(site, context);
   }
   openHome(platform: LoginSite) {
+    return this.openVisiblePage(platform, accountHomes[platform]);
+  }
+
+  openAccountAction(platform: Exclude<LoginSite, "bilibili">) {
+    return this.openVisiblePage(platform, accountActionUrls[platform]);
+  }
+
+  private openVisiblePage(platform: LoginSite, url: string) {
     return this.jobs.run(async () => {
       const context = await this.openQueuedContext(platform, false);
       const page = await context.newPage();
       await page.bringToFront();
-      await page.goto(accountHomes[platform], {
+      await page.goto(url, {
         waitUntil: "commit",
         timeout: 30_000,
       });
@@ -447,7 +508,9 @@ export class PlatformBrowser {
     page.on("close", () => {
       if (this.loginPages.get(platform) === page)
         this.loginPages.delete(platform);
-      void this.saveStatus(platform, context).catch(() => {});
+      void this.saveStatus(platform, context)
+        .then(() => this.forgetSearchLoginBlock(platform))
+        .catch(() => {});
     });
   }
   logout(platform: LoginSite) {
