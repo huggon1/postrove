@@ -140,7 +140,8 @@ const bridge: DesktopBridge = {
   respondModelAuth: (input) => ipcRenderer.invoke(modelChannels.respond, input),
   openModelAuthUrl: (url) => ipcRenderer.invoke(modelChannels.openAuthUrl, url),
   cancelModelLogin: () => ipcRenderer.invoke(modelChannels.cancelLogin),
-  refreshModels: () => ipcRenderer.invoke(modelChannels.refresh),
+  refreshModels: (connectionId) =>
+    ipcRenderer.invoke(modelChannels.refresh, connectionId),
   checkModel: () => ipcRenderer.invoke(modelChannels.check),
   cancelModelCheck: () => ipcRenderer.invoke(modelChannels.cancelCheck),
   xStatus: () => ipcRenderer.invoke(xChannels.status),

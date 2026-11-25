@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import {
+  ArrowClockwise,
   ArrowRight,
   Check,
   CircleNotch,
@@ -211,6 +212,10 @@ export function ModelSettings() {
     [removing, setRemoving] = useState<string>();
   const [errorConnectionId, setErrorConnectionId] = useState<string>();
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [catalogRefresh, setCatalogRefresh] = useState<
+    "pending" | "passed" | "failed"
+  >();
+  const refreshingCatalog = catalogRefresh === "pending";
   const form = useRef<HTMLFormElement>(null);
   const fieldId = useId();
   const restoreDraft = (
@@ -317,6 +322,24 @@ export function ModelSettings() {
     }
   }
   const selected = view?.selected;
+  const selectedMatchesEditor =
+    selected &&
+    (editingConnectionId
+      ? selected.id === editingConnectionId ||
+        selected.replacesId === editingConnectionId
+      : !selected.replacesId &&
+        !view?.connections.some((connection) => connection.id === selected.id));
+  useEffect(() => setCatalogRefresh(undefined), [editing, step, selected?.id]);
+  async function refreshCatalog(connectionId: string) {
+    setCatalogRefresh("pending");
+    try {
+      const reply = await bridge.refreshModels(connectionId);
+      if (reply.ok) setView(reply.value);
+      setCatalogRefresh(reply.ok ? "passed" : "failed");
+    } catch {
+      setCatalogRefresh("failed");
+    }
+  }
   const provider = view?.providers.find(
     (item) => item.id === selected?.providerId,
   );
@@ -334,13 +357,7 @@ export function ModelSettings() {
   };
   async function save() {
     if (!selected) return;
-    if (
-      editingConnectionId
-        ? selected.id !== editingConnectionId &&
-          selected.replacesId !== editingConnectionId
-        : !!selected.replacesId ||
-          view?.connections.some((connection) => connection.id === selected.id)
-    ) {
+    if (!selectedMatchesEditor) {
       setStep(0);
       return;
     }
@@ -402,7 +419,7 @@ export function ModelSettings() {
     customProvider,
   });
   const close = (preserve = true) => {
-    if (busy) return;
+    if (busy || refreshingCatalog) return;
     if (view?.auth === "logging_in") void bridge.cancelModelLogin();
     if (preserve)
       editorDrafts.set(editingConnectionId ?? "new", currentDraft());
@@ -638,7 +655,7 @@ export function ModelSettings() {
           <ModalHeader
             title={editingTitle}
             onClose={() => close()}
-            closeDisabled={busy}
+            closeDisabled={busy || refreshingCatalog}
           />
           <div className="model-workspace">
             <SetupSteps
@@ -957,9 +974,6 @@ export function ModelSettings() {
                 {view?.authFailure && (
                   <Feedback error>{t("认证未完成，请重试")}</Feedback>
                 )}
-                {view?.catalog === "failed" && (
-                  <Feedback error>{t("模型目录刷新失败")}</Feedback>
-                )}
                 {view?.auth === "signed_in" && (
                   <button
                     className="primary full-width"
@@ -979,7 +993,7 @@ export function ModelSettings() {
                 noValidate
                 onSubmit={(event) => {
                   event.preventDefault();
-                  if (!busy) void save();
+                  if (!busy && !refreshingCatalog) void save();
                 }}
               >
                 <label className="config-field">
@@ -992,31 +1006,60 @@ export function ModelSettings() {
                     onChange={(event) => setName(event.target.value)}
                   />
                 </label>
-                <label className="config-field">
-                  <span>{t("模型")}</span>
-                  <select
-                    aria-label={t("模型")}
-                    value={modelId}
-                    disabled={busy}
-                    onChange={(event) => setModelId(event.target.value)}
-                  >
-                    <option value="">{t("选择模型")}</option>
-                    {modelId && !model && (
-                      <option value={modelId} disabled>
-                        {modelId} · {t("目录已变化")}
-                      </option>
-                    )}
-                    {view?.models.map((item) => (
-                      <option
-                        value={item.id}
-                        key={item.id}
-                        disabled={!item.compatible}
+                <div className="config-field">
+                  <label htmlFor={`${fieldId}-model`}>{t("模型")}</label>
+                  <div className="model-catalog-controls">
+                    <select
+                      id={`${fieldId}-model`}
+                      value={modelId}
+                      disabled={busy || refreshingCatalog}
+                      onChange={(event) => setModelId(event.target.value)}
+                    >
+                      <option value="">{t("选择模型")}</option>
+                      {modelId && !model && (
+                        <option value={modelId} disabled>
+                          {modelId} · {t("目录已变化")}
+                        </option>
+                      )}
+                      {view?.models.map((item) => (
+                        <option
+                          value={item.id}
+                          key={item.id}
+                          disabled={!item.compatible}
+                        >
+                          {item.name}
+                        </option>
+                      ))}
+                    </select>
+                    {selected?.catalogSource === "builtin" && (
+                      <button
+                        type="button"
+                        className="secondary"
+                        aria-busy={refreshingCatalog}
+                        disabled={
+                          busy ||
+                          refreshingCatalog ||
+                          !selectedMatchesEditor ||
+                          view?.auth !== "signed_in"
+                        }
+                        onClick={() => void refreshCatalog(selected.id)}
                       >
-                        {item.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                        {refreshingCatalog ? (
+                          <CircleNotch className="spin" aria-hidden="true" />
+                        ) : (
+                          <ArrowClockwise aria-hidden="true" />
+                        )}
+                        {t("刷新目录")}
+                      </button>
+                    )}
+                  </div>
+                  {catalogRefresh === "passed" && (
+                    <Feedback>{t("Pi 目录已刷新")}</Feedback>
+                  )}
+                  {catalogRefresh === "failed" && (
+                    <Feedback error>{t("模型目录刷新失败")}</Feedback>
+                  )}
+                </div>
                 <div className="reasoning-fields">
                   {(["browser", "reading"] as const).map((role) => {
                     const key =
@@ -1206,14 +1249,8 @@ export function ModelSettings() {
                   className="primary full-width"
                   disabled={
                     busy ||
-                    !selected ||
-                    (editingConnectionId
-                      ? selected.id !== editingConnectionId &&
-                        selected.replacesId !== editingConnectionId
-                      : !!selected.replacesId ||
-                        view?.connections.some(
-                          (connection) => connection.id === selected.id,
-                        )) ||
+                    refreshingCatalog ||
+                    !selectedMatchesEditor ||
                     !model?.compatible ||
                     !name.trim() ||
                     view?.auth !== "signed_in"
@@ -1231,7 +1268,9 @@ export function ModelSettings() {
               {step > (editingConnectionId ? 1 : 0) && (
                 <button
                   className="text-button"
-                  disabled={busy || view?.auth === "logging_in"}
+                  disabled={
+                    busy || refreshingCatalog || view?.auth === "logging_in"
+                  }
                   onClick={() => {
                     setStep(step - 1);
                     setError("");
@@ -1242,7 +1281,7 @@ export function ModelSettings() {
               )}
               <button
                 className="text-button"
-                disabled={busy}
+                disabled={busy || refreshingCatalog}
                 onClick={() => close(false)}
               >
                 {t("取消")}
